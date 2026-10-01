@@ -1,0 +1,17 @@
+{
+  "name": "floor-viral-analyzer-v3",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "postinstall": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "playwright": "^1.55.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
