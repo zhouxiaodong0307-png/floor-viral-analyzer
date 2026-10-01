@@ -4,53 +4,85 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111">
-<title>木地板爆款内容分析器 V3.5</title>
+<title>木地板爆款内容分析器 V3.6</title>
 <style>
 :root{--bg:#f5f5f2;--card:#fff;--text:#111;--muted:#777;--line:#e4e4de;--soft:#efefe9;--ok:#08783f;--bad:#b42318}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif}.wrap{max-width:1180px;margin:auto;padding:16px 14px 80px}.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}h1{font-size:23px;margin:0 0 4px}.sub{font-size:12px;color:var(--muted)}.badge{background:#111;color:#fff;border-radius:999px;padding:6px 10px;font-size:12px}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}.label{font-size:13px;font-weight:800;margin:0 0 7px}textarea,input,select,button{font:inherit}textarea,input,select{width:100%;border:1px solid var(--line);border-radius:11px;background:#fff;padding:11px 12px;outline:none}textarea{min-height:105px;resize:vertical;line-height:1.5}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}button{border:0;border-radius:11px;padding:11px 14px;font-weight:800;cursor:pointer}.primary{background:#111;color:#fff}.secondary{background:var(--soft);color:#111}.danger{background:#fff0ee;color:var(--bad)}button:disabled{opacity:.5}.status{font-size:12px;color:var(--muted);line-height:1.6;white-space:pre-wrap;margin-top:10px}.ok{color:var(--ok)}.bad{color:var(--bad)}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}.stat,.decision{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px}.stat b{font-size:22px}.stat span{display:block;font-size:11px;color:var(--muted);margin-top:3px}.decision-grid{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:10px}.decision h3{margin:0 0 8px;font-size:14px}.decision .big{font-size:18px;font-weight:900;line-height:1.4}.decision .small{font-size:12px;color:var(--muted);line-height:1.6}.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{background:#f0f0eb;border-radius:999px;padding:5px 8px;font-size:11px}.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}.toolbar input{flex:1;min-width:0}.toolbar select{width:auto}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}table{border-collapse:collapse;width:100%;min-width:900px;background:#fff}th,td{padding:10px 11px;border-bottom:1px solid var(--line);font-size:12px;text-align:left;vertical-align:top}th{background:#f8f8f5;position:sticky;top:0}td.title{font-weight:800;max-width:340px}.empty{text-align:center;color:var(--muted);padding:28px}.rank{font-weight:900}.foot{font-size:11px;color:#777;line-height:1.6;margin-top:12px}@media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}.decision-grid{grid-template-columns:1fr}.toolbar{flex-wrap:wrap}.toolbar input{flex-basis:100%}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif}.wrap{max-width:1180px;margin:auto;padding:16px 14px 80px}.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}h1{font-size:23px;margin:0 0 4px}.sub{font-size:12px;color:var(--muted)}.badge{background:#111;color:#fff;border-radius:999px;padding:6px 10px;font-size:12px}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}.label{font-size:13px;font-weight:800;margin:0 0 7px}.steps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.step{background:#f8f8f5;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:12px;line-height:1.55}.step b{display:block;font-size:14px;margin-bottom:3px}.collector{display:inline-block;margin-top:10px;background:#111;color:#fff;text-decoration:none;border-radius:11px;padding:12px 16px;font-weight:900}.tip{font-size:12px;color:var(--muted);margin-top:8px}.status{font-size:12px;line-height:1.6;margin-top:10px}.ok{color:var(--ok)}.bad{color:var(--bad)}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}.stat,.decision{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px}.stat b{font-size:22px}.stat span{display:block;font-size:11px;color:var(--muted);margin-top:3px}.decision-grid{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:10px}.decision h3{margin:0 0 8px;font-size:14px}.decision .big{font-size:17px;font-weight:900;line-height:1.45}.decision .small{font-size:12px;color:var(--muted);line-height:1.6}.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{background:#f0f0eb;border-radius:999px;padding:5px 8px;font-size:11px}.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}.toolbar input,.toolbar select,button{font:inherit}.toolbar input,.toolbar select{border:1px solid var(--line);border-radius:11px;background:#fff;padding:11px 12px;outline:none}.toolbar input{flex:1;min-width:0}.toolbar select{width:auto}button{border:0;border-radius:11px;padding:11px 14px;font-weight:800;cursor:pointer}.secondary{background:var(--soft);color:#111}.danger{background:#fff0ee;color:var(--bad)}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}table{border-collapse:collapse;width:100%;min-width:900px;background:#fff}th,td{padding:10px 11px;border-bottom:1px solid var(--line);font-size:12px;text-align:left;vertical-align:top}th{background:#f8f8f5;position:sticky;top:0}td.title{font-weight:800;max-width:350px}.empty{text-align:center;color:var(--muted);padding:28px}.foot{font-size:11px;color:#777;line-height:1.6;margin-top:12px}@media(max-width:760px){.steps,.decision-grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.toolbar{flex-wrap:wrap}.toolbar input{flex-basis:100%}}
 </style>
 </head>
 <body><div class="wrap">
-<div class="top"><div><h1>木地板爆款内容分析器</h1><div class="sub">抓真实商品数据 · 判断下一条怎么发</div></div><div class="badge">V3.5</div></div>
+<div class="top"><div><h1>木地板爆款内容分析器</h1><div class="sub">直接读取你已登录的闲鱼页面 · 告诉你下一条怎么发</div></div><div class="badge">V3.6</div></div>
+
 <div class="card">
-<div class="label">闲鱼搜索网址</div>
-<textarea id="urls" placeholder="粘贴闲鱼搜索结果网址，例如：https://www.goofish.com/search?q=木地板"></textarea>
-<div class="actions"><button class="primary" id="run">开始分析</button><button class="danger" id="clear">清空数据</button></div>
-<div id="status" class="status">粘贴链接后直接分析，不做无意义的登录检测。</div>
+<div class="label">第一次只需安装一次“闲鱼抓取”书签</div>
+<div class="steps">
+<div class="step"><b>1. 拖到书签栏</b>把下面黑色「闲鱼抓取」按钮拖到浏览器书签栏。</div>
+<div class="step"><b>2. 打开闲鱼搜索页</b>正常登录闲鱼，搜索“木地板”等关键词，等商品加载完成。</div>
+<div class="step"><b>3. 点书签</b>点击书签栏里的「闲鱼抓取」，分析结果会自动在新页面打开。</div>
 </div>
+<a id="collector" class="collector" href="#">闲鱼抓取</a>
+<div class="tip">这是本机抓取：直接读取你当前已登录浏览器里已经看得到的商品，不再让 Render 服务器去登录闲鱼。</div>
+<div id="status" class="status">等待抓取数据。</div>
+</div>
+
 <div class="stats">
-<div class="stat"><b id="sItems">0</b><span>识别商品</span></div>
+<div class="stat"><b id="sItems">0</b><span>抓到商品</span></div>
 <div class="stat"><b id="sWant">0</b><span>有想要数据</span></div>
-<div class="stat"><b id="sPrice">—</b><span>中位价格</span></div>
-<div class="stat"><b id="sTop">—</b><span>最高想要</span></div>
+<div class="stat"><b id="sMedian">—</b><span>中位价格</span></div>
+<div class="stat"><b id="sMaxWant">—</b><span>最高想要</span></div>
 </div>
+
 <div class="card">
 <div class="label">下一条怎么发</div>
 <div class="decision-grid">
-<div class="decision"><h3>建议标题方向</h3><div id="titleAdvice" class="big">抓取后生成</div><div id="titleWhy" class="small"></div></div>
-<div class="decision"><h3>价格参考</h3><div id="priceAdvice" class="big">抓取后生成</div><div id="priceWhy" class="small"></div></div>
-<div class="decision"><h3>高频有效词</h3><div id="keywordChips" class="chips"><span class="chip">等待数据</span></div></div>
+<div class="decision"><h3>标题方向</h3><div id="titleAdvice" class="big">先抓一页真实商品数据</div><div id="titleNote" class="small">有数据后再给建议，不做假判断。</div></div>
+<div class="decision"><h3>价格参考</h3><div id="priceAdvice" class="big">暂无</div><div id="priceNote" class="small">优先参考高“想要”商品的价格带。</div></div>
+<div class="decision"><h3>高效词</h3><div id="keywordChips" class="chips"><span class="chip">暂无有效词</span></div></div>
 </div>
 </div>
+
 <div class="card">
-<div class="toolbar"><input id="filter" placeholder="筛选商品标题"><select id="sort"><option value="want">想要人数优先</option><option value="rank">搜索排名优先</option></select><button class="secondary" id="export">导出 CSV</button></div>
+<div class="toolbar"><input id="filter" placeholder="筛选商品标题"><select id="sort"><option value="want">想要人数优先</option><option value="rank">搜索排名优先</option><option value="price">价格从低到高</option></select><button id="clear" class="danger">清空</button><button id="export" class="secondary">导出 CSV</button></div>
 <div class="table-wrap"><table><thead><tr><th>排名</th><th>商品标题</th><th>价格</th><th>想要</th><th>规格</th><th>来源</th></tr></thead><tbody id="body"></tbody></table><div class="empty" id="empty">还没有商品数据。</div></div>
 </div>
-<div class="foot">V3.5 只保留对发布决策有用的数据：排名、标题、价格、想要、规格，并直接给出下一条发布建议。</div>
+<div class="foot">V3.6：抓取发生在你自己的浏览器当前闲鱼页面中，因此会直接使用你已经登录的正常页面。分析器只接收商品标题、价格、想要、规格、排名等用于发布决策的数据。</div>
 </div>
 <script>
 const $=id=>document.getElementById(id);
-let items=JSON.parse(localStorage.getItem('floorV35Items')||'[]');
-function save(){localStorage.setItem('floorV35Items',JSON.stringify(items))}
-function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function fmt(n){if(n==null)return '—';if(n>=10000)return (n/10000).toFixed(n>=100000?0:1)+'万';if(n>=1000)return (n/1000).toFixed(1)+'k';return String(Math.round(n))}
-function status(t,c=''){$('status').className='status '+c;$('status').textContent=t}
-function median(a){const x=a.filter(Number.isFinite).sort((a,b)=>a-b);if(!x.length)return null;const m=Math.floor(x.length/2);return x.length%2?x[m]:(x[m-1]+x[m])/2}
-function keywords(list){const stop=/^(木地板|地板|实木|二手|全新|包邮|出售|处理|现货|平方|平米)$/;const map={};for(const x of list){for(const w of String(x.title||'').match(/[\u4e00-\u9fa5]{2,6}/g)||[]){if(stop.test(w))continue;map[w]=(map[w]||0)+(x.favs||1)}}return Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,8).map(x=>x[0])}
-function buildAdvice(){const useful=items.filter(x=>x.favs!=null);const top=[...useful].sort((a,b)=>(b.favs||0)-(a.favs||0)).slice(0,10);const prices=top.map(x=>x.price).filter(Number.isFinite);const med=median(prices);const words=keywords(top.length?top:items);$('sItems').textContent=items.length;$('sWant').textContent=useful.length;$('sPrice').textContent=med==null?'—':'¥'+Math.round(med);$('sTop').textContent=top.length?fmt(top[0].favs):'—';$('keywordChips').innerHTML=(words.length?words:['暂无有效词']).map(w=>`<span class="chip">${esc(w)}</span>`).join('');if(top.length){const base=top[0].title.replace(/[¥￥].*$/,'').slice(0,38);$('titleAdvice').textContent=base;$('titleWhy').textContent='优先参考“想要”最高的真实商品标题结构，再替换成你自己的木种/规格/卖点。';}else{$('titleAdvice').textContent='先抓到带“想要”数据的商品';$('titleWhy').textContent='没有互动数据时，不做假判断。';}if(med!=null){$('priceAdvice').textContent='参考 ¥'+Math.round(med);$('priceWhy').textContent='基于当前高“想要”商品价格中位数，不建议机械照抄，结合你的成本和规格调整。';}else{$('priceAdvice').textContent='暂无价格参考';$('priceWhy').textContent='当前抓取结果缺少有效价格数据。';}}
-function render(){let q=$('filter').value.trim().toLowerCase();let list=items.filter(x=>!q||String(x.title||'').toLowerCase().includes(q));if($('sort').value==='want')list.sort((a,b)=>(b.favs??-1)-(a.favs??-1));else list.sort((a,b)=>(a.rank??999)-(b.rank??999));$('body').innerHTML=list.map(x=>`<tr><td class="rank">${x.rank??'—'}</td><td class="title">${esc(x.title)}</td><td>${x.price!=null?'¥'+esc(x.price):'—'}</td><td>${fmt(x.favs)}</td><td>${esc(x.spec||'—')}</td><td><a href="${esc(x.url)}" target="_blank" rel="noopener">打开商品</a></td></tr>`).join('');$('empty').style.display=list.length?'none':'block';buildAdvice()}
-async function analyze(url){const r=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,maxItems:80})});const raw=await r.text();if(!raw)throw new Error('服务器连接中断');let j;try{j=JSON.parse(raw)}catch{throw new Error('服务器返回异常')}if(!r.ok||!j.ok)throw new Error(j.error||'分析失败');const incoming=(j.items||[]).map(x=>({...x,sourcePage:j.url,addedAt:new Date().toISOString()}));const urls=new Set(incoming.map(x=>x.url));items=items.filter(x=>!urls.has(x.url));items.unshift(...incoming);items=items.slice(0,1200);save();render();return j}
-$('run').onclick=async()=>{const urls=[...new Set($('urls').value.split('\n').map(x=>x.trim()).filter(Boolean))];if(!urls.length){status('请先粘贴闲鱼搜索网址。','bad');return}$('run').disabled=true;let total=0;try{for(let i=0;i<urls.length;i++){status(`正在抓取 ${i+1}/${urls.length}\n${urls[i]}`);const j=await analyze(urls[i]);total+=(j.items||[]).length}status(`分析完成：识别 ${total} 个商品，并已生成下一条发布建议。`,'ok')}catch(e){status(e.message,'bad')}finally{$('run').disabled=false}};
-$('clear').onclick=()=>{if(confirm('确认清空全部分析数据？')){items=[];save();render();status('已清空。')}};$('filter').oninput=render;$('sort').onchange=render;
-$('export').onclick=()=>{if(!items.length){status('没有数据可导出。','bad');return}const c=v=>`"${String(v??'').replace(/"/g,'""')}"`;const rows=[['排名','商品标题','价格','想要','规格','网址'].map(c).join(',')];items.forEach(x=>rows.push([x.rank,x.title,x.price,x.favs,x.spec,x.url].map(c).join(',')));const b=new Blob(['\ufeff'+rows.join('\n')],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='闲鱼木地板决策数据_V3.5.csv';a.click()};render();
-</script></body></html>
+const fmt=n=>n==null?'—':n>=10000?(n/10000).toFixed(n>=100000?0:1)+'万':n>=1000?(n/1000).toFixed(1)+'k':String(Math.round(n));
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+let imported=JSON.parse(localStorage.getItem('floorV36Import')||'null');
+let items=imported?.items||[];
+
+const bookmarklet=`javascript:(()=>{const c=s=>String(s||'').replace(/\\s+/g,' ').trim(),n=s=>{let m=String(s||'').replace(/,/g,'').match(/([\\d.]+)\\s*(万|w|W|k|K|千)?/);if(!m)return null;let v=+m[1],u=m[2]||'';if(/万|w/i.test(u))v*=1e4;if(/k|千/i.test(u))v*=1e3;return Math.round(v)};let out=[],seen=new Set();[...document.querySelectorAll('a[href]')].forEach(a=>{let h=a.href||'';if(!/goofish\\.com/.test(h)||!/item|detail/i.test(h)||seen.has(h))return;let b=a;for(let j=0;j<6&&b.parentElement;j++){let p=b.parentElement,t=c(p.innerText);if(t.length>8&&t.length<900&&(/[¥￥]\\s*\\d/.test(t)||/人想要/.test(t))){b=p;break}b=p}let t=c(b.innerText||a.innerText);if(t.length<5||/隐私政策|用户协议|营业执照|阿里巴巴|ICP备/i.test(t))return;seen.add(h);let pm=t.match(/[¥￥]\\s*([\\d,.]+)/),wm=t.match(/([\\d,.]+\\s*(?:万|w|W|k|K|千)?)\\s*人想要/i),sm=t.match(/\\b\\d{2,4}\\s*[x×*]\\s*\\d{2,4}(?:\\s*[x×*]\\s*\\d{1,3})?\\s*mm?\\b/i);let title=t.split(/(?=[¥￥])/)[0].replace(/^(包邮|验货宝|超赞鱼小铺|全新|严选|转卖)\\s*/g,'').trim();out.push({rank:out.length+1,title:title||t,text:t,url:h,image:b.querySelector('img')?.src||'',price:pm?+pm[1].replace(/,/g,''):null,favs:wm?n(wm[1]):null,specs:sm?sm[0]:''})});if(!out.length){alert('没抓到商品，请确认当前是闲鱼搜索结果页并等商品加载完成');return}let f=document.createElement('form');f.method='POST';f.action='https://floor-viral-analyzer.onrender.com/import';f.target='_blank';let i=document.createElement('input');i.type='hidden';i.name='data';i.value=JSON.stringify({source:location.href,items:out});f.appendChild(i);document.body.appendChild(f);f.submit();setTimeout(()=>f.remove(),1500)})()`;
+$('collector').href=bookmarklet;
+$('collector').onclick=e=>{if(location.hostname.includes('onrender.com')){e.preventDefault();$('status').className='status bad';$('status').textContent='不要直接点。请把“闲鱼抓取”拖到浏览器书签栏，然后去闲鱼搜索页点击这个书签。';}};
+
+function median(arr){if(!arr.length)return null;const a=[...arr].sort((x,y)=>x-y),m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2}
+const keywords=['实木','多层','三层','橡木','柚木','红檀香','龙凤檀','黑胡桃','白蜡木','菠萝格','鱼骨','人字','工字','锁扣','平扣','全新','二手','现货','包邮','工厂','原木','地暖','耐磨','翻新','清仓','特价'];
+function analyzeDecision(){
+ const validWant=items.filter(x=>Number.isFinite(x.favs));
+ const validPrice=items.filter(x=>Number.isFinite(x.price)&&x.price>0);
+ const top=[...validWant].sort((a,b)=>b.favs-a.favs).slice(0,Math.max(5,Math.ceil(validWant.length*.3)));
+ const pool=top.length?top:items.slice(0,10);
+ const scores=keywords.map(k=>({k,score:pool.reduce((s,x)=>s+(String(x.title).includes(k)?((x.favs??1)+1):0),0),count:pool.filter(x=>String(x.title).includes(k)).length})).filter(x=>x.count).sort((a,b)=>b.score-a.score||b.count-a.count).slice(0,6);
+ const topWords=scores.map(x=>x.k);
+ $('sItems').textContent=items.length;
+ $('sWant').textContent=validWant.length;
+ const med=median(validPrice.map(x=>x.price));$('sMedian').textContent=med==null?'—':'¥'+Math.round(med);
+ $('sMaxWant').textContent=validWant.length?fmt(Math.max(...validWant.map(x=>x.favs))):'—';
+ if(topWords.length){$('titleAdvice').textContent='优先组合：'+topWords.slice(0,4).join(' + ');$('titleNote').textContent='把木种/结构/铺法放前面，规格放后面；方向来自高“想要”商品。'}else{$('titleAdvice').textContent='先参考搜索前排商品的具体卖点';$('titleNote').textContent='当前页“想要”数据不足，不硬凑关键词。'}
+ const topPrice=median(top.filter(x=>Number.isFinite(x.price)&&x.price>0).map(x=>x.price));$('priceAdvice').textContent=topPrice!=null?'高互动中位约 ¥'+Math.round(topPrice):med!=null?'全页中位约 ¥'+Math.round(med):'暂无价格参考';$('priceNote').textContent=topPrice!=null?'优先围绕高“想要”商品的真实价格带判断，不按最低价跟。':'价格样本不足时不做强行建议。';
+ $('keywordChips').innerHTML=topWords.length?topWords.map(x=>`<span class="chip">${esc(x)}</span>`).join(''):'<span class="chip">暂无有效词</span>';
+}
+function render(){
+ let q=$('filter').value.trim().toLowerCase(),list=items.filter(x=>!q||String(x.title).toLowerCase().includes(q));
+ if($('sort').value==='want')list.sort((a,b)=>(b.favs??-1)-(a.favs??-1));else if($('sort').value==='rank')list.sort((a,b)=>(a.rank??999)-(b.rank??999));else list.sort((a,b)=>(a.price??Infinity)-(b.price??Infinity));
+ $('body').innerHTML=list.map(x=>`<tr><td><b>${x.rank??'—'}</b></td><td class="title">${esc(x.title)}</td><td>${x.price!=null?'¥'+esc(x.price):'—'}</td><td>${fmt(x.favs)}</td><td>${esc(x.specs||'—')}</td><td><a href="${esc(x.url)}" target="_blank" rel="noopener">打开商品</a></td></tr>`).join('');$('empty').style.display=list.length?'none':'block';analyzeDecision();
+}
+$('filter').oninput=render;$('sort').onchange=render;
+$('clear').onclick=()=>{if(confirm('确认清空抓取数据？')){items=[];localStorage.removeItem('floorV36Import');render();$('status').textContent='已清空。';}};
+$('export').onclick=()=>{if(!items.length)return;const c=v=>`"${String(v??'').replace(/"/g,'""')}"`;let rows=[['排名','商品标题','价格','想要','规格','商品网址'].map(c).join(',')];items.forEach(x=>rows.push([x.rank,x.title,x.price,x.favs,x.specs,x.url].map(c).join(',')));let b=new Blob(['\ufeff'+rows.join('\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='闲鱼木地板决策数据_V3.6.csv';a.click()};
+if(new URLSearchParams(location.search).get('imported')==='1'&&items.length){$('status').className='status ok';$('status').textContent=`抓取成功：已导入 ${items.length} 个真实商品。`;}render();
+</script>
+</body></html>
