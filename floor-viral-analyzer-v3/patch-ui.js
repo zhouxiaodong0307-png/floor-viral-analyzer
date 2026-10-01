@@ -3,7 +3,7 @@ import fs from "node:fs";
 const file = new URL("./public/index.html", import.meta.url);
 const v61File = new URL("./public/v61.js", import.meta.url);
 let html = fs.readFileSync(file, "utf8");
-const v61 = fs.readFileSync(v61File, "utf8");
+const v61 = fs.readFileSync(v61File, "utf8").replace("rawCount:rawSeen", "rawCount:out.size");
 
 html = html.replaceAll("V4.8", "V6.1").replaceAll("V4.9", "V6.1").replaceAll("V5.0", "V6.1").replaceAll("V5.1", "V6.1").replaceAll("V5.2", "V6.1").replaceAll("V6.0", "V6.1");
 html = html.replace(
