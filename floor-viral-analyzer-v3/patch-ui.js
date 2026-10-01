@@ -3,14 +3,23 @@ import fs from "node:fs";
 const file = new URL("./public/index.html", import.meta.url);
 let html = fs.readFileSync(file, "utf8");
 
-const oldHead = '<th>排名</th><th>价值</th><th>标题</th><th>来源</th><th>价格</th><th>想要</th><th>点赞</th><th>收藏</th><th>评论</th><th>时间</th><th>互动/小时</th><th>卖家类型</th>';
-const newHead = '<th>排名</th><th>价值</th><th>标题</th><th>价格</th><th>想要</th><th>点赞</th><th>收藏</th><th>评论</th><th>时间</th><th>互动/小时</th><th>卖家类型</th><th>来源</th>';
+html = html.replaceAll("V4.8", "V4.9");
+html = html.replace(
+  "先把数据抓够，再只用与你商品真正相关的样本决定下一篇怎么发",
+  "先找高价值样本共同点，再按共同点生成下一篇，而不是套固定模板"
+);
+html = html.replace(
+  "不会再把不相关的“柚木 / 锁扣 / 原木”等词硬塞进你的商品",
+  "先比较高价值样本与普通样本的差异，再决定标题、价格、规格和正文结构"
+);
+html = html.replace(
+  "V4.9：把“结构参考”和“流量参考”分开判断；生成只用关键词高度相关样本，低相关词不会写进商品；深度抓取会边滚动边累计，适配页面虚拟列表。",
+  "V4.9：生成逻辑改为高价值共同点驱动；先比较高价值组与普通组，再把真正有差异的标题/价格/规格/正文结构映射到下一篇。"
+);
 
-const oldRow = '<td class="title">${esc(x.title)}</td><td><a class="openlink" href="${esc(x.url)}" target="_blank" rel="noopener">打开</a></td><td>${x.price!=null?\'¥\'+esc(x.price):\'—\'}</td><td>${fmt(x.wants)}</td><td>${fmt(x.likes)}</td><td>${fmt(x.favs)}</td><td>${fmt(x.comments)}</td><td>${esc(x.ageText||\'—\')}</td><td>${x.velocity==null?\'—\':fmt(x.velocity)}</td><td>${esc(x.sellerType)}</td>';
-const newRow = '<td class="title">${esc(x.title)}</td><td>${x.price!=null?\'¥\'+esc(x.price):\'—\'}</td><td>${fmt(x.wants)}</td><td>${fmt(x.likes)}</td><td>${fmt(x.favs)}</td><td>${fmt(x.comments)}</td><td>${esc(x.ageText||\'—\')}</td><td>${x.velocity==null?\'—\':fmt(x.velocity)}</td><td>${esc(x.sellerType)}</td><td><a class="openlink" href="${esc(x.url)}" target="_blank" rel="noopener">打开</a></td>';
-
-if (html.includes(oldHead)) html = html.replace(oldHead, newHead);
-if (html.includes(oldRow)) html = html.replace(oldRow, newRow);
+if (!html.includes('/v49.js?v=49')) {
+  html = html.replace('</body>', '<script src="/v49.js?v=49"></script></body>');
+}
 
 fs.writeFileSync(file, html);
-console.log("UI column patch applied");
+console.log("V4.9 commonality generator patch applied");
