@@ -2,8 +2,10 @@ import fs from "node:fs";
 
 const file = new URL("./public/index.html", import.meta.url);
 const v63File = new URL("./public/v63.js", import.meta.url);
+const collectorFile = new URL("./public/v63collector.js", import.meta.url);
 let html = fs.readFileSync(file, "utf8");
 const v63 = fs.readFileSync(v63File, "utf8");
+const collector = fs.readFileSync(collectorFile, "utf8");
 
 html = html
   .replaceAll("V4.8", "V6.3")
@@ -25,15 +27,15 @@ html = html.replace(
 );
 
 html = html.replace(/<script\s+src=["']\/v49\.js[^>]*><\/script>/g, "");
-for (const id of ['v50-inline','v51-inline','v52-inline','v60-inline','v61-inline','v62-inline','v63-inline']) {
+for (const id of ['v50-inline','v51-inline','v52-inline','v60-inline','v61-inline','v62-inline','v63-inline','v63collector-inline']) {
   html = html.replace(new RegExp(`<script\\s+id=["']${id}["'][\\s\\S]*?<\\/script>`, 'g'), '');
 }
-html = html.replace("</body>", `<script id="v63-inline">\n${v63}\n<\/script></body>`);
+html = html.replace("</body>", `<script id="v63-inline">\n${v63}\n<\/script>\n<script id="v63collector-inline">\n${collector}\n<\/script></body>`);
 
 html = html.replace(
   /<div class="foot">[\s\S]*?<\/div><\/div>\s*<script>/,
-  '<div class="foot">V6.3：抓取目标仍为500条唯一商品，但不再把页面DOM节点当商品。分析只用清洗后的真实记录；发布区改为3个真正不同的测试方案，并且只有你勾选且数据支持的卖点才会写进可复制正文。</div></div>\n<script>'
+  '<div class="foot">V6.3：单页不足500条时会按精准词→同类词→行业词自动扩展抓取，所有商品按ID/链接去重并保留命中关键词；发布区改为3个不同测试模型，只有你勾选且数据支持的卖点才写进可复制正文。</div></div>\n<script>'
 );
 
 fs.writeFileSync(file, html);
-console.log("V6.3 standalone decision UI applied");
+console.log("V6.3 standalone decision UI + multi-query collector applied");
