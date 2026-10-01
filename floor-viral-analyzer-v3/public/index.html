@@ -4,52 +4,157 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111">
-<title>木地板爆款内容分析器 V3.2</title>
+<title>木地板爆款内容分析器 V3.4</title>
+
 <style>
-:root{--bg:#f5f5f2;--card:#fff;--text:#111;--muted:#777;--line:#e4e4de;--soft:#efefe9;--ok:#08783f;--warn:#a16600;--bad:#b42318}
+:root{
+  --bg:#f5f5f2;
+  --card:#fff;
+  --text:#111;
+  --muted:#777;
+  --line:#e4e4de;
+  --soft:#efefe9;
+  --ok:#08783f;
+  --warn:#a16600;
+  --bad:#b42318
+}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif
+}
 .wrap{max-width:1100px;margin:auto;padding:16px 14px 90px}
-.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}
-h1{font-size:23px;margin:0 0 4px}.sub{font-size:12px;color:var(--muted)}
-.badge{background:#111;color:#fff;border-radius:999px;padding:6px 10px;font-size:12px}
-.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+.top{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+  margin-bottom:14px
+}
+h1{font-size:23px;margin:0 0 4px}
+.sub{font-size:12px;color:var(--muted)}
+.badge{
+  background:#111;
+  color:#fff;
+  border-radius:999px;
+  padding:6px 10px;
+  font-size:12px
+}
+.card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:14px;
+  margin-bottom:12px
+}
 .label{font-size:13px;font-weight:800;margin:0 0 7px}
 textarea,input,select,button{font:inherit}
-textarea,input,select{width:100%;border:1px solid var(--line);border-radius:11px;background:#fff;padding:11px 12px;outline:none}
-textarea{min-height:110px;resize:vertical;line-height:1.55}
-.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-button{border:0;border-radius:11px;padding:11px 14px;font-weight:800;cursor:pointer}
+textarea,input,select{
+  width:100%;
+  border:1px solid var(--line);
+  border-radius:11px;
+  background:#fff;
+  padding:11px 12px;
+  outline:none
+}
+textarea{
+  min-height:110px;
+  resize:vertical;
+  line-height:1.55
+}
+.actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:10px
+}
+button{
+  border:0;
+  border-radius:11px;
+  padding:11px 14px;
+  font-weight:800;
+  cursor:pointer
+}
 button:disabled{opacity:.45;cursor:not-allowed}
 .primary{background:#111;color:#fff}
 .secondary{background:var(--soft);color:#111}
 .danger{background:#fff0ee;color:var(--bad)}
-.status{font-size:12px;color:var(--muted);line-height:1.6;white-space:pre-wrap;margin-top:10px}
-.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
-.login-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.login-state{font-size:13px;font-weight:800}
-.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#aaa;margin-right:6px}
-.dot.okdot{background:var(--ok)}
-.dot.baddot{background:var(--bad)}
-.qrbox{display:none;margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
-.qrbox.show{display:block}
-.qrbox img{display:block;width:100%;max-width:620px;margin:0 auto;border:1px solid var(--line);border-radius:12px}
-.qrnote{text-align:center;font-size:12px;color:var(--muted);margin-top:8px}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
-.stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px}
-.stat b{font-size:22px}.stat span{display:block;font-size:11px;color:var(--muted);margin-top:3px}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
-.toolbar input{flex:1;min-width:180px}.toolbar select{width:auto}
-.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}
-table{border-collapse:collapse;width:100%;min-width:980px;background:#fff}
-th,td{padding:10px 11px;border-bottom:1px solid var(--line);font-size:12px;text-align:left;vertical-align:top}
+.status{
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.6;
+  white-space:pre-wrap;
+  margin-top:10px
+}
+.ok{color:var(--ok)}
+.warn{color:var(--warn)}
+.bad{color:var(--bad)}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+  margin-bottom:12px
+}
+.stat{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:12px
+}
+.stat b{font-size:22px}
+.stat span{
+  display:block;
+  font-size:11px;
+  color:var(--muted);
+  margin-top:3px
+}
+.toolbar{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  margin-bottom:10px
+}
+.toolbar input{flex:1;min-width:0}
+.toolbar select{width:auto}
+.table-wrap{
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius:14px
+}
+table{
+  border-collapse:collapse;
+  width:100%;
+  min-width:760px;
+  background:#fff
+}
+th,td{
+  padding:10px 11px;
+  border-bottom:1px solid var(--line);
+  font-size:12px;
+  text-align:left;
+  vertical-align:top
+}
 th{background:#f8f8f5;position:sticky;top:0}
-td.title{font-weight:800;max-width:300px}
-.empty{text-align:center;color:var(--muted);padding:28px}
-.foot{font-size:11px;color:#777;line-height:1.6;margin-top:12px}
+td.title{font-weight:800;max-width:360px}
+.empty{
+  text-align:center;
+  color:var(--muted);
+  padding:28px
+}
+.foot{
+  font-size:11px;
+  color:#777;
+  line-height:1.6;
+  margin-top:12px
+}
+
 @media(max-width:680px){
-.stats{grid-template-columns:repeat(2,1fr)}
-.login-row{align-items:flex-start;flex-direction:column}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .toolbar{flex-wrap:wrap}
+  .toolbar input{width:100%;flex-basis:100%}
 }
 </style>
 </head>
@@ -58,339 +163,573 @@ td.title{font-weight:800;max-width:300px}
 <div class="wrap">
 
 <div class="top">
-<div>
-<h1>木地板爆款内容分析器</h1>
-<div class="sub">闲鱼商品搜索 · 标题 · 价格 · 想要数据</div>
-</div>
-<div class="badge">V3.2</div>
-</div>
-
-<div class="card">
-<div class="login-row">
-<div>
-<div class="label">闲鱼账号</div>
-<div id="loginState" class="login-state">
-<span id="loginDot" class="dot"></span>
-<span id="loginText">正在检测登录状态...</span>
-</div>
-</div>
-
-<div class="actions" style="margin-top:0">
-<button class="primary" id="loginBtn">闲鱼扫码登录</button>
-<button class="secondary" id="checkLogin">检测登录状态</button>
-</div>
-</div>
-
-<div id="qrBox" class="qrbox">
-<img id="qrImage" alt="闲鱼登录二维码">
-<div class="qrnote">请使用淘宝/闲鱼 App 按页面提示完成扫码登录，完成后点击「检测登录状态」。</div>
-</div>
+  <div>
+    <h1>木地板爆款内容分析器</h1>
+    <div class="sub">闲鱼商品搜索 · 标题 · 价格 · 想要数据</div>
+  </div>
+  <div class="badge">V3.4</div>
 </div>
 
 <div class="card">
-<div class="label">闲鱼搜索网址</div>
-<textarea id="urls" placeholder="例如：https://www.goofish.com/search?q=木地板"></textarea>
 
-<div class="actions">
-<button class="primary" id="run">开始分析</button>
-<button class="danger" id="clear">清空数据</button>
-</div>
+  <div class="label">闲鱼搜索网址</div>
 
-<div id="status" class="status">先检测闲鱼登录状态，再开始抓取商品。</div>
+  <textarea
+    id="urls"
+    placeholder="粘贴闲鱼搜索结果网址，例如：https://www.goofish.com/search?q=木地板"
+  ></textarea>
+
+  <div class="actions">
+    <button class="primary" id="run">开始分析</button>
+    <button class="danger" id="clear">清空数据</button>
+  </div>
+
+  <div id="status" class="status">
+    粘贴闲鱼搜索网址后直接开始分析。
+  </div>
+
 </div>
 
 <div class="stats">
-<div class="stat"><b id="sPages">0</b><span>已分析页面</span></div>
-<div class="stat"><b id="sItems">0</b><span>识别商品</span></div>
-<div class="stat"><b id="sWant">0</b><span>有想要数据</span></div>
-<div class="stat"><b id="sSites">0</b><span>来源网站</span></div>
+
+  <div class="stat">
+    <b id="sPages">0</b>
+    <span>已分析页面</span>
+  </div>
+
+  <div class="stat">
+    <b id="sItems">0</b>
+    <span>识别商品</span>
+  </div>
+
+  <div class="stat">
+    <b id="sWant">0</b>
+    <span>有想要数据</span>
+  </div>
+
+  <div class="stat">
+    <b id="sSites">0</b>
+    <span>来源网站</span>
+  </div>
+
 </div>
 
 <div class="card">
-<div class="toolbar">
-<input id="filter" placeholder="筛选商品标题">
-<select id="sort">
-<option value="want">想要人数优先</option>
-<option value="new">最新抓取</option>
-</select>
-<button class="secondary" id="export">导出 CSV</button>
-</div>
 
-<div class="table-wrap">
-<table>
-<thead>
-<tr>
-<th>#</th>
-<th>商品标题</th>
-<th>价格</th>
-<th>想要</th>
-<th>来源</th>
-</tr>
-</thead>
-<tbody id="body"></tbody>
-</table>
-<div class="empty" id="empty">还没有商品数据。</div>
-</div>
+  <div class="toolbar">
+
+    <input
+      id="filter"
+      placeholder="筛选商品标题"
+    >
+
+    <select id="sort">
+      <option value="want">想要人数优先</option>
+      <option value="new">最新抓取</option>
+    </select>
+
+    <button
+      class="secondary"
+      id="export"
+    >
+      导出 CSV
+    </button>
+
+  </div>
+
+  <div class="table-wrap">
+
+    <table>
+
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>商品标题</th>
+          <th>价格</th>
+          <th>想要</th>
+          <th>来源</th>
+        </tr>
+      </thead>
+
+      <tbody id="body"></tbody>
+
+    </table>
+
+    <div
+      class="empty"
+      id="empty"
+    >
+      还没有商品数据。
+    </div>
+
+  </div>
+
 </div>
 
 <div class="foot">
-V3.2：闲鱼使用独立登录会话。登录状态失效或触发安全验证时会直接提示重新登录，不再把页脚、隐私政策等内容识别成商品。
+V3.4：无需提前登录。系统直接尝试分析你粘贴的闲鱼搜索网址；只有闲鱼限制服务器访问时才会提示。
 </div>
 
 </div>
 
 <script>
-const $=id=>document.getElementById(id);
 
-let pages=JSON.parse(localStorage.getItem("floorV32Pages")||"[]");
-let items=JSON.parse(localStorage.getItem("floorV32Items")||"[]");
+const $ = id =>
+  document.getElementById(id);
+
+let pages = JSON.parse(
+  localStorage.getItem("floorV34Pages") || "[]"
+);
+
+let items = JSON.parse(
+  localStorage.getItem("floorV34Items") || "[]"
+);
 
 function save(){
-localStorage.setItem("floorV32Pages",JSON.stringify(pages));
-localStorage.setItem("floorV32Items",JSON.stringify(items));
+  localStorage.setItem(
+    "floorV34Pages",
+    JSON.stringify(pages)
+  );
+
+  localStorage.setItem(
+    "floorV34Items",
+    JSON.stringify(items)
+  );
 }
 
 function esc(s){
-return String(s??"").replace(/[&<>"']/g,m=>({
-"&":"&amp;",
-"<":"&lt;",
-">":"&gt;",
-'"':"&quot;",
-"'":"&#39;"
-}[m]));
+  return String(s ?? "")
+    .replace(
+      /[&<>"']/g,
+      m => ({
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        '"':"&quot;",
+        "'":"&#39;"
+      }[m])
+    );
 }
 
 function fmt(n){
-if(n==null)return "—";
-if(n>=10000)return (n/10000).toFixed(n>=100000?0:1)+"万";
-if(n>=1000)return (n/1000).toFixed(1)+"k";
-return String(Math.round(n));
+
+  if(n == null) return "—";
+
+  if(n >= 10000){
+    return (
+      n / 10000
+    ).toFixed(
+      n >= 100000 ? 0 : 1
+    ) + "万";
+  }
+
+  if(n >= 1000){
+    return (
+      n / 1000
+    ).toFixed(1) + "k";
+  }
+
+  return String(
+    Math.round(n)
+  );
 }
 
-function status(text,type=""){
-$("status").className="status "+type;
-$("status").textContent=text;
-}
+function status(
+  text,
+  type = ""
+){
+  $("status").className =
+    "status " + type;
 
-function setLogin(loggedIn){
-$("loginDot").className="dot "+(loggedIn?"okdot":"baddot");
-$("loginText").textContent=loggedIn?"已登录闲鱼":"未登录 / 登录状态失效";
-$("loginText").style.color=loggedIn?"var(--ok)":"var(--bad)";
+  $("status").textContent =
+    text;
 }
 
 function render(){
-$("sPages").textContent=pages.length;
-$("sItems").textContent=items.length;
-$("sWant").textContent=items.filter(x=>x.favs!=null).length;
-$("sSites").textContent=new Set(pages.map(x=>x.site).filter(Boolean)).size;
 
-const q=$("filter").value.trim().toLowerCase();
+  $("sPages").textContent =
+    pages.length;
 
-let list=items.filter(x=>
-!q||String(x.title||"").toLowerCase().includes(q)
-);
+  $("sItems").textContent =
+    items.length;
 
-if($("sort").value==="want"){
-list.sort((a,b)=>(b.favs??-1)-(a.favs??-1));
-}else{
-list.sort((a,b)=>new Date(b.addedAt)-new Date(a.addedAt));
+  $("sWant").textContent =
+    items.filter(
+      x => x.favs != null
+    ).length;
+
+  $("sSites").textContent =
+    new Set(
+      pages
+        .map(x => x.site)
+        .filter(Boolean)
+    ).size;
+
+  const q =
+    $("filter")
+      .value
+      .trim()
+      .toLowerCase();
+
+  let list =
+    items.filter(
+      x =>
+        !q ||
+        String(
+          x.title || ""
+        )
+        .toLowerCase()
+        .includes(q)
+    );
+
+  if(
+    $("sort").value === "want"
+  ){
+    list.sort(
+      (a,b) =>
+        (b.favs ?? -1) -
+        (a.favs ?? -1)
+    );
+  }else{
+    list.sort(
+      (a,b) =>
+        new Date(b.addedAt) -
+        new Date(a.addedAt)
+    );
+  }
+
+  $("body").innerHTML =
+    list.map(
+      (x,i) => `
+        <tr>
+          <td>${i + 1}</td>
+
+          <td class="title">
+            ${esc(x.title)}
+          </td>
+
+          <td>
+            ${
+              x.price != null
+                ? "¥" + esc(x.price)
+                : "—"
+            }
+          </td>
+
+          <td>
+            ${fmt(x.favs)}
+          </td>
+
+          <td>
+            <a
+              href="${esc(x.url)}"
+              target="_blank"
+              rel="noopener"
+            >
+              打开商品
+            </a>
+          </td>
+        </tr>
+      `
+    )
+    .join("");
+
+  $("empty").style.display =
+    list.length
+      ? "none"
+      : "block";
 }
-
-$("body").innerHTML=list.map((x,i)=>`
-<tr>
-<td>${i+1}</td>
-<td class="title">${esc(x.title)}</td>
-<td>${x.price!=null?"¥"+esc(x.price):"—"}</td>
-<td>${fmt(x.favs)}</td>
-<td><a href="${esc(x.url)}" target="_blank">打开商品</a></td>
-</tr>
-`).join("");
-
-$("empty").style.display=list.length?"none":"block";
-}
-
-async function checkLogin(showStatus=true){
-try{
-const r=await fetch("/api/goofish/login-status",{cache:"no-store"});
-const j=await r.json();
-
-setLogin(!!j.loggedIn);
-
-if(showStatus){
-status(
-j.loggedIn
-?"闲鱼登录成功，可以开始分析。"
-:"当前未登录闲鱼，请点击「闲鱼扫码登录」。",
-j.loggedIn?"ok":"warn"
-);
-}
-
-return !!j.loggedIn;
-
-}catch(e){
-setLogin(false);
-if(showStatus)status("登录状态检测失败："+e.message,"bad");
-return false;
-}
-}
-
-$("loginBtn").onclick=async()=>{
-$("loginBtn").disabled=true;
-status("正在打开闲鱼登录页面...");
-
-try{
-const r=await fetch("/api/goofish/login",{cache:"no-store"});
-const j=await r.json();
-
-if(!r.ok||!j.ok)throw new Error(j.error||"登录页打开失败");
-
-$("qrImage").src=j.screenshot;
-$("qrBox").classList.add("show");
-
-status("登录页面已生成。请扫码完成登录，然后点击「检测登录状态」。","warn");
-
-}catch(e){
-status("打开闲鱼登录失败："+e.message,"bad");
-}finally{
-$("loginBtn").disabled=false;
-}
-};
-
-$("checkLogin").onclick=()=>checkLogin(true);
 
 async function analyze(url){
-const r=await fetch("/api/analyze",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-url,
-maxItems:60
-})
-});
 
-const j=await r.json();
+  const response =
+    await fetch(
+      "/api/analyze",
+      {
+        method:"POST",
 
-if(!r.ok||!j.ok){
-throw new Error(j.error||"分析失败");
+        headers:{
+          "Content-Type":
+            "application/json"
+        },
+
+        body:JSON.stringify({
+          url,
+          maxItems:60
+        })
+      }
+    );
+
+  /*
+    不再直接 response.json()
+    避免服务器异常时出现
+    Unexpected end of JSON input
+  */
+
+  const raw =
+    await response.text();
+
+  if(!raw){
+    throw new Error(
+      "服务器连接中断，请稍后重新分析"
+    );
+  }
+
+  let data;
+
+  try{
+    data = JSON.parse(raw);
+  }catch{
+    throw new Error(
+      "服务器返回异常，请稍后重新分析"
+    );
+  }
+
+  if(
+    !response.ok ||
+    !data.ok
+  ){
+    throw new Error(
+      data.error ||
+      "分析失败"
+    );
+  }
+
+  pages =
+    pages.filter(
+      x => x.url !== data.url
+    );
+
+  pages.unshift({
+    url:data.url,
+    site:data.site,
+    title:data.title,
+    addedAt:
+      new Date().toISOString()
+  });
+
+  const source =
+    (data.items || [])
+      .map(
+        x => ({
+          ...x,
+          site:data.site,
+          sourcePage:data.url,
+          addedAt:
+            new Date().toISOString()
+        })
+      );
+
+  const sourceUrls =
+    new Set(
+      source.map(
+        x => x.url
+      )
+    );
+
+  items =
+    items.filter(
+      x =>
+        !sourceUrls.has(
+          x.url
+        )
+    );
+
+  items.unshift(
+    ...source
+  );
+
+  items =
+    items.slice(
+      0,
+      1000
+    );
+
+  save();
+  render();
+
+  return data;
 }
 
-pages=pages.filter(x=>x.url!==j.url);
+$("run").onclick =
+async () => {
 
-pages.unshift({
-url:j.url,
-site:j.site,
-title:j.title,
-addedAt:new Date().toISOString()
-});
+  const urls = [
+    ...new Set(
+      $("urls")
+        .value
+        .split("\n")
+        .map(
+          x => x.trim()
+        )
+        .filter(Boolean)
+    )
+  ];
 
-const source=(j.items||[]).map(x=>({
-...x,
-site:j.site,
-sourcePage:j.url,
-addedAt:new Date().toISOString()
-}));
+  if(!urls.length){
+    status(
+      "请先粘贴闲鱼搜索网址。",
+      "bad"
+    );
 
-const sourceUrls=new Set(source.map(x=>x.url));
+    return;
+  }
 
-items=items.filter(x=>!sourceUrls.has(x.url));
-items.unshift(...source);
-items=items.slice(0,1000);
+  $("run").disabled = true;
 
-save();
-render();
+  let total = 0;
+  let success = 0;
 
-return j;
-}
+  try{
 
-$("run").onclick=async()=>{
-const urls=[
-...new Set(
-$("urls").value
-.split("\n")
-.map(x=>x.trim())
-.filter(Boolean)
-)
-];
+    for(
+      let i = 0;
+      i < urls.length;
+      i++
+    ){
 
-if(!urls.length){
-status("请先输入闲鱼搜索网址。","bad");
-return;
-}
+      status(
+        `正在分析 ${i + 1}/${urls.length}\n${urls[i]}`
+      );
 
-$("run").disabled=true;
+      const result =
+        await analyze(
+          urls[i]
+        );
 
-try{
-const logged=await checkLogin(false);
+      total +=
+        (result.items || [])
+          .length;
 
-if(!logged){
-throw new Error("闲鱼尚未登录，请先扫码登录");
-}
+      success++;
+    }
 
-let total=0;
+    status(
+      `分析完成：识别 ${total} 个商品。`,
+      "ok"
+    );
 
-for(let i=0;i<urls.length;i++){
-status(`正在抓取 ${i+1}/${urls.length}\n${urls[i]}`);
+  }catch(e){
 
-const j=await analyze(urls[i]);
-total+=(j.items||[]).length;
-}
+    status(
+      e.message,
+      "bad"
+    );
 
-status(`分析完成：本次识别 ${total} 个商品。`,"ok");
+  }finally{
 
-}catch(e){
-status(e.message,"bad");
-}finally{
-$("run").disabled=false;
-}
+    $("run").disabled =
+      false;
+  }
 };
 
-$("clear").onclick=()=>{
-if(confirm("确认清空全部抓取数据？")){
-pages=[];
-items=[];
-save();
-render();
-status("已清空。");
-}
+$("clear").onclick =
+() => {
+
+  if(
+    confirm(
+      "确认清空全部分析数据？"
+    )
+  ){
+    pages = [];
+    items = [];
+
+    save();
+    render();
+
+    status(
+      "已清空。"
+    );
+  }
 };
 
-$("filter").oninput=render;
-$("sort").onchange=render;
+$("filter").oninput =
+  render;
 
-$("export").onclick=()=>{
-if(!items.length){
-status("没有数据可导出。","bad");
-return;
-}
+$("sort").onchange =
+  render;
 
-const csv=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+$("export").onclick =
+() => {
 
-const rows=[
-["商品标题","价格","想要人数","商品网址"].map(csv).join(",")
-];
+  if(!items.length){
 
-items.forEach(x=>{
-rows.push([
-x.title,
-x.price,
-x.favs,
-x.url
-].map(csv).join(","));
-});
+    status(
+      "没有数据可导出。",
+      "bad"
+    );
 
-const blob=new Blob(
-["\ufeff"+rows.join("\n")],
-{type:"text/csv;charset=utf-8"}
-);
+    return;
+  }
 
-const a=document.createElement("a");
-a.href=URL.createObjectURL(blob);
-a.download="闲鱼木地板商品分析_V3.2.csv";
-a.click();
+  const csv =
+    v =>
+      `"${String(
+        v ?? ""
+      ).replace(
+        /"/g,
+        '""'
+      )}"`;
+
+  const rows = [
+    [
+      "商品标题",
+      "价格",
+      "想要人数",
+      "商品网址"
+    ]
+    .map(csv)
+    .join(",")
+  ];
+
+  items.forEach(
+    x => {
+
+      rows.push(
+        [
+          x.title,
+          x.price,
+          x.favs,
+          x.url
+        ]
+        .map(csv)
+        .join(",")
+      );
+
+    }
+  );
+
+  const blob =
+    new Blob(
+      [
+        "\ufeff" +
+        rows.join("\n")
+      ],
+      {
+        type:
+          "text/csv;charset=utf-8"
+      }
+    );
+
+  const a =
+    document.createElement(
+      "a"
+    );
+
+  a.href =
+    URL.createObjectURL(
+      blob
+    );
+
+  a.download =
+    "闲鱼木地板商品分析_V3.4.csv";
+
+  a.click();
 };
 
 render();
-checkLogin(false);
+
 </script>
+
 </body>
 </html>
