@@ -3,7 +3,16 @@ import fs from "node:fs";
 const file = new URL("./public/index.html", import.meta.url);
 const v61File = new URL("./public/v61.js", import.meta.url);
 let html = fs.readFileSync(file, "utf8");
-const v61 = fs.readFileSync(v61File, "utf8").replace("rawCount:rawSeen", "rawCount:out.size");
+let v61 = fs.readFileSync(v61File, "utf8").replace("rawCount:rawSeen", "rawCount:out.size");
+v61 = v61.replace(
+  "const c=classify(raw),ev=evidencePool(c),sp=splitPerf(ev.arr),sigs=",
+  "const c=classify(raw),ev=evidencePool(c),recentMain=ev.arr.filter(x=>(recordAgeH(x)??99999)<=30*24),analysisArr=recentMain.length>=30?recentMain:ev.arr,sp=splitPerf(analysisArr),sigs="
+);
+v61 = v61.replace("time:timeLabel(ev.arr)", "time:timeLabel(analysisArr)");
+v61 = v61.replace(
+  "lastAnalysis=analyze(raw);const a=lastAnalysis,best=",
+  "lastAnalysis=analyze(raw);const a=lastAnalysis;const am=new Set(a.A.map(x=>x.key)),bm=new Set(a.B.map(x=>x.key)),cm=new Set(a.C.map(x=>x.key));store.records.forEach(r=>{if(am.has(r.key))r.sampleTier='A';else if(bm.has(r.key))r.sampleTier='B';else if(cm.has(r.key))r.sampleTier='C'});saveStore();const best="
+);
 
 html = html.replaceAll("V4.8", "V6.1").replaceAll("V4.9", "V6.1").replaceAll("V5.0", "V6.1").replaceAll("V5.1", "V6.1").replaceAll("V5.2", "V6.1").replaceAll("V6.0", "V6.1");
 html = html.replace(
