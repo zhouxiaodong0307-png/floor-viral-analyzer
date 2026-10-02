@@ -3,7 +3,7 @@ if(window.__FLOOR_V721_COLLECTING__)return;
 window.__FLOOR_V721_COLLECTING__=true;
 
 const TARGET=500, MAX_TOTAL_MS=8*60*1000, SATURATED_ROUNDS=2, MIN_ROUND_GAIN=3, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
-const COLLECTOR_VERSION='8.2.4';
+const COLLECTOR_VERSION='8.2.5';
 window.__FLOOR_MANUAL_STOP__=false;
 let fatalReason='',stopReason='';
 const safeQuery=(root,sel)=>{try{return root&&root.querySelector?root.querySelector(sel):null}catch{return null}};
@@ -78,7 +78,7 @@ function putItem(key,obj){
   out.set(key,{...old,...obj,keywordHits:hits,sampleTier:finalTier,
     wants:obj.wants??old.wants??null,views:obj.views??old.views??null,likes:obj.likes??old.likes??null,
     favs:obj.favs??old.favs??null,comments:obj.comments??old.comments??null,shares:obj.shares??old.shares??null,
-    price:obj.price??old.price??null,ageText:obj.ageText||old.ageText||'',seller:obj.seller||old.seller||''
+    price:obj.price??old.price??null,ageText:obj.ageText||old.ageText||'',seller:obj.seller||old.seller||'',coverRatio:obj.coverRatio??old.coverRatio??null,coverRatioType:obj.coverRatioType||old.coverRatioType||'',coverHasTextOverlay:obj.coverHasTextOverlay??old.coverHasTextOverlay??null,coverVisualType:obj.coverVisualType||old.coverVisualType||'',coverVisualConfidence:obj.coverVisualConfidence||old.coverVisualConfidence||'',coverOverlayText:obj.coverOverlayText||old.coverOverlayText||'',carouselCount:obj.carouselCount??old.carouselCount??null,visibleImageCount:obj.visibleImageCount??old.visibleImageCount??null,mediaType:obj.mediaType||old.mediaType||''
   });
 }
 function xhsCard(doc,a){
@@ -88,6 +88,48 @@ function xhsCard(doc,a){
     if(r.width>=120&&r.width<=760&&r.height>=70&&r.height<=1100&&t.length>=6&&t.length<=1100&&e.querySelector('img'))return e;
   }
   return null
+}
+
+function coverMeta(card,img){
+  try{
+    if(!img)return{coverRatio:null,coverRatioType:'',coverHasTextOverlay:null,coverVisualType:'',coverVisualConfidence:'',carouselCount:null,mediaType:'图片'};
+    const ir=img.getBoundingClientRect(),nw=img.naturalWidth||0,nh=img.naturalHeight||0,w=nw||ir.width||0,h=nh||ir.height||0,ratio=h?Math.round((w/h)*100)/100:null;
+    const ratioType=ratio===null?'':ratio<.84?'竖版':ratio>1.18?'横版':'方形/近方形';
+    const visible=[...card.querySelectorAll('img')].filter(x=>{try{const r=x.getBoundingClientRect();return r.width>40&&r.height>40}catch{return false}});
+    const allAttrs=[...card.querySelectorAll('[aria-label],[title]')].map(el=>C(el.getAttribute('aria-label')||el.getAttribute('title'))).filter(Boolean).join(' ');
+    const imgCue=C((img.alt||'')+' '+(img.title||'')+' '+(img.getAttribute('aria-label')||''));
+    let overlay=[];
+    for(const el of card.querySelectorAll('span,p,b,strong,div')){
+      if(el===card||el.querySelector('img'))continue;
+      const tx=C(el.innerText);if(!tx||tx.length>60)continue;
+      try{
+        const r=el.getBoundingClientRect();
+        const ix=Math.max(0,Math.min(r.right,ir.right)-Math.max(r.left,ir.left)),iy=Math.max(0,Math.min(r.bottom,ir.bottom)-Math.max(r.top,ir.top));
+        if(ix*iy>0&&r.width>4&&r.height>4)overlay.push(tx);
+      }catch{}
+      if(overlay.length>=8)break
+    }
+    overlay=[...new Set(overlay)];
+    const overlayText=C(overlay.join(' ')),coverHasTextOverlay=overlayText.replace(/\s+/g,'').length>=4;
+    const cardText=C(card.innerText);
+    const strongCue=C(imgCue+' '+overlayText),weakCue=C(strongCue+' '+cardText.slice(0,220));
+    const rules=[
+      ['实景/空间',/客厅|卧室|餐厅|家装|实景|空间|入住|新家|房间|效果图|完工/],
+      ['工厂/生产',/工厂|车间|生产|仓库|流水线|库存|下线/],
+      ['施工/铺装',/施工|安装|铺设|铺装|龙骨|鱼骨|人字|工字|收口/],
+      ['板材/木纹近景',/板材|样板|色板|木纹|纹理|近景|细节|板面/],
+      ['对比/拼图',/对比|前后|vs|VS|区别|差别|拼图|两种|左右/],
+      ['信息/清单',/清单|攻略|避坑|建议|问题|细节|误区|图解|参数|规格|尺寸|价格/]
+    ];
+    let visualType='',confidence='';
+    for(const [name,re] of rules){if(re.test(strongCue)){visualType=name;confidence='中';break}}
+    if(!visualType)for(const [name,re] of rules){if(re.test(weakCue)){visualType=name;confidence='低';break}}
+    const cm=(allAttrs+' '+cardText).match(/(?:^|\D)(\d{1,2})\s*\/\s*(\d{1,2})(?:\D|$)/)|| (allAttrs+' '+cardText).match(/(\d{1,2})\s*(?:张|图)/);
+    let carouselCount=null;if(cm){carouselCount=cm[2]?+cm[2]:+cm[1];if(!(carouselCount>=2&&carouselCount<=20))carouselCount=null}
+    if(!carouselCount&&visible.length>1)carouselCount=visible.length;
+    const mediaType=card.querySelector('video,[class*="video"],[class*="play"]')||/视频|播放/.test(allAttrs)?'视频':'图片';
+    return{coverRatio:ratio,coverRatioType:ratioType,coverHasTextOverlay,coverVisualType:visualType,coverVisualConfidence:confidence,coverOverlayText:overlayText.slice(0,160),carouselCount,visibleImageCount:visible.length||1,mediaType}
+  }catch{return{coverRatio:null,coverRatioType:'',coverHasTextOverlay:null,coverVisualType:'',coverVisualConfidence:'',carouselCount:null,mediaType:'图片'}}
 }
 function scanXhs(win,q,tier){
   const before=out.size,doc=win.document;
@@ -100,6 +142,7 @@ function scanXhs(win,q,tier){
     const explicitTitle=C(safeQuery(card,'[class*="title"],[class*="note-title"]')?.innerText||'');
     const title=explicitTitle||titleOf(lines,q);if(!title)continue;
     const img=card.querySelector('img'),imgSrc=img?.currentSrc||img?.src||'';
+    const visual=coverMeta(card,img);
     const lm=t.match(/(?:点赞|赞)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:点赞|赞)/i);
     const numericLines=lines.filter(x=>/^\d+(?:\.\d+)?\s*(?:万|w|W|k|K|千)?$/i.test(x));
     const fallbackLike=!lm&&numericLines.length?N(numericLines[numericLines.length-1]):null;
@@ -116,7 +159,7 @@ function scanXhs(win,q,tier){
     let imageKey='';try{const z=new URL(imgSrc);imageKey=z.pathname.split('/').slice(-2).join('/').slice(0,120)}catch{}
     const key=pid||cleanTitle+'|'+seller.replace(/\s+/g,'').slice(0,60)+'|'+imageKey;
     rawKeys.add(key);
-    putItem(key,{rank:out.size+1,productId:pid,title,text:t,url:link,image:imgSrc,imageCount:card.querySelectorAll('img').length||null,
+    putItem(key,{rank:out.size+1,productId:pid,title,text:t,url:link,image:imgSrc,imageCount:visual.carouselCount||visual.visibleImageCount||null,...visual,
       price:null,wants:null,views:vm?N(vm[1]):null,likes:lm?N(lm[1]):fallbackLike,favs:fm?N(fm[1]):null,comments:cm?N(cm[1]):null,shares:sm?N(sm[1]):null,
       ageText:tm?tm[1]:'',seller,contentType:'笔记',sourceKeyword:q,sampleTier:tier});
     if(out.size>=TARGET)break;
