@@ -2,8 +2,8 @@
 if(window.__FLOOR_V721_COLLECTING__)return;
 window.__FLOOR_V721_COLLECTING__=true;
 
-const TARGET=500, MAX_TOTAL_MS=8*60*1000, SATURATED_ROUNDS=2, MIN_ROUND_GAIN=3, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
-const COLLECTOR_VERSION='8.2.5';
+const TARGET=500, DEPTH_TARGET=120, DEPTH_MAX_MS=4*60*1000, MAX_TOTAL_MS=8*60*1000, SATURATED_ROUNDS=2, MIN_ROUND_GAIN=3, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
+const COLLECTOR_VERSION='8.2.6';
 window.__FLOOR_MANUAL_STOP__=false;
 let fatalReason='',stopReason='';
 const safeQuery=(root,sel)=>{try{return root&&root.querySelector?root.querySelector(sel):null}catch{return null}};
@@ -234,6 +234,109 @@ async function collectQuery(win,step,index){
   queryStats.push({query:step.q,tier:step.tier,added:out.size-started,total:out.size});
 }
 
+
+function depthScore(x){
+  const likes=N(x.likes)||0,favs=N(x.favs)||0,comments=N(x.comments)||0,shares=N(x.shares)||0,rank=N(x.rank)||999;
+  return likes+favs*2+comments*3+shares*4+Math.max(0,600-rank)*.03;
+}
+function sampleBand(arr,count){
+  if(!arr.length||count<=0)return[];
+  const out=[],step=arr.length/count;
+  for(let i=0;i<count;i++){const x=arr[Math.min(arr.length-1,Math.floor((i+.5)*step))];if(x&&!out.includes(x))out.push(x)}
+  return out
+}
+function selectDepthSample(limit){
+  const entries=[...out.entries()].filter(([,x])=>/^https?:\/\/[^/]*xiaohongshu\.com\/(?:explore|discovery\/item|search_result)\//i.test(String(x.url||'')));
+  entries.sort((a,b)=>depthScore(b[1])-depthScore(a[1]));
+  if(entries.length<=limit)return entries;
+  const n=entries.length,parts=[
+    entries.slice(0,Math.ceil(n*.20)),
+    entries.slice(Math.ceil(n*.20),Math.ceil(n*.50)),
+    entries.slice(Math.ceil(n*.50),Math.ceil(n*.80)),
+    entries.slice(Math.ceil(n*.80))
+  ],quota=[36,30,30,24],picked=[],seen=new Set();
+  for(let b=0;b<parts.length;b++)for(const e of sampleBand(parts[b],quota[b])){if(!seen.has(e[0])){seen.add(e[0]);picked.push(e)}}
+  for(const e of entries){if(picked.length>=limit)break;if(!seen.has(e[0])){seen.add(e[0]);picked.push(e)}}
+  return picked.slice(0,limit)
+}
+function detailMetric(doc,body,keys){
+  const keyRe=new RegExp(keys,'i'),nodes=[...doc.querySelectorAll('button,[role="button"],span,div')];
+  for(const el of nodes){
+    let cue='';
+    try{cue=C((el.getAttribute('aria-label')||'')+' '+(el.getAttribute('title')||'')+' '+(el.id||'')+' '+(typeof el.className==='string'?el.className:'')+' '+C(el.innerText).slice(0,60))}catch{}
+    if(!keyRe.test(cue))continue;
+    const texts=[C(el.innerText),C(el.parentElement?.innerText),C(el.nextElementSibling?.innerText)].filter(Boolean);
+    for(const tx of texts){
+      const m=tx.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)/i);
+      if(m){const v=N(m[1]);if(v!==null)return v}
+    }
+  }
+  const re1=new RegExp('(?:'+keys+')\\s*[:：]?\\s*([\\d,.]+\\s*(?:万|w|W|k|K|千)?)','i');
+  const re2=new RegExp('([\\d,.]+\\s*(?:万|w|W|k|K|千)?)\\s*(?:'+keys+')','i');
+  const m=body.match(re1)||body.match(re2);return m?N(m[1]):null
+}
+function detailText(doc,item){
+  const metas=[
+    doc.querySelector('meta[name="description"]')?.content,
+    doc.querySelector('meta[property="og:description"]')?.content,
+    doc.querySelector('meta[name="twitter:description"]')?.content
+  ].map(C).filter(Boolean);
+  const selectors='[class*="note-content"],[class*="desc"],[class*="description"],[class*="content-text"],[class*="note-text"]';
+  const blocks=[...doc.querySelectorAll(selectors)].map(x=>C(x.innerText)).filter(x=>x.length>=20&&x.length<=8000).sort((a,b)=>b.length-a.length);
+  const candidate=blocks[0]||metas.sort((a,b)=>b.length-a.length)[0]||'';
+  if(candidate&&candidate.length>=20)return candidate;
+  return item.text||''
+}
+function extractXhsDetail(win,item){
+  try{
+    const doc=win.document,body=C(doc.body?.innerText||''),title=C(doc.querySelector('meta[property="og:title"]')?.content||safeQuery(doc,'[class*="title"],[class*="note-title"]')?.innerText||item.title||'').replace(/\s*[-|｜]\s*小红书.*$/,'');
+    const likes=detailMetric(doc,body,'点赞|赞'),favs=detailMetric(doc,body,'收藏'),comments=detailMetric(doc,body,'评论'),shares=detailMetric(doc,body,'转发|分享'),views=detailMetric(doc,body,'浏览|阅读|小眼睛');
+    const timeMatch=body.match(/(刚刚|今天|昨天|\d+\s*(?:分钟|小时|天|周|个月|年)前|\d{4}[.\-/年]\d{1,2}(?:[.\-/月]\d{1,2})?)/);
+    const imgs=[...doc.querySelectorAll('img')].filter(im=>{try{const r=im.getBoundingClientRect(),w=im.naturalWidth||r.width,h=im.naturalHeight||r.height;return w>=220&&h>=220&&r.width>120&&r.height>120}catch{return false}});
+    const uniqueImgs=[];const seen=new Set();for(const im of imgs){const s=im.currentSrc||im.src||'';if(s&&!seen.has(s)){seen.add(s);uniqueImgs.push(im)}}
+    const mainImg=uniqueImgs[0]||doc.querySelector('img'),visual=coverMeta(doc.body||doc.documentElement,mainImg);
+    const noteText=detailText(doc,item),mediaType=doc.querySelector('video,[class*="video"],[class*="player"]')?'视频':(visual.mediaType||item.mediaType||'图片');
+    const useful=[likes,favs,comments,shares,views].filter(v=>v!==null).length+(noteText&&noteText!==item.text?1:0)+(uniqueImgs.length?1:0);
+    return{title:title||item.title,text:noteText,likes:likes??item.likes??null,favs:favs??item.favs??null,comments:comments??item.comments??null,shares:shares??item.shares??null,views:views??item.views??null,
+      ageText:timeMatch?timeMatch[1]:(item.ageText||''),imageCount:uniqueImgs.length||item.imageCount||null,carouselCount:uniqueImgs.length||item.carouselCount||null,mediaType,
+      coverRatio:visual.coverRatio??item.coverRatio??null,coverRatioType:visual.coverRatioType||item.coverRatioType||'',coverHasTextOverlay:visual.coverHasTextOverlay??item.coverHasTextOverlay??null,
+      coverVisualType:visual.coverVisualType||item.coverVisualType||'',coverVisualConfidence:visual.coverVisualConfidence||item.coverVisualConfidence||'',
+      coverOverlayText:visual.coverOverlayText||item.coverOverlayText||'',deepFetched:true,deepUsefulFields:useful}
+  }catch{return null}
+}
+async function waitDetail(win){
+  for(let i=0;i<28;i++){
+    try{
+      if(win.document?.body&&win.document.body.innerText.length>180&&win.document.readyState!=='loading')return true
+    }catch{}
+    await new Promise(r=>setTimeout(r,250))
+  }
+  return false
+}
+async function enrichDepth(win){
+  const sample=selectDepthSample(DEPTH_TARGET),start=Date.now();
+  let attempted=0,enriched=0,failed=0,failStreak=0;
+  for(let i=0;i<sample.length&&!window.__FLOOR_MANUAL_STOP__;i++){
+    if(Date.now()-start>=DEPTH_MAX_MS)break;
+    if(!win||win.closed)break;
+    const [key,item]=sample[i];attempted++;
+    status(window,'500条广度采集完成｜正在补全详情 '+(i+1)+'/'+sample.length+'｜已成功 '+enriched);
+    let loaded=false;
+    try{win.location.href=item.url;loaded=await waitDetail(win)}catch{}
+    if(!loaded){failed++;failStreak++;if(failStreak>=12)break;continue}
+    await new Promise(r=>setTimeout(r,260));
+    const d=extractXhsDetail(win,item);
+    if(d&&d.deepUsefulFields>=2){
+      out.set(key,{...item,...d,keywordHits:item.keywordHits||[],sampleTier:item.sampleTier});
+      enriched++;failStreak=0;
+    }else{failed++;failStreak++}
+    await new Promise(r=>setTimeout(r,180));
+    if(failStreak>=12)break
+  }
+  const fields=['views','likes','favs','comments','shares','ageText','imageCount','coverRatioType','coverVisualType'];
+  const fieldCounts={};for(const k of fields)fieldCounts[k]=[...out.values()].filter(x=>x[k]!==null&&x[k]!==undefined&&x[k]!=='').length;
+  return{target:DEPTH_TARGET,selected:sample.length,attempted,enriched,failed,durationSeconds:Math.round((Date.now()-start)/1000),fieldCounts}
+}
 let worker=null;
 try{worker=window.open('about:blank','floorCollectorV812','width=980,height=760,left=28,top=28')}catch{}
 if(!worker||worker.closed){
@@ -285,6 +388,10 @@ while(out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__){
   status(window,'第'+round+'轮完成｜'+out.size+'/500｜本轮新增 '+roundGain+'；继续尝试');
   await new Promise(r=>setTimeout(r,noGrowthRounds?2200:900));
 }
+let depthMeta={target:DEPTH_TARGET,selected:0,attempted:0,enriched:0,failed:0,durationSeconds:0,fieldCounts:{}};
+if(IS_XHS&&!window.__FLOOR_MANUAL_STOP__&&!fatalReason&&out.size>=60&&worker&&!worker.closed){
+  try{depthMeta=await enrichDepth(worker)}catch{}
+}
 if(worker&&!worker.closed)try{worker.close()}catch{}
 window.__FLOOR_V721_COLLECTING__=false;
 if(fatalReason&&out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__){
@@ -301,13 +408,13 @@ if(!out.size){
 const tierCounts={A:0,B:0,C:0};
 for(const x of out.values())tierCounts[x.sampleTier]=(tierCounts[x.sampleTier]||0)+1;
 const stopLabel=out.size>=TARGET?'已达到500条':window.__FLOOR_MANUAL_STOP__?'手动停止':stopReason==='saturated'?'平台样本已饱和':stopReason==='safety-time-limit'?'达到8分钟安全时限':'结束';
-status(window,stopLabel+'｜当前 '+out.size+'/500｜A '+tierCounts.A+' · B '+tierCounts.B+' · C '+tierCounts.C+'，正在导入实际结果…');
+status(window,stopLabel+'｜广度 '+out.size+'/500｜详情补全 '+(depthMeta.enriched||0)+'/'+(depthMeta.target||DEPTH_TARGET)+'，正在导入实际结果…');
 
 const payload={
   source:location.href,keyword:Q,
   meta:{
     target:TARGET,rawCount:rawKeys.size,validCount:out.size,duplicateCount:Math.max(0,rawKeys.size-out.size),
-    tierCounts,queryStats,expanded:true,durationSeconds:Math.round((Date.now()-START)/1000),
+    tierCounts,queryStats,depth:depthMeta,expanded:true,durationSeconds:Math.round((Date.now()-START)/1000),
     stoppedBy:out.size>=TARGET?'target':(window.__FLOOR_MANUAL_STOP__?'manual':(stopReason||'unknown')),rounds:round
   },
   items:[...out.values()]
