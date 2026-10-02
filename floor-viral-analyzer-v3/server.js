@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: "3mb" }));
 app.use(express.urlencoded({ extended: false, limit: "3mb" }));
-app.use(express.static("public", { etag: false, maxAge: 0 }));
+app.use(express.static("public", { etag: false, maxAge: 0, setHeaders(res){ res.setHeader("Cache-Control","no-store, no-cache, must-revalidate"); res.setHeader("Access-Control-Allow-Origin","*"); } }));
 
 let browserPromise = null;
 
@@ -57,7 +57,7 @@ async function getBrowser() {
 }
 
 function normalizeItems(rows, source, site) {
-  return rows.slice(0, 100).map((x, i) => ({
+  return rows.slice(0, 600).map((x, i) => ({
     rank: Number(x.rank) || i + 1,
     title: clean(x.title, 260),
     text: clean(x.text, 1400),
@@ -68,9 +68,12 @@ function normalizeItems(rows, source, site) {
     likes: Number.isFinite(Number(x.likes)) ? Number(x.likes) : null,
     favs: Number.isFinite(Number(x.favs)) ? Number(x.favs) : null,
     comments: Number.isFinite(Number(x.comments)) ? Number(x.comments) : null,
+    views: Number.isFinite(Number(x.views)) ? Number(x.views) : null,
     shares: Number.isFinite(Number(x.shares)) ? Number(x.shares) : null,
     specs: clean(x.specs, 140),
     ageText: clean(x.ageText, 80),
+    imageCount: Number.isFinite(Number(x.imageCount)) ? Number(x.imageCount) : null,
+    searchKeyword: clean(x.searchKeyword, 120),
     site
   })).filter(x => x.title);
 }
@@ -139,7 +142,7 @@ async function analyzeUrl(url) {
 }
 
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, version: "4.1.0", mode: "safe-local-browser-bridge" });
+  res.json({ ok: true, version: "7.0.0", mode: "decision-system-permanent-collector" });
 });
 
 app.get("/browser-bridge.zip", (req, res) => {
@@ -172,11 +175,11 @@ app.post("/import", (req, res) => {
     const rows = Array.isArray(payload.items) ? payload.items : [];
     const items = normalizeItems(rows, source, site);
     if (!items.length) throw new Error("没有收到有效内容数据");
-    const safe = JSON.stringify({ source, site, capturedAt: new Date().toISOString(), items }).replace(/</g, "\\u003c");
-    res.type("html").send(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>正在导入</title></head><body><script>localStorage.setItem('floorV41Import',JSON.stringify(${safe}));location.replace('/?imported=1&v=41');<\/script></body></html>`);
+    const safe = JSON.stringify({ source, site, keyword: clean(payload.keyword,120), meta: payload.meta || {}, capturedAt: new Date().toISOString(), items }).replace(/</g, "\\u003c");
+    res.type("html").send(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>正在导入</title></head><body><script>localStorage.setItem('floorV7Import',JSON.stringify(${safe}));location.replace('/?imported=1&v=70&t='+Date.now());<\/script></body></html>`);
   } catch (err) {
     res.status(400).type("html").send(`<!doctype html><meta charset="utf-8"><body style="font-family:-apple-system;padding:30px"><h2>导入失败</h2><p>${clean(err?.message || "未知错误", 300)}</p></body>`);
   }
 });
 
-app.listen(PORT, "0.0.0.0", () => console.log(`V4.1 running on :${PORT}`));
+app.listen(PORT, "0.0.0.0", () => console.log(`V7.0 running on :${PORT}`));
