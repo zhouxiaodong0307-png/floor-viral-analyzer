@@ -160,7 +160,7 @@ const PLATFORM={
         commentRate:views>0&&comments!==null?comments/views:null,
         shareRate:views>0&&shares!==null?shares/views:null,
         totalRate:views>0&&any?total/views:null,
-        speed:days!==null?(views!==null?views: (any?total:null))/Math.max(.25,days)
+        speed:days!==null?(views!==null?views:(any?total:null))/Math.max(.25,days):null
       };
     },
     weights:{views:.18,likeRate:.16,favRate:.27,commentRate:.17,shareRate:.22,totalRate:.18,speed:.18},
