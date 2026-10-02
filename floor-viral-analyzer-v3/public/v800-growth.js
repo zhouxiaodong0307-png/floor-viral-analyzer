@@ -171,16 +171,7 @@ const PLATFORM={
     group(x){return {type:xhsContentType(x),cond:'',mat:materialOf(x),d:ageDays(x),p:null}}
   }
 };
-PLATFORM.default={
-  label:'当前平台',
-  featureDefs:PLATFORM['小红书'].featureDefs,
-  dims(x){const views=pos(x.views),eng=interactions(x,'default'),days=ageDays(x);return{views,eng,days,engRate:views>0&&eng!==null?eng/views:null,speed:days!==null&&eng!==null?eng/Math.max(.25,days):null}},
-  weights:{views:.25,engRate:.45,speed:.30},
-  kinds:{views:'流量型',engRate:'互动型',speed:'异常爆发型'},
-  dimLabels:{views:'浏览',engRate:'互动率',speed:'增长速度'},
-  coreCoverage:d=>[d.views,d.eng,d.days],
-  group(x){return{type:'同平台内容',cond:'',mat:materialOf(x),d:ageDays(x),p:n(x.price)}}
-};
+PLATFORM.default={unsupported:true,label:'未建模平台'};
 
 function platformModel(){return PLATFORM[siteName()]||PLATFORM.default}
 function buildComparable(items,model){
@@ -291,6 +282,7 @@ function batchItems(){
 }
 function analyze(){
   const platform=siteName(),model=platformModel(),batch=batchItems();
+  if(model.unsupported)return{platform,model,batch,unsupported:true,empty:false};
   if(!batch.length)return{platform,model,batch:[],empty:true};
   const comparable0=buildComparable(batch,model),deb=debias(comparable0.usable,platform),rescored=scoreRows(deb.items,model),rows=outlierRows(rescored);
   const anomalies=rows.filter(x=>x.__outlier),normalPool=rows.filter(x=>!x.__outlier).sort((a,b)=>b.__score-a.__score);
@@ -386,6 +378,15 @@ function metricsFor(r){
 }
 function renderDecision(r){
   ensureUI();
+  if(r.unsupported){
+    $id('v8Conclusion').textContent='当前平台尚未建立独立高价值模型';
+    $id('v8Why').textContent='系统不会套用闲鱼或小红书算法。需要先定义这个平台的曝光→点击→互动→转化/传播链路，之后才允许输出高价值判断。';
+    $id('v8Action').textContent='先建立该平台指标模型';
+    $id('v8ActionSub').textContent='未建模前只保留抓取数据，不生成“爆款规律”。';
+    $id('v8Metrics').innerHTML='<div class="v8-metric"><b>'+esc(r.platform)+'</b><span>当前平台</span></div><div class="v8-metric"><b>'+r.batch.length+'</b><span>已抓数据</span></div>';
+    $id('v8Reasons').innerHTML='<div class="v8-reason"><strong>不套通用算法</strong><span>这是为了避免跨平台指标错用。</span></div>';
+    $id('v8Evidence').innerHTML='';$id('v8HighList').innerHTML='';if($id('v8AnomalyList'))$id('v8AnomalyList').innerHTML='';return;
+  }
   if(r.empty){
     $id('v8Conclusion').textContent='先抓取一轮真实数据';
     $id('v8Why').textContent='系统会按当前平台自己的行为链识别高价值内容，而不是套统一爆款分数。';
@@ -421,10 +422,16 @@ function parseProduct(raw){
 }
 function personalSignal(platform,label){
   let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}
-  const rows=a.filter(x=>x.platform===platform&&x.strategy===label&&x.metrics);
+  const measured=a.filter(x=>x.platform===platform&&x.metrics&&n(x.performance)!==null);
+  const rows=measured.filter(x=>x.strategy===label);
   if(rows.length<3)return null;
-  const vals=rows.map(x=>n(x.performance)).filter(v=>v!==null);
-  return vals.length?med(vals):null;
+  const groups=new Map();
+  for(const x of measured){if(!groups.has(x.strategy))groups.set(x.strategy,[]);groups.get(x.strategy).push(n(x.performance))}
+  const medians=[...groups.entries()].map(([k,v])=>({k,m:med(v.filter(z=>z!==null))})).filter(x=>x.m!==null);
+  const mine=medians.find(x=>x.k===label);if(!mine)return null;
+  const rank=percentile(mine.m,medians.map(x=>x.m));
+  const weight=Math.min(1,rows.length/10);
+  return rank*weight;
 }
 function chooseSignal(r,seed){
   const pool=r.reusable.concat(r.testable);
@@ -464,7 +471,7 @@ function installGenerator(){
   window.v8Seed=0;
   function run(){
     const raw=$id('genKeyword').value.trim();if(!raw)return setStatus('请先输入你准备发布的商品信息。','bad');
-    const r=window.__v8Analysis||analyze();if(r.empty)return setStatus('先完成抓取。','warn');
+    const r=window.__v8Analysis||analyze();if(r.unsupported)return setStatus('当前平台尚未建立独立指标模型，暂不生成内容。','warn');if(r.empty)return setStatus('先完成抓取。','warn');
     const signal=chooseSignal(r,window.v8Seed);if(!signal)return setStatus('本轮没有“可以复用”或“值得测试”的可靠信号，暂不硬生成。','warn');
     const p=parseProduct(raw),out=r.platform==='小红书'?generateXhs(p,signal):generateXianyu(p,signal);
     $id('gConfidence').textContent=signal.category+' · '+signal.evidence;$id('gConfidence').className='confidence '+(signal.category==='可以复用'?'good':'base');
@@ -505,7 +512,7 @@ function saveFeedback(){
 function runAll(){
   ensureUI();
   const r=analyze();window.__v8Analysis=r;renderDecision(r);installGenerator();
-  const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';
+  const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.0：不同平台使用独立高价值模型；结论在前、行动其次、关键证据随后、原始数据最后。';
   const sub=document.querySelector('.top .sub');if(sub)sub.textContent='找到高表现内容 → 解释为什么好 → 提炼下一条最值得测试的变量';
   const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.0';
   document.title='多平台内容增长决策系统 V8.0';
