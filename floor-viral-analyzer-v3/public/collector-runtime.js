@@ -7,6 +7,7 @@ const START=Date.now();
 const C=s=>String(s||'').replace(/\s+/g,' ').trim();
 const N=s=>{const m=String(s||'').replace(/,/g,'').match(/([\d.]+)\s*(万|w|W|k|K|千)?/i);if(!m)return null;let v=+m[1],u=m[2]||'';if(/万|w/i.test(u))v*=1e4;if(/k|千/i.test(u))v*=1e3;return Math.round(v)};
 const base=new URL(location.href);
+const HOST=base.hostname.toLowerCase(),IS_XHS=HOST.includes('xiaohongshu.com'),IS_XY=HOST.includes('goofish.com');
 const Q=decodeURIComponent(base.searchParams.get('q')||base.searchParams.get('keyword')||base.searchParams.get('kw')||base.searchParams.get('query')||'').trim();
 
 const out=new Map(), rawKeys=new Set(), queryStats=[];
@@ -39,7 +40,7 @@ function status(win,msg){
 status(window,'准备深度抓取 0/500…');
 
 function idOf(u){
-  let m=String(u||'').match(/[?&](?:id|itemId|goodsId|noteId)=([^&#]+)/i)||String(u||'').match(/\/(?:item|detail|goods|note|explore)\/([A-Za-z0-9_-]{6,})/i);
+  let m=String(u||'').match(/[?&](?:id|itemId|goodsId|noteId)=([^&#]+)/i)||String(u||'').match(/\/(?:item|detail|goods|note|explore|search_result)\/([A-Za-z0-9_-]{6,})/i);
   return m?m[1]:''
 }
 function titleOf(lines,q){
@@ -55,36 +56,83 @@ function getCard(doc,a){
   }
   return null
 }
-function scan(win,q,tier){
+function putItem(key,obj){
+  const old=out.get(key)||{};
+  const hits=[...(old.keywordHits||[]),obj.sourceKeyword].filter((x,i,a)=>x&&a.indexOf(x)===i);
+  const prev=old.sampleTier||obj.sampleTier,finalTier=(prev==='A'||obj.sampleTier==='A')?'A':(prev==='B'||obj.sampleTier==='B')?'B':'C';
+  out.set(key,{...old,...obj,keywordHits:hits,sampleTier:finalTier,
+    wants:obj.wants??old.wants??null,views:obj.views??old.views??null,likes:obj.likes??old.likes??null,
+    favs:obj.favs??old.favs??null,comments:obj.comments??old.comments??null,shares:obj.shares??old.shares??null,
+    price:obj.price??old.price??null,ageText:obj.ageText||old.ageText||'',seller:obj.seller||old.seller||''
+  });
+}
+function xhsCard(doc,a){
+  let e=a;
+  for(let i=0;i<7&&e;i++,e=e.parentElement){
+    const r=e.getBoundingClientRect(),t=C(e.innerText);
+    if(r.width>=120&&r.width<=760&&r.height>=70&&r.height<=1100&&t.length>=6&&t.length<=1100&&e.querySelector('img'))return e;
+  }
+  return null
+}
+function scanXhs(win,q,tier){
+  const before=out.size,doc=win.document;
+  const anchors=[...doc.querySelectorAll('a[href*="/explore/"],a[href*="/discovery/item/"],a[href*="/search_result/"]')];
+  for(const a of anchors){
+    const link=a.href||'',pid=idOf(link);if(!pid&&/\/search_result_ai(?:\?|$)/i.test(link))continue;
+    const card=xhsCard(doc,a);if(!card)continue;
+    const baseText=C(card.innerText),attrs=[...card.querySelectorAll('[aria-label],[title]')].map(el=>C(el.getAttribute('aria-label')||el.getAttribute('title'))).filter(Boolean).join(' '),t=C(baseText+' '+attrs);
+    const lines=(card.innerText||'').split(/\n+/).map(C).filter(Boolean);
+    const explicitTitle=C(card.querySelector('[class*="title"],[class*="note-title"],[data-v-*] [class*="title"]')?.innerText||'');
+    const title=explicitTitle||titleOf(lines,q);if(!title)continue;
+    const img=card.querySelector('img'),imgSrc=img?.currentSrc||img?.src||'';
+    const lm=t.match(/(?:点赞|赞)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:点赞|赞)/i);
+    const numericLines=lines.filter(x=>/^\d+(?:\.\d+)?\s*(?:万|w|W|k|K|千)?$/i.test(x));
+    const fallbackLike=!lm&&numericLines.length?N(numericLines[numericLines.length-1]):null;
+    const fm=t.match(/(?:收藏)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*收藏/i);
+    const cm=t.match(/(?:评论)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*评论/i);
+    const sm=t.match(/(?:转发|分享)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:转发|分享)/i);
+    const vm=t.match(/(?:浏览|小眼睛|阅读)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:浏览|阅读)/i);
+    const tm=t.match(/(刚刚|今天|昨天|\d+\s*(?:分钟|小时|天|周|个月|年)前)(?:发布)?/);
+    let seller=C(card.querySelector('[class*="author"],[class*="user"],[class*="name"]')?.innerText||'');
+    if(!seller){
+      seller=lines.find(x=>x!==title&&x.length>=2&&x.length<=30&&!/^\d/.test(x)&&!/刚刚|今天|昨天|分钟前|小时前|天前|周前|个月前|年前/.test(x))||'';
+    }
+    const cleanTitle=title.replace(/\s+/g,'').replace(/[^\u4e00-\u9fa5a-z0-9]/gi,'').slice(0,160);
+    let imageKey='';try{const z=new URL(imgSrc);imageKey=z.pathname.split('/').slice(-2).join('/').slice(0,120)}catch{}
+    const key=pid||cleanTitle+'|'+seller.replace(/\s+/g,'').slice(0,60)+'|'+imageKey;
+    rawKeys.add(key);
+    putItem(key,{rank:out.size+1,productId:pid,title,text:t,url:link,image:imgSrc,imageCount:card.querySelectorAll('img').length||null,
+      price:null,wants:null,views:vm?N(vm[1]):null,likes:lm?N(lm[1]):fallbackLike,favs:fm?N(fm[1]):null,comments:cm?N(cm[1]):null,shares:sm?N(sm[1]):null,
+      ageText:tm?tm[1]:'',seller,contentType:'笔记',sourceKeyword:q,sampleTier:tier});
+    if(out.size>=TARGET)break;
+  }
+  return out.size-before
+}
+function scanGeneric(win,q,tier){
   const before=out.size,doc=win.document;
   for(const a of doc.querySelectorAll('a[href]')){
     const card=getCard(doc,a);if(!card)continue;
     const baseText=C(card.innerText),attrs=[...card.querySelectorAll('[aria-label],[title]')].map(el=>C(el.getAttribute('aria-label')||el.getAttribute('title'))).filter(Boolean).join(' '),t=C(baseText+' '+attrs),lines=(card.innerText||'').split(/\n+/).map(C).filter(Boolean),title=titleOf(lines,q);
     if(!title)continue;
     const pm=t.match(/[¥￥]\s*([\d,.]+)/),price=pm?+pm[1].replace(/,/g,''):null,link=a.href||win.location.href,pid=idOf(link);
-    rawKeys.add((pid||link.split('#')[0])+'|'+title.slice(0,120));
-    const key=pid||title.replace(/\s+/g,'').replace(/[^\u4e00-\u9fa5a-z0-9]/gi,'').slice(0,150)+'|'+(price??'');
-    const old=out.get(key)||{};
+    const cleanTitle=title.replace(/\s+/g,'').replace(/[^\u4e00-\u9fa5a-z0-9]/gi,'').slice(0,150),key=pid||cleanTitle+'|'+(price??'');
+    rawKeys.add(key);
     const wm=t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:人想要|想要)/i),
           vm=t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:浏览|浏览量|查看|阅读)/i),
           lm=t.match(/(?:点赞|赞)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:点赞|赞)/i),
           fm=t.match(/(?:收藏)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*收藏/i),
           cm=t.match(/(?:评论)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*评论/i),
           tm=t.match(/(刚刚|今天|昨天|\d+\s*(?:分钟|小时|天)前)(?:发布)?/),
-          sm=t.match(/\d{2,4}\s*[x×*]\s*\d{2,4}(?:\s*[x×*]\s*\d{1,3})?/i);
-    const img=card.querySelector('img'),hits=[...(old.keywordHits||[]),q].filter((x,i,a)=>x&&a.indexOf(x)===i);
-    const prev=old.sampleTier||tier,finalTier=(prev==='A'||tier==='A')?'A':(prev==='B'||tier==='B')?'B':'C';
-    out.set(key,{
-      rank:old.rank||out.size+1,productId:pid||old.productId||'',title,text:t,url:link,image:img?.src||old.image||'',
-      imageCount:card.querySelectorAll('img').length||old.imageCount||null,price:Number.isFinite(price)?price:(old.price??null),
-      wants:wm?N(wm[1]):(old.wants??null),views:vm?N(vm[1]):(old.views??null),likes:lm?N(lm[1]):(old.likes??null),
-      favs:fm?N(fm[1]):(old.favs??null),comments:cm?N(cm[1]):(old.comments??null),ageText:tm?tm[1]:(old.ageText||''),
-      specs:sm?sm[0]:(old.specs||''),sourceKeyword:q,keywordHits:hits,sampleTier:finalTier
-    });
+          spec=t.match(/\d{2,4}\s*[x×*]\s*\d{2,4}(?:\s*[x×*]\s*\d{1,3})?/i);
+    const img=card.querySelector('img');
+    putItem(key,{rank:out.size+1,productId:pid,title,text:t,url:link,image:img?.src||'',imageCount:card.querySelectorAll('img').length||null,price,
+      wants:wm?N(wm[1]):null,views:vm?N(vm[1]):null,likes:lm?N(lm[1]):null,favs:fm?N(fm[1]):null,comments:cm?N(cm[1]):null,
+      ageText:tm?tm[1]:'',specs:spec?spec[0]:'',sourceKeyword:q,sampleTier:tier});
     if(out.size>=TARGET)break;
   }
   return out.size-before
 }
+function scan(win,q,tier){return IS_XHS?scanXhs(win,q,tier):scanGeneric(win,q,tier)}
 function scrollables(win){
   const arr=[];
   for(const e of win.document.querySelectorAll('main,[role="main"],section,div')){
