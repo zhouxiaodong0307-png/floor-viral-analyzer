@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='8.2.1';
+const VERSION='8.3.0';
 const EXPKEY='floorGrowthExperimentsV81';
 const REPORTKEY='floorGrowthReportsV814';
 const $id=id=>document.getElementById(id);
@@ -380,47 +380,89 @@ function makeTwoVersions(p,s){
 }
 
 
+
 function ensureUI(){
   document.querySelector('.stats')?.classList.add('g81-hide');
   $id('marketAnalysisCard')?.classList.add('g81-hide');
   $id('g81Decision')?.classList.add('g81-hide');
   $id('g81Report')?.classList.add('g81-hide');
+  $id('g82Report')?.classList.add('g81-hide');
+  $id('g81Middle')?.classList.add('g81-hide');
+  $id('g81Details')?.classList.add('g81-hide');
+  $id('g82DetailToggle')?.classList.add('g81-hide');
   const oldGen=$id('genKeyword')?.closest('.card');if(oldGen)oldGen.classList.add('g81-hide');
-  const raw=[...document.querySelectorAll('.card')].find(x=>x.querySelector('.label')?.textContent==='抓取结果');
-  const capture=[...document.querySelectorAll('.card')].find(x=>x.querySelector('.label')?.textContent.includes('抓取数据'));
+
+  const cards=[...document.querySelectorAll('.card')];
+  const capture=cards.find(x=>x.querySelector('.label')?.textContent.includes('抓取数据'));
+  const raw=cards.find(x=>x.querySelector('.label')?.textContent==='抓取结果');
   const mobile=$id('mobileCollectCard');
+  if(capture)capture.classList.add('g83-hidden-support');
+  if(raw)raw.classList.add('g83-hidden-support');
+  if(mobile)mobile.classList.add('g83-hidden-support');
 
-  let report=$id('g82Report');
-  if(!report){
-    report=document.createElement('section');report.id='g82Report';report.className='g82-report';
-    report.innerHTML='<div class="g82-head"><div><span>小红书 · 本轮综合分析</span><h2>这批数据告诉了我什么</h2></div><div id="g82ReportMeta" class="g82-meta"></div></div><p id="g82Summary" class="g82-summary">正在分析本轮数据…</p><div id="g82BestRef" class="g82-best-ref" style="display:none"></div><div class="g82-grid"><div class="g82-main"><div class="g82-section-title">本轮最值得看的发现</div><div id="g82Findings"></div><div class="g82-section-title">高表现主要赢在哪里</div><div id="g82Layers" class="g82-layers"></div><div class="g82-section-title">本轮高价值内容画像</div><div id="g82Profile" class="g82-profile"></div></div><aside class="g82-side"><small>下一轮建议</small><strong id="g82NextTitle">等待分析</strong><p id="g82NextDo"></p><div class="g82-dont"><b>不要</b><span id="g82NextDont"></span></div><div class="g82-purpose"><b>目的</b><span id="g82NextPurpose"></span></div><button id="g82GenerateTop" class="g81-primary">生成下一轮测试内容</button><button id="g82CopyReport" class="g81-secondary">复制综合报告</button></aside></div><div class="g82-section-title">内容机会地图</div><div id="g82Map" class="g82-map"></div><div id="g82Limit" class="g82-limit"></div>';
-    document.querySelector('.top')?.after(report);
+  let flow=$id('g83Flow');
+  if(!flow){
+    flow=document.createElement('div');flow.id='g83Flow';flow.className='g83-flow';
+    flow.innerHTML=
+      '<section class="g83-hero" id="g83Hero">'+
+        '<div class="g83-kicker">小红书 · 本轮结论</div>'+
+        '<h2 id="g83HeroTitle">正在分析本轮数据</h2>'+
+        '<p class="g83-summary" id="g83HeroSummary">系统会把复杂数据压缩成一个结论和一个下一步动作。</p>'+
+        '<div class="g83-signal" id="g83Signal"></div>'+
+        '<div class="g83-next"><span>下一步</span><b id="g83Next">等待分析</b><p id="g83NextText"></p></div>'+
+        '<button id="g83GenerateTop" class="g83-primary">生成下一轮测试内容</button>'+
+        '<div class="g83-meta" id="g83Meta"></div>'+
+      '</section>'+
+      '<section class="g83-why">'+
+        '<div class="g83-section-head"><div><span>②</span><b>为什么</b></div><small>只保留会影响下一步决定的信息</small></div>'+
+        '<div id="g83WhyList" class="g83-why-list"></div>'+
+        '<div id="g83BestRef" class="g83-best-ref" style="display:none"></div>'+
+        '<button id="g83OpenAnalysis" class="g83-secondary">查看完整分析</button>'+
+      '</section>'+
+      '<section class="g83-generate" id="g83GenerateSection">'+
+        '<div class="g83-section-head"><div><span>③</span><b>生成下一篇</b></div><small>先理解产品，再执行测试变量</small></div>'+
+        '<div class="g83-input-row"><input id="g81Product" placeholder="输入真实商品信息，例如：柚木 910×125×17 530元/㎡"><button id="g81Generate" class="g83-primary">生成</button></div>'+
+        '<div id="g81Need" class="g81-need"></div>'+
+        '<div id="g81Output" class="g81-output g81-empty-output">输入商品信息后生成可直接发布的小红书内容。</div>'+
+      '</section>'+
+      '<div class="g83-bottom-actions"><button id="g83AnalysisBottom" class="g83-secondary">查看完整分析</button><button id="g83Recapture" class="g83-secondary">重新抓取数据</button></div>'+
+      '<section class="g83-analysis" id="g83Analysis">'+
+        '<div class="g83-analysis-head"><b>完整分析</b><button id="g83CloseAnalysis">收起</button></div>'+
+        '<div class="g83-accordion">'+
+          '<button class="g83-acc-btn" data-target="g83Quality"><span>数据质量</span><em>展开</em></button><div id="g83Quality" class="g83-acc-body"></div>'+
+          '<button class="g83-acc-btn" data-target="g83Diff"><span>高低表现差异</span><em>展开</em></button><div id="g83Diff" class="g83-acc-body"><div id="g81Evidence" class="g81-evidence"></div></div>'+
+          '<button class="g83-acc-btn" data-target="g83Cases"><span>高价值案例</span><em>展开</em></button><div id="g83Cases" class="g83-acc-body"><div id="g81High" class="g81-high-list"></div><button id="g81ShowHigh" class="g81-more">查看全部高价值样本</button></div>'+
+          '<button class="g83-acc-btn" data-target="g83Anomaly"><span>异常案例</span><em>展开</em></button><div id="g83Anomaly" class="g83-acc-body"></div>'+
+          '<button class="g83-acc-btn" data-target="g83Raw"><span>原始数据</span><em>展开</em></button><div id="g83Raw" class="g83-acc-body"></div>'+
+        '</div>'+
+        '<div id="g81DetailFoot" class="g81-detail-foot"></div>'+
+      '</section>'+
+      '<section class="g83-capture-panel" id="g83CapturePanel"></section>';
+    document.querySelector('.top')?.after(flow);
   }
 
-  let middle=$id('g81Middle');
-  if(!middle){
-    middle=document.createElement('section');middle.id='g81Middle';middle.className='g81-middle';
-    middle.innerHTML='<div class="g81-generator"><div class="g81-section-title"><b>生成下一轮测试内容</b><span>先理解产品，再执行测试策略</span></div><div class="g81-input-row"><input id="g81Product" placeholder="输入真实商品信息，例如：柚木 910×125×17 530元/㎡"><button id="g81Generate" class="g81-primary">生成</button></div><div id="g81Need" class="g81-need"></div><div id="g81Output" class="g81-output g81-empty-output">输入商品信息后，生成两个属于同一测试变量的自然小红书方案。</div></div>';
-    report.after(middle);
-  }else{
-    const rp=middle.querySelector('.g81-reason-panel');if(rp)rp.style.display='none';
-  }
+  const rawSlot=$id('g83Raw');
+  if(raw&&rawSlot&&!rawSlot.contains(raw)){raw.classList.remove('g83-hidden-support');rawSlot.appendChild(raw)}
+  const captureSlot=$id('g83CapturePanel');
+  if(capture&&captureSlot&&!captureSlot.contains(capture)){capture.classList.remove('g83-hidden-support');captureSlot.appendChild(capture)}
+  if(mobile&&captureSlot&&!captureSlot.contains(mobile)){mobile.classList.remove('g83-hidden-support');captureSlot.appendChild(mobile)}
+  captureSlot?.classList.remove('show');
 
-  let details=$id('g81Details');
-  if(!details){
-    details=document.createElement('section');details.id='g81Details';details.className='g81-details';
-    details.innerHTML='<div class="g81-detail-grid"><div><div class="g81-section-title"><b>关键证据</b><span>高表现 VS 普通</span></div><div id="g81Evidence" class="g81-evidence"></div></div><div><div class="g81-section-title"><b>典型高价值案例</b><span>默认3条</span></div><div id="g81High" class="g81-high-list"></div><button id="g81ShowHigh" class="g81-more">查看全部高价值样本</button></div></div><div class="g81-detail-foot" id="g81DetailFoot"></div>';
-    middle.after(details);
-  }
-  details.classList.remove('show');
-  if(!$id('g82DetailToggle')){const b=document.createElement('button');b.id='g82DetailToggle';b.className='g81-more';b.textContent='查看详细分析';middle.after(b);b.onclick=()=>{details.classList.toggle('show');b.textContent=details.classList.contains('show')?'收起详细分析':'查看详细分析'}}
-  if(capture&&details.nextElementSibling!==capture)details.after(capture);
-  if(mobile&&capture&&capture.nextElementSibling!==mobile)capture.after(mobile);
-
-  if(raw&&!raw.dataset.g81){raw.dataset.g81='1';const head=raw.querySelector('.head');if(head&&head.querySelector('.muted'))head.querySelector('.muted').textContent='原始数据默认折叠，只在核查证据时展开。';const children=[...raw.children].filter(x=>x!==head),body=document.createElement('div');body.id='g81RawBody';body.className='g81-raw-body';children.forEach(x=>body.appendChild(x));const btn=document.createElement('button');btn.className='g81-raw-toggle';btn.innerHTML='<span>查看原始抓取数据</span><span>展开</span>';btn.onclick=()=>{body.classList.toggle('show');btn.lastElementChild.textContent=body.classList.contains('show')?'收起':'展开'};raw.appendChild(btn);raw.appendChild(body)}
-
-  $id('g82GenerateTop').onclick=()=>{const i=$id('g81Product');middle.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(()=>i.focus(),250)};
+  const scrollGenerate=()=>{$id('g83GenerateSection')?.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(()=>$id('g81Product')?.focus(),250)};
+  $id('g83GenerateTop').onclick=scrollGenerate;
   $id('g81Generate').onclick=generateCurrent;
+  const openAnalysis=()=>{$id('g83Analysis').classList.add('show');$id('g83Analysis').scrollIntoView({behavior:'smooth',block:'start'})};
+  $id('g83OpenAnalysis').onclick=openAnalysis;
+  $id('g83AnalysisBottom').onclick=openAnalysis;
+  $id('g83CloseAnalysis').onclick=()=>$id('g83Analysis').classList.remove('show');
+  $id('g83Recapture').onclick=()=>{$id('g83CapturePanel').classList.toggle('show');if($id('g83CapturePanel').classList.contains('show'))$id('g83CapturePanel').scrollIntoView({behavior:'smooth',block:'start'})};
+
+  document.querySelectorAll('.g83-acc-btn').forEach(btn=>{
+    btn.onclick=()=>{
+      const body=$id(btn.dataset.target),open=body.classList.toggle('show');
+      btn.classList.toggle('open',open);btn.querySelector('em').textContent=open?'收起':'展开';
+    };
+  });
   $id('g81ShowHigh').onclick=()=>{window.__g81ShowAll=!window.__g81ShowAll;renderHigh(window.__g81Analysis);$id('g81ShowHigh').textContent=window.__g81ShowAll?'只看3条典型样本':'查看全部高价值样本'};
 }
 
@@ -530,24 +572,62 @@ function reportText(rep){
   const noRef=rep.opportunity.noRef.length?rep.opportunity.noRef.map(x=>x.label).join('、'):'暂无明确项目';
   const ref=rep.reference?['','【最值得查看的1条高价值笔记】',rep.reference.title,rep.reference.reasons.join('；'),rep.reference.url]:[];return ['【本轮小红书综合分析】',rep.summary,'','【样本】','抓取 '+rep.sample.raw+'｜进入分析 '+rep.sample.valid+'｜高价值 '+rep.sample.high+'｜普通 '+rep.sample.normal,'','【本轮发现】',f||'没有达到展示门槛的正向差异。','','【高表现主要赢在哪里】',layer,'','【高价值内容画像】',rep.profile.length?rep.profile.join('、'):'暂无足够差异支持稳定画像','','【内容机会地图】','可以直接复用：'+reuse,'值得测试：'+test,'暂时不要参考：'+noRef,...ref,'','【下一轮建议】',rep.next.title,rep.next.doText,'不要：'+rep.next.dont,'目的：'+rep.next.purpose,'','【可信度限制】','核心数据覆盖 '+Math.round(rep.limits.coverage*100)+'%｜去偏保留 '+Math.round(rep.limits.stability*100)+'%｜异常案例 '+rep.limits.anomalies+'｜排序参考 '+Math.round(rep.limits.rankOnlyRate*100)+'%'+(rep.limits.stop?'｜采集结束：'+rep.limits.stop:'')].join('\n');
 }
+
 function renderReport(r){
   const rep=buildReport(r);if(!rep)return;saveReport(rep);window.__g82Report=rep;
-  $id('g82Summary').textContent=rep.summary;
-  $id('g82ReportMeta').innerHTML='<b>'+rep.sample.raw+'</b><span>抓取笔记</span><b>'+rep.sample.high+'</b><span>高价值样本</span><b>'+rep.confidence[0]+'</b><span>综合可信度</span>';
-  $id('g82Findings').innerHTML=rep.topFindings.length?rep.topFindings.map((x,i)=>'<div class="g82-finding"><span>'+(i+1)+'</span><div><b>'+esc(x.label)+'</b><small>高表现 '+fmtPct(x.hp)+' ｜ 普通 '+fmtPct(x.np)+' ｜ <strong>'+(x.diff>=0?'+':'')+Math.round(x.diff*100)+'%</strong> ｜ '+esc(x.level)+'</small><p>'+esc(x.explain)+'</p></div></div>').join(''):'<div class="g82-empty">本轮没有达到展示门槛的正向差异；这不是分析失败，而是高表现组和普通组写法目前比较接近。</div>';
-  $id('g82Layers').innerHTML=rep.layers.map(x=>'<div><b>'+esc(x.name)+'</b><span>'+(x.available?(x.top?('更常见：'+esc(x.top.label)+' '+(x.top.diff>=0?'+':'')+Math.round(x.top.diff*100)+'%'):'暂未发现明显内容差异'):'当前无法分析该维度')+'</span></div>').join('');
-  $id('g82Profile').innerHTML=rep.profile.length?rep.profile.map(x=>'<span>'+esc(x)+'</span>').join(''):'<span class="muted">暂无足够差异支持稳定画像</span>';
-  const map=rep.opportunity;$id('g82Map').innerHTML='<div><b>可以直接复用</b><p>'+(map.reuse.length?map.reuse.map(x=>esc(x.label)).join('、'):'暂无')+'</p></div><div><b>值得测试</b><p>'+(map.test.length?map.test.map(x=>esc(x.label)).join('、'):'暂无')+'</p></div><div><b>暂时不要参考</b><p>'+(map.noRef.length?map.noRef.map(x=>esc(x.label)).join('、'):'暂无明确项目')+'</p></div>';
-  $id('g82NextTitle').textContent=rep.next.title;$id('g82NextDo').textContent=rep.next.doText;$id('g82NextDont').textContent=rep.next.dont;$id('g82NextPurpose').textContent=rep.next.purpose;
-  $id('g82Limit').textContent='核心数据覆盖 '+Math.round(rep.limits.coverage*100)+'% · 去偏保留 '+Math.round(rep.limits.stability*100)+'% · 异常案例 '+rep.limits.anomalies+' · 排序参考 '+Math.round(rep.limits.rankOnlyRate*100)+'%'+(rep.limits.stop?' · '+rep.limits.stop:'');
-  const ref=$id('g82BestRef');if(ref){if(rep.reference){ref.innerHTML='<div><span>本轮最值得查看的1条</span><b>'+esc(rep.reference.title)+'</b><small>'+esc(rep.reference.kind)+' · '+esc(rep.reference.reasons.join('；'))+'</small></div><a href="'+esc(rep.reference.url)+'" target="_blank" rel="noopener">查看原笔记</a>';ref.style.display='grid'}else{ref.style.display='none'}}
-  $id('g82CopyReport').onclick=async()=>{try{await navigator.clipboard.writeText(reportText(rep));setStatus('综合分析报告已复制。','oktxt')}catch{setStatus('复制失败，请手动复制。','warn')}};
+  const signal=r.strongest||r.exploratory||null;
+  const hasStrong=r.reusable.length>0;
+  $id('g83HeroTitle').textContent=hasStrong
+    ?('当前最值得继续使用：'+(signal?.label||'已发现稳定差异'))
+    :(signal?('当前最值得继续测试：'+signal.label):'这轮没有发现稳定强规律');
+  $id('g83HeroSummary').textContent=rep.summary;
+
+  if(signal){
+    $id('g83Signal').innerHTML=
+      '<div><span>高表现</span><b>'+fmtPct(signal.hp)+'</b></div>'+
+      '<div><span>普通</span><b>'+fmtPct(signal.np)+'</b></div>'+
+      '<div><span>差异</span><b>'+(signal.diff>=0?'+':'')+Math.round(signal.diff*100)+'%</b></div>'+
+      '<div><span>证据</span><b>'+esc(signal.level)+'</b></div>';
+  }else{
+    $id('g83Signal').innerHTML='<div class="g83-no-signal">当前没有达到最低测试门槛的正向差异。</div>';
+  }
+
+  $id('g83Next').textContent=rep.next.title;
+  $id('g83NextText').textContent=rep.next.doText;
+  $id('g83Meta').textContent=rep.sample.raw+'条样本 · '+rep.sample.high+'条高表现 · 核心数据覆盖'+Math.round(rep.limits.coverage*100)+'% · 可信度'+rep.confidence[0];
+
+  const findings=rep.topFindings.filter(x=>x.diff>0).slice(0,3);
+  $id('g83WhyList').innerHTML=findings.length
+    ?findings.map((x,i)=>'<div class="g83-why-row"><span>'+(i+1)+'</span><b>'+esc(x.label)+'</b><em>高表现 '+fmtPct(x.hp)+' vs 普通 '+fmtPct(x.np)+'</em><strong>'+(x.diff>=0?'+':'')+Math.round(x.diff*100)+'%</strong><small>'+esc(x.level)+'</small></div>').join('')
+    :'<div class="g83-empty">高表现组和普通组目前没有足够大的内容差异。</div>';
+
+  const ref=$id('g83BestRef');
+  if(rep.reference){
+    ref.innerHTML='<div><span>本轮最值得研究的1条</span><b>'+esc(rep.reference.title)+'</b><small>'+esc(rep.reference.reasons.join('；'))+'</small></div><a href="'+esc(rep.reference.url)+'" target="_blank" rel="noopener">查看原笔记</a>';
+    ref.style.display='grid';
+  }else ref.style.display='none';
+
+  const q=$id('g83Quality');
+  if(q)q.innerHTML=
+    '<div class="g83-detail-line"><span>抓取</span><b>'+rep.sample.raw+'条</b></div>'+
+    '<div class="g83-detail-line"><span>进入分析</span><b>'+rep.sample.valid+'条</b></div>'+
+    '<div class="g83-detail-line"><span>高价值样本</span><b>'+rep.sample.high+'条</b></div>'+
+    '<div class="g83-detail-line"><span>核心数据覆盖</span><b>'+Math.round(rep.limits.coverage*100)+'%</b></div>'+
+    '<div class="g83-detail-line"><span>去偏保留</span><b>'+Math.round(rep.limits.stability*100)+'%</b></div>'+
+    '<div class="g83-detail-line"><span>综合可信度</span><b>'+rep.confidence[0]+'</b></div>';
+
+  const an=$id('g83Anomaly');
+  if(an){
+    const arr=(r.anomalies||[]).slice(0,5);
+    an.innerHTML=arr.length?arr.map((x,i)=>'<a class="g83-anomaly" href="'+esc(x.url||'#')+'" target="_blank" rel="noopener"><span>'+(i+1)+'</span><b>'+esc(x.title||'未命名')+'</b><em>'+esc(x.__kind||'异常高表现')+'</em></a>').join(''):'<div class="g83-empty">本轮没有需要单独查看的异常高表现案例。</div>';
+  }
 }
+
 function renderHigh(r){
   if(!r||!r.high){$id('g81High').innerHTML='';return}const arr=window.__g81ShowAll?r.high:r.high.slice(0,3);
   $id('g81High').innerHTML=arr.map((x,i)=>'<a class="g81-high" href="'+esc(x.url||'#')+'" target="_blank" rel="noopener"><span class="g81-no">'+(i+1)+'</span><div><b>'+esc(x.title||'未命名')+'</b><small>'+esc(x.__kind)+' · '+esc(itemReasons(x,r.model).join('；'))+'</small></div><span class="g81-open">打开</span></a>').join('')||'<div class="g81-muted">暂无足够高价值样本。</div>';$id('g81ShowHigh').style.display=r.high.length>3?'inline-flex':'none';
 }
-function signalPool(r){return r.reusable.concat(r.testable)}
+function signalPool(r){const a=r.reusable.concat(r.testable);if(!a.length&&r.exploratory)a.push(r.exploratory);return a}
 function metrics(r){const s=r.strongest,signal=s?((s.diff>=0?'+':'')+Math.round(s.diff*100)+'%'):'—';return[[r.pool.length,'有效样本'],[r.high.length,'高价值样本'],[Math.round(r.coverage*100)+'%','核心数据覆盖'],[signal,'本轮最强信号'],[r.confidence[0],'综合可信度']]}
 
 function renderAnalysis(r){
@@ -570,14 +650,29 @@ function versionHtml(v,idx){
   const ok=v.check&&v.check.ok;
   return '<div class="g82-version"><div class="g82-version-head"><div><span>'+esc(v.label)+'</span><b>'+esc(v.mode)+'</b></div><em class="'+(ok?'ok':'bad')+'">'+(ok?'✓ 可读性通过':'✕ 需重生成')+'</em></div><div class="g81-field"><span>标题</span><strong>'+esc(v.title)+'</strong></div><div class="g81-field"><span>正文</span><pre>'+esc(v.body)+'</pre></div><div class="g81-field-row"><div class="g81-field"><span>话题 / 搜索词</span><p>'+esc(v.tags)+'</p></div><div class="g81-field"><span>封面建议</span><p>'+esc(v.cover)+'</p></div></div><div class="g81-field"><span>图片内容建议</span><p>'+esc(v.images)+'</p></div><div class="g81-output-actions"><button class="g81-primary g82-copy-version" data-i="'+idx+'">复制'+esc(v.label)+'</button><button class="g81-secondary g82-record-version" data-i="'+idx+'">记录发布结果</button></div></div>';
 }
+
 function renderOutput(r,s,p,versions){
-  const w=generatorWhy(r,s,p).map(([a,b])=>'<div><span>'+esc(a)+'</span><b>'+esc(b)+'</b></div>').join('');
-  $id('g81Output').classList.remove('g81-empty-output');
-  $id('g81Output').innerHTML='<div class="g82-strategy"><div class="g81-mini-title">后台策略（不会写进正文）</div>'+w+'<div class="g82-check">✓ 两个方案都必须执行同一个主变量，但用不同表达方式。</div></div><div class="g82-versions">'+versions.map(versionHtml).join('')+'</div><div id="g81Feedback" class="g81-feedback"></div>';
-  window.__g82Versions=versions;
-  document.querySelectorAll('.g82-copy-version').forEach(btn=>btn.onclick=async()=>{const v=versions[+btn.dataset.i],text='【标题】\\n'+v.title+'\\n\\n【正文】\\n'+v.body+'\\n\\n【话题】\\n'+v.tags+'\\n\\n【封面建议】\\n'+v.cover+'\\n\\n【图片建议】\\n'+v.images;try{await navigator.clipboard.writeText(text);setStatus(v.label+'已复制。','oktxt')}catch{setStatus('复制失败，请手动复制。','warn')}});
-  document.querySelectorAll('.g82-record-version').forEach(btn=>btn.onclick=()=>{window.__g82RecordIndex=+btn.dataset.i;renderFeedback()});
+  window.__g82Versions=versions;window.__g83VersionIndex=0;
+  const basis=generatorWhy(r,s,p);
+  const renderVersion=()=>{
+    const idx=window.__g83VersionIndex||0,v=versions[idx],ok=v.check&&v.check.ok;
+    $id('g81Output').classList.remove('g81-empty-output');
+    $id('g81Output').innerHTML=
+      '<div class="g83-output-head"><div><span>本轮测试</span><b>'+esc(s.label)+'</b></div><em class="'+(ok?'ok':'bad')+'">'+(ok?'✓ 已执行':'✕ 未执行')+'</em></div>'+
+      '<div class="g83-publish-field"><span>标题</span><strong>'+esc(v.title)+'</strong></div>'+
+      '<div class="g83-publish-field"><span>正文</span><pre>'+esc(v.body)+'</pre></div>'+
+      '<div class="g83-publish-grid"><div class="g83-publish-field"><span>封面建议</span><p>'+esc(v.cover)+'</p></div><div class="g83-publish-field"><span>话题</span><p>'+esc(v.tags)+'</p></div></div>'+
+      '<div class="g83-output-actions"><button id="g83CopyVersion" class="g83-primary">复制当前版本</button><button id="g83SwapVersion" class="g83-secondary">换一个版本</button><button id="g83BasisToggle" class="g83-link">查看生成依据</button><button id="g83RecordVersion" class="g83-secondary">记录发布结果</button></div>'+
+      '<div id="g83Basis" class="g83-basis">'+basis.map(([a,b])=>'<div><span>'+esc(a)+'</span><b>'+esc(b)+'</b></div>').join('')+'</div>'+
+      '<div id="g81Feedback" class="g81-feedback"></div>';
+    $id('g83CopyVersion').onclick=async()=>{const text='【标题】\n'+v.title+'\n\n【正文】\n'+v.body+'\n\n【话题】\n'+v.tags+'\n\n【封面建议】\n'+v.cover;try{await navigator.clipboard.writeText(text);setStatus('当前版本已复制。','oktxt')}catch{setStatus('复制失败，请手动复制。','warn')}};
+    $id('g83SwapVersion').onclick=()=>{window.__g83VersionIndex=(idx+1)%versions.length;renderVersion()};
+    $id('g83BasisToggle').onclick=()=>{const b=$id('g83Basis'),open=b.classList.toggle('show');$id('g83BasisToggle').textContent=open?'收起生成依据':'查看生成依据'};
+    $id('g83RecordVersion').onclick=()=>{window.__g82RecordIndex=idx;renderFeedback()};
+  };
+  renderVersion();
 }
+
 function saveDraft(r,s,p,versions){
   let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}
   versions.forEach((o,i)=>a.push({id:'exp_'+Date.now()+'_'+i,platform:r.platform,product:p.raw,strategy:s.label,signalId:s.id,category:s.category,evidence:s.level,variant:o.label,title:o.title,body:o.body,cover:o.cover,images:o.images,createdAt:nowISO(),status:'draft'}));
@@ -602,7 +697,7 @@ function generateCurrent(){
 
 function renderFeedback(){const box=$id('g81Feedback');box.innerHTML='<div class="g81-feedback-title">发布后记录结果</div><div class="g81-feedback-grid"><label>浏览<input data-k="views" inputmode="decimal"></label><label>点赞<input data-k="likes" inputmode="decimal"></label><label>收藏<input data-k="favs" inputmode="decimal"></label><label>评论<input data-k="comments" inputmode="decimal"></label><label>转发<input data-k="shares" inputmode="decimal"></label><label>发布天数<input data-k="days" inputmode="decimal"></label></div><button id="g81SaveFeedback" class="g81-primary">保存结果</button>';box.classList.add('show');$id('g81SaveFeedback').onclick=saveFeedback}
 function saveFeedback(){let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}const wanted=window.__g82Versions&&window.__g82Versions[window.__g82RecordIndex||0]?.label;const d=[...a].reverse().find(x=>x.platform===currentPlatform()&&x.status==='draft'&&(!wanted||x.variant===wanted));if(!d)return setStatus('没有找到待验证的生成记录。','warn');const m={};$id('g81Feedback').querySelectorAll('input').forEach(i=>{const v=num(i.value);if(v!==null)m[i.dataset.k]=v});const total=(m.likes||0)+(m.favs||0)+(m.comments||0)+(m.shares||0),days=m.days||1;d.metrics=m;d.performance=m.views?total/m.views:total/Math.max(.25,days);d.status='measured';d.measuredAt=nowISO();localStorage.setItem(EXPKEY,JSON.stringify(a.slice(-120)));$id('g81Feedback').innerHTML='<div class="g81-saved">✓ 已保存，本轮结果会进入后续同平台验证。</div>';setStatus('发布结果已记录。','oktxt')}
-function runAll(){ensureUI();const r=analyze();window.__g81Analysis=r;renderAnalysis(r);const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const sub=document.querySelector('.top .sub');if(sub)sub.textContent='小红书：抓取 → 综合分析 → 测试策略 → 自然内容 → 发布验证';const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.2.1';document.title='多平台内容增长决策系统 V8.2.1';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.2.1：结论在前、行动其次、关键证据随后、原始数据最后；生成结果必须通过测试变量执行校验。'}
+function runAll(){ensureUI();const r=analyze();window.__g81Analysis=r;renderAnalysis(r);const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const sub=document.querySelector('.top .sub');if(sub)sub.textContent='小红书 · 决策流程';const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.3.0';document.title='多平台内容增长决策系统 V8.3.0';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.3.0：一屏一个重点：结论 → 为什么 → 生成；详细证据默认隐藏。'}
 const oldRender=window.render;if(typeof oldRender==='function'){window.render=function(){const v=oldRender.apply(this,arguments);setTimeout(runAll,40);return v}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(runAll,90));else setTimeout(runAll,90);
 })();
