@@ -101,18 +101,10 @@ function canonicalItemId(x,source){
   if(direct)return'id:'+direct;
   const m=u.match(/[?&](?:id|itemId|goodsId|noteId)=([^&#]+)/i)||u.match(/\/(?:item|detail|goods|note|explore)\/([A-Za-z0-9_-]{6,})/i);
   if(m)return'id:'+m[1];
-  try{
-    const z=new URL(u);
-    if(u&&u!==source&&!/\/search(?:\/|\?)/i.test(u)&&!/xiaohongshu\.com\/(?:search_result|search)/i.test(u)){
-      return'u:'+z.origin+z.pathname.replace(/\/$/,'');
-    }
-  }catch{}
   const title=norm(x.title).replace(/[^\u4e00-\u9fa5a-z0-9]+/g,'').slice(0,160);
   const price=x.price??'';
   const seller=norm(x.seller||'').replace(/\s+/g,'').slice(0,60);
-  let image='';
-  try{const z=new URL(String(x.image||''));image=z.pathname.split('/').slice(-2).join('/').slice(0,120)}catch{}
-  return't:'+title+'|p:'+price+'|s:'+seller+'|i:'+image
+  return't:'+title+'|p:'+price+'|s:'+seller
 }
 function keyOf(x,source){return canonicalItemId(x,source)}
 function mergeCapture(source,newSite,newItems,capturedAt){const stamp=String(capturedAt||new Date().toISOString());if(db.seenCaptures.includes(stamp))return 0;let map=new Map(db.items.map(x=>[x._key||keyOf(x,x.sourcePage||''),x])),added=0;(newItems||[]).forEach(raw=>{if(!raw?.title)return;let x=enrich({...raw,site:newSite,sourcePage:source,_capturedAt:stamp}),k=keyOf(x,source);x._key=k;if(map.has(k)){let old=map.get(k);map.set(k,enrich({...old,...x,_firstCapturedAt:old._firstCapturedAt||old._capturedAt||stamp}))}else{map.set(k,{...x,_firstCapturedAt:stamp});added++}});db.items=[...map.values()].sort((a,b)=>new Date(b._capturedAt||0)-new Date(a._capturedAt||0)).slice(0,900);db.lastSite=newSite;db.lastSource=source;db.lastBatchCount=added;db.lastCapturedAt=stamp;db.seenCaptures=[...db.seenCaptures,stamp].slice(-100);localStorage.setItem(DBKEY,JSON.stringify(db));site=newSite;return added}
