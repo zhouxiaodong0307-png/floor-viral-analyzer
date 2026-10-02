@@ -142,7 +142,7 @@ async function analyzeUrl(url) {
 }
 
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, version: "7.1.1", mode: "decision-system-permanent-collector" });
+  res.json({ ok: true, version: "7.1.2", mode: "decision-system-permanent-collector" });
 });
 
 app.get("/browser-bridge.zip", (req, res) => {
@@ -182,4 +182,4 @@ app.post("/import", (req, res) => {
   }
 });
 
-app.listen(PORT, "0.0.0.0", () => console.log(`V7.1.1 running on :${PORT}`));
+app.listen(PORT, "0.0.0.0", () => console.log(`V7.1.2 running on :${PORT}`));
