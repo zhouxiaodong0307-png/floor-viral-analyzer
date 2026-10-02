@@ -264,7 +264,7 @@ function featureEvidence(high,normal,defs,coverage,stability,cycleCount){
     else if((ev==='中等证据'||ev==='弱证据')&&diff>=.10)category='值得测试';
     else if(ev==='探索性信号'&&diff>=.16&&high.length>=10)category='值得测试';
     return{id,label,hc,nc,hp,np,diff,z:zz,evidence:ev,category,total:high.length+normal.length,cycles:cycleCount};
-  }).sort((a,b)=>({可以复用:3,值得测试:2,暂无价值:1}[b.category]-({可以复用:3,值得测试:2,暂无价值:1}[a.category])||b.diff-a.diff);
+  }).sort((a,b)=>(({可以复用:3,值得测试:2,暂无价值:1}[b.category]-{可以复用:3,值得测试:2,暂无价值:1}[a.category])||b.diff-a.diff));
 }
 function loadFindings(){try{return JSON.parse(localStorage.getItem(FINDKEY)||'[]')}catch{return[]}}
 function cycleCount(platform,id){
