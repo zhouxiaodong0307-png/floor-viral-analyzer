@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='8.1.2';
+const VERSION='8.1.3';
 const EXPKEY='floorGrowthExperimentsV81';
 const $id=id=>document.getElementById(id);
 const num=v=>(v===null||v===undefined||v===''||!Number.isFinite(Number(v)))?null:Number(v);
@@ -258,7 +258,7 @@ function generateCurrent(){
 }
 function renderFeedback(){const box=$id('g81Feedback');box.innerHTML='<div class="g81-feedback-title">发布后记录结果</div><div class="g81-feedback-grid"><label>浏览<input data-k="views" inputmode="decimal"></label><label>点赞<input data-k="likes" inputmode="decimal"></label><label>收藏<input data-k="favs" inputmode="decimal"></label><label>评论<input data-k="comments" inputmode="decimal"></label><label>转发<input data-k="shares" inputmode="decimal"></label><label>发布天数<input data-k="days" inputmode="decimal"></label></div><button id="g81SaveFeedback" class="g81-primary">保存结果</button>';box.classList.add('show');$id('g81SaveFeedback').onclick=saveFeedback}
 function saveFeedback(){let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}const d=[...a].reverse().find(x=>x.platform===currentPlatform()&&x.status==='draft');if(!d)return setStatus('没有找到待验证的生成记录。','warn');const m={};$id('g81Feedback').querySelectorAll('input').forEach(i=>{const v=num(i.value);if(v!==null)m[i.dataset.k]=v});const total=(m.likes||0)+(m.favs||0)+(m.comments||0)+(m.shares||0),days=m.days||1;d.metrics=m;d.performance=m.views?total/m.views:total/Math.max(.25,days);d.status='measured';d.measuredAt=nowISO();localStorage.setItem(EXPKEY,JSON.stringify(a.slice(-120)));$id('g81Feedback').innerHTML='<div class="g81-saved">✓ 已保存，本轮结果会进入后续同平台验证。</div>';setStatus('发布结果已记录。','oktxt')}
-function runAll(){ensureUI();const r=analyze();window.__g81Analysis=r;renderAnalysis(r);const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const sub=document.querySelector('.top .sub');if(sub)sub.textContent='小红书：高价值分析 → 测试变量 → 内容生成 → 发布验证';const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.1.2';document.title='多平台内容增长决策系统 V8.1.2';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.1.2：结论在前、行动其次、关键证据随后、原始数据最后；生成结果必须通过测试变量执行校验。'}
+function runAll(){ensureUI();const r=analyze();window.__g81Analysis=r;renderAnalysis(r);const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const sub=document.querySelector('.top .sub');if(sub)sub.textContent='小红书：高价值分析 → 测试变量 → 内容生成 → 发布验证';const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.1.3';document.title='多平台内容增长决策系统 V8.1.3';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.1.3：结论在前、行动其次、关键证据随后、原始数据最后；生成结果必须通过测试变量执行校验。'}
 const oldRender=window.render;if(typeof oldRender==='function'){window.render=function(){const v=oldRender.apply(this,arguments);setTimeout(runAll,40);return v}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(runAll,90));else setTimeout(runAll,90);
 })();
