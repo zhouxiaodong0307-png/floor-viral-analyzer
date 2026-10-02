@@ -63,7 +63,7 @@ function scan(win,q,tier){
     if(!title)continue;
     const pm=t.match(/[¥￥]\s*([\d,.]+)/),price=pm?+pm[1].replace(/,/g,''):null,link=a.href||win.location.href,pid=idOf(link);
     rawKeys.add((pid||link.split('#')[0])+'|'+title.slice(0,120));
-    let canonical='';try{const z=new URL(link);canonical=z.origin+z.pathname.replace(/\/$/,'')}catch{}const key=pid||title.replace(/\s+/g,'').slice(0,150)+'|'+(price??'')+'|'+canonical;
+    const key=pid||title.replace(/\s+/g,'').replace(/[^\u4e00-\u9fa5a-z0-9]/gi,'').slice(0,150)+'|'+(price??'');
     const old=out.get(key)||{};
     const wm=t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:人想要|想要)/i),
           vm=t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:浏览|浏览量|查看|阅读)/i),
@@ -75,7 +75,7 @@ function scan(win,q,tier){
     const img=card.querySelector('img'),hits=[...(old.keywordHits||[]),q].filter((x,i,a)=>x&&a.indexOf(x)===i);
     const prev=old.sampleTier||tier,finalTier=(prev==='A'||tier==='A')?'A':(prev==='B'||tier==='B')?'B':'C';
     out.set(key,{
-      rank:old.rank||out.size+1,queryRank:old.queryRank||Math.max(1,queryStats.filter(s=>s.query===q).length+1),productId:pid||old.productId||'',title,text:t,url:link,image:img?.src||old.image||'',
+      rank:old.rank||out.size+1,productId:pid||old.productId||'',title,text:t,url:link,image:img?.src||old.image||'',
       imageCount:card.querySelectorAll('img').length||old.imageCount||null,price:Number.isFinite(price)?price:(old.price??null),
       wants:wm?N(wm[1]):(old.wants??null),views:vm?N(vm[1]):(old.views??null),likes:lm?N(lm[1]):(old.likes??null),
       favs:fm?N(fm[1]):(old.favs??null),comments:cm?N(cm[1]):(old.comments??null),ageText:tm?tm[1]:(old.ageText||''),
