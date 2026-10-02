@@ -1,0 +1,114 @@
+/* V7.3.1 responsive layout fix — solve shrink rules at source, no overflow-x masking. */
+html,body{width:100%;max-width:100%;margin:0}
+body{min-width:0}
+.wrap{width:min(100% - 24px,1180px);max-width:1180px;margin:0 auto;padding:18px 0 60px;min-width:0}
+.wrap>*,.card,.panel,.top,.head,.stats,.work,.strategy,.toolbar,.capturebar,.sampleline,.urlrow,.genrow,.outputs,.output-actions,.market-grid,.market-signals,.market-top-items,.source-list{min-width:0;max-width:100%}
+.top>*,.head>*,.stats>*,.work>*,.strategy>*,.toolbar>*,.capturebar>*,.sampleline>*,.urlrow>*,.genrow>*,.outputs>*,.output-actions>*,.market-grid>*,.market-signal>*,.market-item>*,.source-card>*{min-width:0}
+.card,.panel,.signal,.output,.stat,.market-summary,.market-signal,.market-item,.source-card{width:100%;max-width:100%;box-sizing:border-box}
+input,textarea,select,pre,.muted,.qualitynote,.status,.sampletext,.market-summary,.signal strong,.signal span,.output pre,.foot{max-width:100%}
+.muted,.qualitynote,.market-summary,.signal strong,.signal span,.output pre,.foot{overflow-wrap:anywhere;word-break:break-word}
+input{min-width:0}
+.market-top-items{width:100%}
+.market-item{width:100%;max-width:100%;grid-template-columns:32px minmax(0,1fr) 48px;gap:10px;align-items:center;padding:10px 11px}
+.market-item .no{width:32px;text-align:center;flex:none}
+.market-item>div:nth-child(2){min-width:0;max-width:100%}
+.market-item b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal;overflow:hidden;text-overflow:ellipsis;line-height:1.42;max-height:2.84em;font-size:12px;overflow-wrap:anywhere}
+.market-item span{display:block;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
+.market-item .open{width:48px;min-width:48px;max-width:48px;text-align:center;white-space:nowrap;align-self:center;justify-self:end}
+.market-grid{grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr)}
+.market-signal{grid-template-columns:minmax(0,1fr) max-content}
+.market-diff{white-space:nowrap}
+.evidencebar>*{min-width:0}
+.evidencebar .muted{flex:1 1 280px}
+.confidence{flex:0 0 auto}
+.head .muted{max-width:62%;text-align:right}
+.head>div{min-width:0}
+.head .label{overflow-wrap:anywhere}
+.source-card{grid-template-columns:minmax(0,1fr) 48px}
+.source-main{min-width:0;max-width:100%}
+.source-card b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal;overflow:hidden;text-overflow:ellipsis;overflow-wrap:anywhere}
+.source-card .source-main>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.source-open{width:48px;min-width:48px;text-align:center;white-space:nowrap}
+.urlrow button,.genrow button,.toolbar button,.copybtn,.secondary,.primary,.download,.collector{flex:0 0 auto;max-width:100%}
+.output-actions{flex-wrap:wrap}
+.output-actions button{max-width:100%}
+.table-wrap{width:100%;max-width:100%;overflow:visible}
+table{width:100%;max-width:100%;min-width:0;table-layout:fixed}
+th,td{min-width:0;overflow:hidden;text-overflow:ellipsis}
+th:nth-child(1),td:nth-child(1){width:5%}
+th:nth-child(2),td:nth-child(2){width:8%}
+th:nth-child(3),td:nth-child(3){width:28%}
+th:nth-child(4),td:nth-child(4){width:7%}
+th:nth-child(5),td:nth-child(5),th:nth-child(6),td:nth-child(6),th:nth-child(7),td:nth-child(7),th:nth-child(8),td:nth-child(8),th:nth-child(9),td:nth-child(9){width:5.5%}
+th:nth-child(10),td:nth-child(10){width:7%}
+th:nth-child(11),td:nth-child(11){width:8%}
+th:nth-child(12),td:nth-child(12){width:8%}
+th:nth-child(13),td:nth-child(13){width:6%}
+td.title{max-width:none;white-space:normal;display:table-cell;overflow-wrap:anywhere;word-break:break-word}
+td:not(.title){white-space:nowrap}
+.openlink{max-width:100%;padding:6px 7px}
+@media(max-width:900px){
+  .wrap{width:min(100% - 20px,820px);padding-top:14px}
+  .head{align-items:flex-start}
+  .head .muted{max-width:100%;text-align:left}
+  .market-grid,.work{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .table-wrap{border:0;border-radius:0;overflow:visible}
+  table,tbody{display:block;width:100%;max-width:100%}
+  thead{display:none}
+  tbody{display:grid;gap:9px}
+  tbody tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);width:100%;max-width:100%;border:1px solid var(--line);border-radius:13px;background:#fff;overflow:visible;padding:10px 11px;gap:5px 12px}
+  tbody tr.row-high{background:var(--high);box-shadow:inset 3px 0 0 var(--ok)}
+  tbody tr.row-mid{background:var(--mid);box-shadow:inset 3px 0 0 #c79a1b}
+  tbody tr td{display:flex;align-items:baseline;gap:7px;width:100%!important;max-width:100%;padding:2px 0;border:0;background:transparent!important;box-shadow:none!important;white-space:normal;overflow:visible;text-overflow:clip;min-width:0;font-size:11px}
+  tbody tr td::before{font-size:10px;color:var(--muted);font-weight:600;flex:0 0 auto}
+  tbody tr td:nth-child(1)::before{content:"排名"}
+  tbody tr td:nth-child(2)::before{content:"价值"}
+  tbody tr td:nth-child(3)::before{content:"标题"}
+  tbody tr td:nth-child(4)::before{content:"价格"}
+  tbody tr td:nth-child(5)::before{content:"浏览"}
+  tbody tr td:nth-child(6)::before{content:"想要"}
+  tbody tr td:nth-child(7)::before{content:"点赞"}
+  tbody tr td:nth-child(8)::before{content:"收藏"}
+  tbody tr td:nth-child(9)::before{content:"评论"}
+  tbody tr td:nth-child(10)::before{content:"时间"}
+  tbody tr td:nth-child(11)::before{content:"互动/小时"}
+  tbody tr td:nth-child(12)::before{content:"卖家"}
+  tbody tr td:nth-child(13)::before{content:"来源"}
+  tbody tr td.title{grid-column:1/-1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;font-size:13px;padding:3px 0 7px}
+  tbody tr td.title::before{display:none}
+  tbody tr td:nth-child(13){justify-content:flex-end}
+  .openlink{margin-left:auto}
+}
+@media(max-width:650px){
+  .wrap{width:min(100% - 16px,620px);padding-top:12px}
+  .card{padding:12px;border-radius:14px}
+  .top{align-items:center}
+  .top h1{font-size:20px}
+  .badge{flex:0 0 auto}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stat{padding:11px}.stat b{font-size:19px}
+  .market-item{grid-template-columns:26px minmax(0,1fr) 44px;padding:9px}
+  .market-item .no{width:26px}
+  .market-item .open{width:44px;min-width:44px;max-width:44px}
+  .strategy{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .source-card{grid-template-columns:minmax(0,1fr) 44px}
+  .source-open{width:44px;min-width:44px}
+  .sampleline{align-items:center}
+  .sampletext{white-space:normal;line-height:1.35;max-width:46%}
+  .capturebar .status{flex:1 1 100%}
+  .sortbar{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .sortbtn{min-width:0;white-space:normal}
+  .tool-actions{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .outputs{grid-template-columns:1fr}.output.tags{grid-column:auto}
+  tbody tr{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 10px}
+}
+@media(max-width:390px){
+  .wrap{width:calc(100% - 12px)}
+  .top h1{font-size:18px}
+  .strategy{grid-template-columns:1fr 1fr}
+  .market-summary{padding:10px 11px;font-size:13px}
+  .market-item{grid-template-columns:24px minmax(0,1fr) 42px;gap:7px}
+  .market-item .no{width:24px}
+  .market-item .open{width:42px;min-width:42px;max-width:42px}
+}
