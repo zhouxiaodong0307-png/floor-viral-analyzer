@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='8.0.1', FINDKEY='floorGrowthFindingsV8', EXPKEY='floorGrowthExperimentsV8';
+const VERSION='8.0.2', FINDKEY='floorGrowthFindingsV8', EXPKEY='floorGrowthExperimentsV8';
 const $id=id=>document.getElementById(id);
 const n=v=>(v===null||v===undefined||v===''||!Number.isFinite(Number(v)))?null:Number(v);
 const pos=v=>{const x=n(v);return x!==null&&x>0?x:null};
@@ -225,6 +225,14 @@ function scoreRows(usable,model){
     };
     applyWeights(model.weights);
     if(!w&&model.fallbackWeights){mode='高互动/潜在高表现';applyWeights(model.fallbackWeights)}
+    if(!w){
+      const rank=n(x.queryRank??x.rank),ranks=cohort.map(z=>n(z.queryRank??z.rank)).filter(v=>v!==null&&v>0);
+      const days=ageDays(x);
+      if(rank!==null&&rank>0&&ranks.length>=5){
+        const rp=1-(percentile(rank,ranks)??1),fresh=days===null?0:days<=7?.12:days<=30?.05:0;
+        sum=clamp(rp+fresh);w=1;best={key:'searchRank',p:rp};mode='搜索排序/时效参考';
+      }
+    }
     const core=model.coreCoverage(x.__dims),completeness=core.length?core.filter(v=>v!==null&&v!==undefined).length/core.length:0;
     const score=w?sum/w:null;
     return {...x,__score:score,__complete:completeness,__best:best,__mode:mode,__kind:model.kinds[best.key]||'潜在高表现'};
@@ -301,11 +309,18 @@ function analyze(){
   const findings=featureEvidence(high,normal,defs,coverage,stability,1);
   for(const f of findings){f.cycles=cycleCount(platform,f.id)}
   const findings2=featureEvidence(high,normal,defs,coverage,stability,1);
+  const rankOnlyRate=normalPool.length?normalPool.filter(x=>x.__mode==='搜索排序/时效参考').length/normalPool.length:0;
+  if(rankOnlyRate>=.5){
+    for(const f of findings2){
+      f.evidence='探索性信号';
+      f.category=(f.diff>=.15&&high.length>=10&&normal.length>=20)?'值得测试':'暂无价值';
+    }
+  }
   // restore per-feature cycle counts and cross-platform notes
   for(const f of findings2){f.cycles=cycleCount(platform,f.id);f.cross=crossSignal(f.id,platform)}
   // re-evaluate strong evidence with its own repeated-cycle count
   for(const f of findings2){
-    if(f.cycles>=2&&f.evidence==='中等证据'&&high.length>=50&&normal.length>=100&&f.diff>=.15&&f.z>=2&&coverage>=.55&&stability>=.70)f.evidence='强证据';
+    if(rankOnlyRate<.5&&f.cycles>=2&&f.evidence==='中等证据'&&high.length>=50&&normal.length>=100&&f.diff>=.15&&f.z>=2&&coverage>=.55&&stability>=.70)f.evidence='强证据';
     if(f.evidence==='强证据'&&f.diff>=.15)f.category='可以复用';
   }
   const reusable=findings2.filter(f=>f.category==='可以复用'),testable=findings2.filter(f=>f.category==='值得测试'),none=findings2.filter(f=>f.category==='暂无价值');
@@ -408,9 +423,9 @@ function renderDecision(r){
     $id('v8Action').textContent='完成一次抓取';
     $id('v8Metrics').innerHTML='';$id('v8Reasons').innerHTML='';$id('v8Evidence').innerHTML='';$id('v8HighList').innerHTML='';return;
   }
-  const s=r.strongest,lead=s?(s.category==='可以复用'?'可以复用：':'值得测试：')+s.label:'本轮没有足够稳定的内容规律';const fallbackCount=r.rows.filter(x=>x.__mode==='高互动/潜在高表现').length;
+  const s=r.strongest,lead=s?(s.category==='可以复用'?'可以复用：':'值得测试：')+s.label:'本轮没有足够稳定的内容规律';const fallbackCount=r.rows.filter(x=>x.__mode==='高互动/潜在高表现').length,rankRefCount=r.rows.filter(x=>x.__mode==='搜索排序/时效参考').length;
   $id('v8Conclusion').textContent=lead;
-  $id('v8Why').innerHTML=s?('高表现组 '+s.hc+'/'+r.high.length+' = <b>'+fmtPct(s.hp)+'</b>，普通组 '+s.nc+'/'+r.normal.length+' = <b>'+fmtPct(s.np)+'</b>，差异 <b>'+(s.diff>=0?'+':'')+Math.round(s.diff*100)+'%</b>；'+s.evidence+'。'+(fallbackCount?' 本轮有 '+fallbackCount+' 条因缺少浏览/发布时间，只按“高互动/潜在高表现”比较，不代表高流量或高曝光。':'')):'本轮高低表现组差异不足，系统不会为了“有结论”而硬凑规律。'+(fallbackCount?' 当前部分样本只能按累计互动比较，不代表高流量或高曝光。':'');
+  $id('v8Why').innerHTML=s?('高表现组 '+s.hc+'/'+r.high.length+' = <b>'+fmtPct(s.hp)+'</b>，普通组 '+s.nc+'/'+r.normal.length+' = <b>'+fmtPct(s.np)+'</b>，差异 <b>'+(s.diff>=0?'+':'')+Math.round(s.diff*100)+'%</b>；'+s.evidence+'。'+(fallbackCount?' 本轮有 '+fallbackCount+' 条因缺少浏览/发布时间，只按“高互动/潜在高表现”比较，不代表高流量或高曝光。':'')+(rankRefCount?' 另有 '+rankRefCount+' 条只能按搜索排序/时效做探索性参考，不代表真实流量。':'')):'本轮高低表现组差异不足，系统不会为了“有结论”而硬凑规律。'+(fallbackCount?' 当前部分样本只能按累计互动比较，不代表高流量或高曝光。':'')+(rankRefCount?' 当前部分样本只能按搜索排序/时效参考。':'');
   $id('v8Action').textContent=s&&s.category!=='暂无价值'?'下一条只测试「'+s.label+'」':'保持当前方案，先补更多有效数据';
   $id('v8ActionSub').textContent=s&&s.category!=='暂无价值'?'价格、主体产品信息、发布时间等尽量保持接近，用下一轮结果验证这个相关性。':'当前证据不足，不建议同时改多个变量。';
   $id('v8Metrics').innerHTML=metricsFor(r).map(([v,l])=>'<div class="v8-metric"><b>'+esc(v)+'</b><span>'+esc(l)+'</span></div>').join('');
@@ -527,10 +542,10 @@ function saveFeedback(){
 function runAll(){
   ensureUI();
   const r=analyze();window.__v8Analysis=r;renderDecision(r);installGenerator();
-  const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.0.1：不同平台使用独立高价值模型；结论在前、行动其次、关键证据随后、原始数据最后。';
+  const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.0.2：不同平台使用独立高价值模型；结论在前、行动其次、关键证据随后、原始数据最后。';
   const sub=document.querySelector('.top .sub');if(sub)sub.textContent='找到高表现内容 → 解释为什么好 → 提炼下一条最值得测试的变量';
-  const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.0.1';
-  document.title='多平台内容增长决策系统 V8.0.1';
+  const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.0.2';
+  document.title='多平台内容增长决策系统 V8.0.2';
 }
 const oldRender=window.render;
 if(typeof oldRender==='function'){
