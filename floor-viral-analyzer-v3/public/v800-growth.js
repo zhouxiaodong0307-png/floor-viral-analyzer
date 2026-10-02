@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='8.1.4';
+const VERSION='8.2.0';
 const EXPKEY='floorGrowthExperimentsV81';
 const REPORTKEY='floorGrowthReportsV814';
 const $id=id=>document.getElementById(id);
@@ -93,7 +93,16 @@ const XHS_FEATURES=[
   ['experience','正文使用真实经验/结果表达',x=>/用了|使用|实测|真话|后悔|踩坑|翻车|住了|装完|完工/.test((x.title||'')+' '+(x.text||''))],
   ['factory','内容直接展示工厂/生产现场',x=>/工厂|车间|生产|仓库|刚下线|刚生产/.test((x.title||'')+' '+(x.text||''))],
   ['coverScene','封面为真实使用/铺装场景',x=>/实景|场景|铺装|家装|案例/.test(String(x.coverType||x.imageType||''))],
-  ['video','内容形式为视频',x=>/视频/.test(String(x.contentType||''))]
+  ['video','内容形式为视频',x=>/视频/.test(String(x.contentType||''))],
+  ['shortTitle','标题更精简',x=>{const n=String(x.title||'').replace(/\s+/g,'').length;return n>=8&&n<=22}],
+  ['decisionTitle','标题直接解决选购问题',x=>/怎么选|适合|区别|差别|值不值|预算|规格|铺法|损耗|稳定|地暖/.test(x.title||'')],
+  ['directOpen','正文开头快速进入主题',x=>{const s=String(x.text||'').trim().slice(0,120);return /先看|直接|如果|同样|这次|为什么|怎么|铺|装|用|规格|价格|空间/.test(s)}],
+  ['structuredBody','正文结构清晰',x=>{const s=String(x.text||'');return /\n\s*\n/.test(s)||/(?:^|\n)\s*[1-5][.、]/.test(s)}],
+  ['mediumBody','正文长度适中',x=>{const n=String(x.text||'').replace(/\s+/g,'').length;return n>=100&&n<=500}],
+  ['practicalInfo','正文包含可决策的具体信息',x=>/\d{2,4}\s*[x×*]\s*\d{2,4}|\d+(?:\.\d+)?\s*(?:㎡|平米|平方|元)|地暖|损耗|铺法|规格|收口/.test(x.text||'')],
+  ['hasTags','包含话题标签',x=>/#\S+/.test(x.text||'')],
+  ['multiImage','图片数量4张及以上',x=>num(x.imageCount)!==null&&num(x.imageCount)>=4],
+  ['lowAdTone','弱广告表达',x=>!/特价|清仓|最低|秒杀|加微信|私聊报价|全网最低|厂家直销/.test((x.title||'')+' '+(x.text||''))]
 ];
 const XY_FEATURES=[
   ['spec','标题带具体规格',x=>/\d{2,4}\s*[x×*]\s*\d{2,4}/i.test(x.title||'')],
@@ -205,114 +214,276 @@ function signalPool(r){
   if(!a.length&&r.exploratory)a.push(r.exploratory);
   return a;
 }
-function xhsGenerate(p,s){
-  const id=s.id,m=p.mat;let title='',body='',cover='',images='';
-  if(id==='titleSpec'){title=m+' '+p.spec+'，这种规格铺家里是什么效果？';body='这次先把规格说清楚：'+p.spec+'。\n\n同样是'+m+'，规格、铺法和空间比例都会影响最后效果。选的时候建议把实际面积、柜体颜色和收口一起考虑。';cover='封面只保留「'+m+' + '+p.spec+'」两个关键信息。';images='首图真实板面/铺装效果；第2张规格细节；第3张实际空间或拼接方式。'}
-  else if(id==='titlePrice'){title=p.price+'元/㎡的'+m+'，实际选的时候我更看这几点';body='价格先写明：'+p.price+'元/㎡。\n\n真正落地时还要一起看规格、铺法、面积和现场收口。单看价格，很容易忽略最后影响使用效果的条件。';cover='封面突出「'+p.price+'元/㎡ + '+m+'」，不要再叠太多文字。';images='首图真实产品；后续补规格、板面和实际空间。'}
-  else if(id==='titleNumber'){title=m+'这次只看'+p.otherNum+'这个具体条件';body='这条不讲泛泛卖点，直接围绕一个具体条件展开：'+p.otherNum+'。\n\n把数字信息说清楚，再结合实际空间和铺法判断，会比只看颜色更有参考价值。';cover='封面突出唯一数字「'+p.otherNum+'」，形成一眼可读的信息点。';images='围绕这个数字对应的真实细节连续展示，避免无关图片。'}
-  else if(id==='titleMaterial'){title=m+'地板，先别急着只看颜色';body='这次直接从'+m+'本身开始看。\n\n实际选择时，更值得先确认的是规格、铺法、面积和现场搭配，再决定颜色和表面效果。';cover='封面直接出现「'+m+'」，搭配真实板面或铺装图。';images='首图木种实拍；第2张板面；第3张铺装或空间效果。'}
-  else if(id==='titleScene'||id==='sceneBody'){title='家里准备铺'+m+'，我会先看这3件事';body='如果是家装在看'+m+'，我会先从真实空间出发：\n1. 采光和柜体颜色\n2. 规格和铺法\n3. 面积与收口条件\n\n先把这些确定，再看具体板面会更实际。';cover='用真实客厅/卧室铺装场景，不用纯白底产品图。';images='首图完整空间；第2张板面近景；第3张柜体/门套/收口关系。'}
-  else if(id==='titleQuestion'){title=m+'地板到底怎么选？先别只看颜色';body='看'+m+'时，我更建议先问三个问题：规格适不适合？铺法适不适合？现场收口怎么做？\n\n这些确认以后，再看颜色会更有效率。';cover='封面只放一个明确问题：「'+m+'到底怎么选？」';images='首图问题对应的真实产品；后面逐项回答规格、铺法、现场。'}
-  else if(id==='titleResult'){title=p.raw.includes(m)?p.raw.replace(/\s+/g,' ').slice(0,28):m+'用过以后，才敢说这几点';body='这条只基于你提供的真实使用/完工信息展开，不额外编造体验。\n\n'+p.raw+'\n\n把真实结果、适用条件和需要注意的地方分开说清楚，比单纯夸材质更有参考价值。';cover='封面突出真实结果，不使用夸张承诺。';images='优先结果图/完工图；再补使用细节和容易忽略的位置。'}
-  else if(id==='titleCompare'){title='同样是'+m+'，单看板和铺进家里真的不一样';body='这次做一个明确对比：单看一块板，和真正铺进空间里，判断标准完全不同。\n\n实际家装要把采光、面积、柜体颜色和铺法放在一起看。';cover='封面左右对比：单板近景 VS 实际铺装空间。';images='第1张对比封面；第2张单板；第3张完整空间；第4张细节差异。'}
-  else if(id==='titleLayout'){title=p.layout+'铺'+m+'，先确认这几个位置';body=p.layout+'准备铺'+m+'，建议先看客厅采光、房间尺度、柜体颜色和收口位置。\n\n户型明确以后，再去选规格和铺法会更有针对性。';cover='封面突出「'+p.layout+' + '+m+'」并用真实户型/空间图。';images='首图完整空间；再补客厅、卧室、收口三个关键位置。'}
-  else if(id==='titleArea'){title=p.area+'铺'+m+'，规格和损耗要先算清楚';body=p.area+'准备铺'+m+'，先别只看单价。\n\n面积明确后，要一起确认规格、铺法和损耗，再决定最终用量和效果。';cover='封面突出「'+p.area+' + '+m+'」，配实际地面/空间图。';images='首图空间；第2张规格；第3张铺法；第4张收口。'}
-  else if(id==='titleInstall'){title=m+'做'+p.install+'，铺出来和普通平铺差别有多大？';body='这次只看一个变量：'+p.install+'。\n\n同样是'+m+'，铺法会直接改变视觉比例和损耗。选择前建议结合房间尺度和实际面积一起判断。';cover='封面突出「'+p.install+'」铺法，直接展示拼接效果。';images='首图完整铺法效果；第2张拼接近景；第3张空间整体。'}
-  else if(id==='howto'||id==='saveValue'){title='准备铺'+m+'的，先把这4点记下来';body='准备铺'+m+'，建议先确认：\n1. 实际面积和损耗\n2. 规格与铺法\n3. 柜体、门套和收口\n4. 真实板面与色差\n\n先把条件确认清楚，再去选具体产品。';cover='清单型封面，只显示「铺'+m+'前先确认4点」。';images='4张图分别对应面积/规格/铺法/收口，方便收藏回看。'}
-  else if(id==='discussion'){title=m+'你会选平铺还是花式拼？';body='如果是你家铺'+m+'，你会更在意稳定耐用，还是更在意铺装效果？\n\n不同空间、面积和预算，最后答案会不一样。你会怎么选？';cover='封面用两种铺法对比，直接形成选择题。';images='首图A/B对比；后面分别展示两种方案细节。'}
-  else if(id==='experience'){title='看了这么多'+m+'，我现在更在意这几个细节';body='看得越多，越觉得选'+m+'不能只靠第一眼颜色。\n\n我更在意规格、铺法、现场搭配和收口条件，这些才真正影响落地效果。';cover='真实观察/现场图，避免纯宣传海报。';images='首图真实现场；后面逐项展示规格、板面和收口。'}
-  else if(id==='factory'){title='刚在工厂看到一批'+m+'，先看真实板面';body='这次直接看工厂现场和真实板面，不做过度滤镜。\n\n同一木种也要结合规格、选材和实际铺装条件看，单看一块样板不够。';cover='工厂现场或刚下线产品实拍。';images='首图生产/库存现场；第2张板面；第3张规格或包装。'}
-  else if(id==='coverScene'){title=m+'铺进家里，和单看样板真的不一样';body='这次内容重点不放在参数堆叠，而是用真实空间展示'+m+'铺进去后的比例、光线和搭配效果。';cover='必须使用真实铺装/使用场景作为首图。';images='首图完整空间；第2张近景；第3张不同光线；第4张收口。'}
-  else {title=m+'地板，先看真实空间再决定';body='这次只围绕一个明确切入点展开，不堆泛泛卖点。\n\n实际选择时先看空间、规格和铺法，再决定具体产品。';cover='真实产品或实际铺装图。';images='首图真实场景；后面补产品细节。'}
-  const tags='#'+[m,m.includes('地板')?null:m+'地板','实木地板','装修','地板选购'].filter(Boolean).join(' #');return{title,body,tags,cover,images};
+
+function semanticSpec(p){
+  if(!p.spec)return null;
+  const m=p.spec.match(/(\d{2,4})\s*[x×*]\s*(\d{2,4})(?:\s*[x×*]\s*(\d{1,3}))?/i);
+  if(!m)return null;
+  return{full:p.spec,length:m[1],width:m[2],thickness:m[3]||''};
+}
+function numericMeaning(p){
+  const sp=semanticSpec(p);
+  if(sp)return{type:'规格',value:sp.full,meaning:'板长、板宽和厚度，会影响铺装比例、视觉尺度和选购判断'};
+  if(p.area)return{type:'面积',value:p.area,meaning:'实际铺设面积，会影响用量、损耗和铺法选择'};
+  if(p.price)return{type:'价格',value:p.price+'元/㎡',meaning:'价格需要和规格、材质、结构及落地条件一起判断'};
+  if(p.layout)return{type:'户型',value:p.layout,meaning:'户型和房间尺度会影响规格与铺法选择'};
+  return null;
+}
+function strategyPlan(s,p,variant='A'){
+  const n=numericMeaning(p),m=p.mat;
+  let action='',angle='',why='';
+  if(s.id==='titleSpec'||s.id==='titleNumber'){
+    action='标题加入完整且有意义的具体信息';
+    if(n?.type==='规格'){angle=variant==='A'?'用完整规格回答“铺出来是什么感觉”':'用完整规格提出“和其他规格差在哪”';why=n.meaning}
+    else if(n){angle='把'+n.type+'和真实选购问题连接起来';why=n.meaning}
+    else{angle='需要先补充有单位、有含义的真实数字';why='单独的“910”没有语义，不能直接写进标题'}
+  }else if(s.id==='titleScene'||s.id==='sceneBody'){action='从真实使用场景切入';angle=variant==='A'?'先说空间，再说产品':'先提家装问题，再给判断';why='让用户先知道这条内容和自己的空间有什么关系'}
+  else if(s.id==='titleQuestion'){action='用明确问题做标题入口';angle=variant==='A'?'直接问“怎么选”':'直接问“差别在哪”';why='问题必须对应真实购买决策，而不是空泛提问'}
+  else if(s.id==='titleCompare'){action='用对比建立阅读动机';angle=variant==='A'?'单板 VS 铺进空间':'同木种不同规格/铺法的判断差异';why='对比要回答真实选择问题，不做无依据结论'}
+  else if(s.id==='titleResult'||s.id==='experience'){action='用真实结果/经验切入';angle=variant==='A'?'先给结果，再讲条件':'先讲经历，再总结判断';why='只使用用户提供的真实经历，不编造体验'}
+  else if(s.id==='titlePrice'){action='把真实价格放进决策语境';angle=variant==='A'?'价格 + 为什么不能只看单价':'价格 + 需要一起确认的条件';why='价格数字要帮助判断，不是单纯吸引点击'}
+  else if(s.id==='titleInstall'){action='把铺法变成具体选择问题';angle=variant==='A'?'铺法对视觉效果的影响':'铺法对损耗/空间尺度的影响';why='铺法本身是购买决策变量'}
+  else if(s.id==='titleArea'||s.id==='titleLayout'){action='把实际空间条件前置';angle=variant==='A'?'面积/户型 + 规格选择':'面积/户型 + 铺法选择';why='空间条件能让内容更贴近真实装修决策'}
+  else if(s.id==='howto'||s.id==='saveValue'||s.id==='practicalInfo'){action='提供可收藏的选购信息';angle=variant==='A'?'清单式判断':'问题—答案式判断';why='让信息对用户后续选购有可复用价值'}
+  else if(s.id==='discussion'){action='用真实选择题触发讨论';angle=variant==='A'?'两种铺法怎么选':'效果和耐用更看重哪个';why='讨论点要建立在真实取舍上'}
+  else if(s.id==='factory'){action='用真实工厂/生产现场建立内容可信度';angle=variant==='A'?'先看真实板面':'先看生产/库存现场';why='现场信息必须真实存在'}
+  else if(s.id==='titleMaterial'){action='木种前置但不做泛泛卖点';angle=variant==='A'?'木种 + 选购问题':'木种 + 落地场景';why='木种只是入口，正文要解决选择问题'}
+  else {action=s.label;angle=variant==='A'?'从真实装修问题切入':'从具体选择差异切入';why='测试变量要转成用户能理解的内容角度'}
+  return{action,angle,why,numeric:n};
+}
+function naturalXhsGenerate(p,s,variant='A'){
+  const m=p.mat,plan=strategyPlan(s,p,variant),n=plan.numeric,sp=semanticSpec(p);
+  let title='',body='',cover='',images='';
+  if((s.id==='titleSpec'||s.id==='titleNumber')&&sp){
+    if(variant==='A'){
+      title=sp.full+'的'+m+'，铺出来更适合什么空间？';
+      body='同样是'+m+'，规格不同，铺出来的比例感会很不一样。\n\n'+sp.full+'这个规格，我会重点看房间尺度、采光和铺法，再决定它适不适合家里。单看一块板很难判断，最好放到真实空间里看整体效果。';
+      cover='首图用真实空间或现场拼铺，角落轻量标注「'+sp.full+'」即可。';
+      images='1. 完整空间/拼铺效果；2. 板材近景；3. 规格细节；4. 收口或与柜体的搭配。';
+    }else{
+      title='同样是'+m+'，'+sp.full+'和小规格铺感差在哪？';
+      body='看'+m+'时，规格其实比第一眼颜色更容易被忽略。\n\n'+sp.full+'这类规格放进不同大小的房间，视觉比例会有差别。选择时可以把空间尺度、铺法和收口一起看，不要只盯着单块样板。';
+      cover='做“完整规格 + 实际铺装”的对比封面，不写算法词或大段说明。';
+      images='1. 两种尺度的铺装对比；2. '+sp.full+'实拍；3. 空间远景；4. 边角/收口。';
+    }
+  }else if((s.id==='titleSpec'||s.id==='titleNumber')&&n){
+    title=variant==='A'?n.value+'铺'+m+'，真正要先看什么？':m+'用到'+n.value+'，选的时候别只看表面效果';
+    body='有具体条件以后，判断会比只说“好不好看”更有意义。\n\n这次把'+n.type+'放进真实选购场景里看：'+n.meaning+'。再结合现场空间和铺法，结论才有参考价值。';
+    cover='封面只保留「'+n.value+' + '+m+'」和真实产品/空间。';
+    images='优先展示和'+n.type+'直接相关的真实细节，再补整体空间。';
+  }else if(s.id==='titleScene'||s.id==='sceneBody'){
+    title=variant==='A'?'家里准备铺'+m+'，我会先看这3个地方':m+'别只看样板，放进真实空间才知道合不合适';
+    body=variant==='A'?'如果是家装在看'+m+'，我会先看客厅采光、柜体颜色和收口位置。\n\n这三个条件确定以后，再选规格和铺法会更稳，也更容易判断最终效果。':'单看一块样板，很容易只注意颜色。\n\n真正铺进家里以后，空间大小、采光、柜体和门套都会影响整体感觉。选'+m+'时，我更建议先看真实空间，再决定规格和铺法。';
+    cover='真实客厅/卧室或现场拼铺图，尽量不用纯白底产品照。';
+    images='整体空间 → 板面近景 → 柜体/门套搭配 → 收口细节。';
+  }else if(s.id==='titleQuestion'){
+    title=variant==='A'?m+'地板到底怎么选？先别只看颜色':'同样是'+m+'，为什么有人铺完会觉得不对劲？';
+    body='我更建议先把问题拆开看：空间多大、准备怎么铺、规格是否合适、最后怎么收口。\n\n这些条件比单看颜色更接近真正落地时会遇到的问题。';
+    cover='封面只放一个清楚的问题，配真实产品或空间图。';
+    images='问题对应的真实场景 → 规格 → 铺法 → 收口。';
+  }else if(s.id==='titleCompare'){
+    title=variant==='A'?'同样是'+m+'，单看板和铺进家里真的不一样':m+'大板和小板怎么选？先看房间尺度';
+    body='选地板最容易误判的一点，就是只看手上的一块样板。\n\n真正铺开以后，板宽、长度、房间尺度和铺法会一起影响视觉效果。对比时最好看完整空间，而不是只比单块颜色。';
+    cover='左右对比：单块板材 VS 实际铺装空间。';
+    images='对比封面 → 单板 → 完整空间 → 细节。';
+  }else if(s.id==='titlePrice'&&p.price){
+    title=variant==='A'?p.price+'元/㎡的'+m+'，单看这个价格其实不够':m+'卖到'+p.price+'元/㎡，差别通常要从哪里看？';
+    body='价格是最直观的信息，但真要判断值不值，还得把规格、结构、铺法和现场条件放在一起看。\n\n这次价格是'+p.price+'元/㎡，后面我会把真正影响选择的几个条件拆开看。';
+    cover='真实产品图 + 小字标注「'+p.price+'元/㎡」，避免促销海报感。';
+    images='产品实拍 → 规格 → 结构/板面 → 实际铺装。';
+  }else if(s.id==='titleInstall'&&p.install){
+    title=variant==='A'?m+'做'+p.install+'，铺出来和普通平铺差在哪？':p.install+'铺'+m+'，先看空间大小再决定';
+    body='同样是'+m+'，铺法一变，整体比例和视觉节奏就会变。\n\n如果考虑'+p.install+'，我会先看房间尺度、实际面积和收口位置，再决定是不是适合。';
+    cover='直接用'+p.install+'完成效果做封面。';
+    images='完整铺装 → 拼接近景 → 房间远景 → 收口。';
+  }else if(s.id==='titleArea'&&p.area){
+    title=variant==='A'?p.area+'铺'+m+'，规格和铺法要先怎么定？':m+'铺'+p.area+'，先把损耗和规格算清楚';
+    body='面积明确以后，很多选择会更具体。\n\n'+p.area+'铺'+m+'，我会先确认规格、铺法和损耗，再看最终用量和整体效果。';
+    cover='真实空间 + 「'+p.area+'」小字信息。';
+    images='空间 → 规格 → 铺法 → 收口。';
+  }else if(s.id==='howto'||s.id==='saveValue'||s.id==='practicalInfo'){
+    title=variant==='A'?'准备铺'+m+'的，这4点建议先确认':m+'怎么选更省事？先把这4个问题问清楚';
+    body='准备铺'+m+'，建议先确认：\n1. 实际面积和损耗\n2. 规格与铺法\n3. 柜体、门套和收口\n4. 真实板面与色差\n\n这四项先弄清楚，后面选具体产品会快很多。';
+    cover='清单型封面，只放“铺'+m+'前先确认4点”。';
+    images='每张图对应一个问题，顺序和正文一致。';
+  }else if(s.id==='discussion'){
+    title=variant==='A'?m+'你会选平铺还是花式拼？':'铺'+m+'，你更在意整体效果还是后期省心？';
+    body='如果是你家铺'+m+'，你会更在意视觉效果，还是更在意后期打理和施工复杂度？\n\n不同空间、面积和预算，最后选择可能完全不同。';
+    cover='两种真实方案做A/B对比。';
+    images='A方案 → B方案 → 各自细节。';
+  }else if(s.id==='titleResult'||s.id==='experience'){
+    title=variant==='A'?m+'真正用过以后，最容易忽略的是这些细节':m+'装完以后再看，和选样板时想的不太一样';
+    body=p.raw+'\n\n如果这是真实使用/完工信息，正文重点就放在实际结果、适用条件和需要注意的地方，不额外编造体验。';
+    cover='真实完工/使用结果图，不用夸张承诺。';
+    images='结果图 → 使用细节 → 容易忽略的位置。';
+  }else if(s.id==='factory'&&p.factory){
+    title=variant==='A'?'刚在工厂看到一批'+m+'，先看真实板面':'工厂里的'+m+'，和展厅样板最该看什么？';
+    body='这次直接看真实生产/库存现场，不加重滤镜。\n\n同一木种也要结合规格、选材和实际铺装条件看，单看一块样板不够。';
+    cover='工厂/车间真实现场。';
+    images='生产现场 → 板面 → 规格 → 包装/库存。';
+  }else{
+    title=variant==='A'?m+'地板，先看真实空间再决定':m+'怎么选更合适？别只看第一眼颜色';
+    body='看'+m+'时，我更建议把空间、规格、铺法和收口放在一起判断。\n\n单看一块样板很容易只注意颜色，真正落地以后，整体比例和现场搭配更重要。';
+    cover='真实空间或产品现场图。';
+    images='整体 → 近景 → 规格/铺法 → 收口。';
+  }
+  const tags='#'+[m,m.includes('地板')?null:m+'地板','实木地板','装修','地板选购'].filter(Boolean).join(' #');
+  return{title,body,tags,cover,images,plan};
 }
 function validateSignal(s,o,p){
   const t=o.title,b=o.body,c=o.cover;
-  if(s.id==='titleSpec')return !!p.spec&&t.includes(p.spec);if(s.id==='titleNumber')return /\d/.test(t);if(s.id==='titlePrice')return !!p.price&&t.includes(p.price);if(s.id==='titleMaterial')return t.includes(p.mat);if(s.id==='titleScene')return /家里|客厅|卧室|家装|装修|新房|老房|民宿|办公室/.test(t);if(s.id==='titleQuestion')return /[？?]|怎么|到底|能不能|值不值/.test(t);if(s.id==='titleResult')return /用了|实测|装完|铺完|住了|后悔|真话|效果|翻车|踩坑/.test(t+' '+b);if(s.id==='titleCompare')return /对比|区别|不一样|差别|还是|VS|vs/.test(t);if(s.id==='titleLayout')return !!p.layout&&t.includes(p.layout);if(s.id==='titleArea')return !!p.area&&t.includes(p.area);if(s.id==='titleInstall')return !!p.install&&t.includes(p.install);if(s.id==='sceneBody')return /家装|实际空间|客厅|卧室|新房|铺进家里/.test((t+' '+b).slice(0,180));if(s.id==='howto'||s.id==='saveValue')return /1[.、]|第一|清单|记下来/.test(b);if(s.id==='discussion')return /你会|你觉得|你们|怎么选|哪种|[？?]/.test(t+' '+b);if(s.id==='experience')return /看了|使用|实测|用了|现场|完工/.test(t+' '+b);if(s.id==='factory')return /工厂|车间|生产/.test(t+' '+b);if(s.id==='coverScene')return /真实|铺装|场景|空间/.test(c);return true;
+  if(s.id==='titleSpec')return !!p.spec&&t.includes(p.spec);
+  if(s.id==='titleNumber')return !!numericMeaning(p)&&(/\d/.test(t));
+  if(s.id==='titlePrice')return !!p.price&&t.includes(p.price);
+  if(s.id==='titleMaterial')return t.includes(p.mat);
+  if(s.id==='titleScene')return /家里|客厅|卧室|家装|装修|空间/.test(t);
+  if(s.id==='titleQuestion')return /[？?]|怎么|到底|为什么|差在哪/.test(t);
+  if(s.id==='titleResult')return /用了|实测|装完|铺完|住了|结果|完工/.test(t+' '+b);
+  if(s.id==='titleCompare')return /对比|差在哪|不一样|怎么选|VS|vs/.test(t);
+  if(s.id==='titleLayout')return !!p.layout&&t.includes(p.layout);
+  if(s.id==='titleArea')return !!p.area&&t.includes(p.area);
+  if(s.id==='titleInstall')return !!p.install&&t.includes(p.install);
+  if(s.id==='sceneBody')return /家装|真实空间|客厅|卧室|铺进家里|空间/.test((t+' '+b).slice(0,220));
+  if(s.id==='howto'||s.id==='saveValue'||s.id==='practicalInfo')return /1[.、]|4点|问题|确认/.test(b);
+  if(s.id==='discussion')return /你会|你更在意|怎么选|[？?]/.test(t+' '+b);
+  if(s.id==='experience')return /用过|装完|实际|结果|完工/.test(t+' '+b);
+  if(s.id==='factory')return /工厂|车间|生产/.test(t+' '+b);
+  if(s.id==='coverScene')return /真实|铺装|场景|空间/.test(c);
+  return true;
 }
-function forceSignal(s,o,p){
-  if(s.id==='titleSpec'&&p.spec&&!o.title.includes(p.spec))o.title=p.mat+' '+p.spec+'，实际铺出来什么效果？';if(s.id==='titlePrice'&&p.price&&!o.title.includes(p.price))o.title=p.price+'元/㎡的'+p.mat+'，实际选的时候看什么？';if(s.id==='titleNumber'&&!/\d/.test(o.title)&&p.otherNum)o.title=p.mat+'这次只看'+p.otherNum+'这个具体条件';if(s.id==='titleScene'&&!/家里|客厅|卧室|家装|装修/.test(o.title))o.title='家里准备铺'+p.mat+'，先看这3点';if(s.id==='titleQuestion'&&!/[？?]/.test(o.title))o.title=p.mat+'地板到底怎么选？';if(s.id==='titleCompare'&&!/对比|区别|不一样|差别/.test(o.title))o.title='同样是'+p.mat+'，单看板和铺进家里差别有多大？';if(s.id==='titleLayout'&&p.layout&&!o.title.includes(p.layout))o.title=p.layout+'铺'+p.mat+'，先确认这几个位置';if(s.id==='titleArea'&&p.area&&!o.title.includes(p.area))o.title=p.area+'铺'+p.mat+'，规格和损耗要先算清楚';if(s.id==='titleInstall'&&p.install&&!o.title.includes(p.install))o.title=p.mat+'做'+p.install+'，效果差别有多大？';if(s.id==='sceneBody'&&!/家装|实际空间|客厅|卧室/.test(o.body))o.body='如果是家装在看'+p.mat+'，先从真实空间、采光和柜体颜色开始判断。\n\n'+o.body;return o;
+function readabilityCheck(o,s,p){
+  const joined=[o.title,o.body,o.cover].join(' ');
+  const banned=['本轮测试','本篇围绕','围绕'+(p.otherNum||'__'),'这个具体条件','把数字信息说清楚','测试变量','高表现组','普通组','算法','+11%'];
+  const bad=banned.find(x=>x!=='围绕__'&&joined.includes(x));
+  if(bad)return{ok:false,reason:'出现后台/机械表达：'+bad};
+  if(o.title.length<7||o.title.length>34)return{ok:false,reason:'标题长度不自然'};
+  if(String(o.body||'').replace(/\s+/g,'').length<45)return{ok:false,reason:'正文过短'};
+  if((s.id==='titleNumber'||s.id==='titleSpec')&&!numericMeaning(p))return{ok:false,reason:'数字没有明确语义'};
+  if(/\b\d{2,4}\b/.test(o.title)&&s.id==='titleNumber'&&!/×|x|㎡|平米|平方|元|年|室|房/.test(o.title))return{ok:false,reason:'标题里的数字缺少单位或含义'};
+  return{ok:true,reason:''};
+}
+function eligibility(s,p){
+  if(!s)return{ok:false,need:'没有可测试信号'};
+  if((s.id==='titleSpec'||s.id==='titleNumber')&&!numericMeaning(p))return{ok:false,need:'有意义的真实数字信息，例如完整规格 910×125×17、面积70㎡或价格530元/㎡'};
+  if(s.id==='titlePrice'&&!p.price)return{ok:false,need:'真实价格，例如 530元/㎡'};
+  if(s.id==='titleLayout'&&!p.layout)return{ok:false,need:'真实户型，例如 三房两厅'};
+  if(s.id==='titleArea'&&!p.area)return{ok:false,need:'真实面积，例如 70㎡'};
+  if(s.id==='titleInstall'&&!p.install)return{ok:false,need:'真实铺法，例如 鱼骨 / 人字 / 工字'};
+  if((s.id==='titleResult'||s.id==='experience')&&!p.experience)return{ok:false,need:'真实使用/完工结果，避免编造体验'};
+  if(s.id==='factory'&&!p.factory)return{ok:false,need:'确认这条内容确实是工厂/生产现场'};
+  return{ok:true,need:''};
+}
+function makeTwoVersions(p,s){
+  const a=naturalXhsGenerate(p,s,'A'),b=naturalXhsGenerate(p,s,'B');
+  const ca=readabilityCheck(a,s,p),cb=readabilityCheck(b,s,p);
+  return[{...a,label:'方案A',mode:'严格测试当前变量',check:ca},{...b,label:'方案B',mode:'同一变量的另一种表达',check:cb}];
 }
 
+
 function ensureUI(){
-  document.querySelector('.stats')?.classList.add('g81-hide');$id('marketAnalysisCard')?.classList.add('g81-hide');const oldGen=$id('genKeyword')?.closest('.card');if(oldGen)oldGen.classList.add('g81-hide');
-  const raw=[...document.querySelectorAll('.card')].find(x=>x.querySelector('.label')?.textContent==='抓取结果'),capture=[...document.querySelectorAll('.card')].find(x=>x.querySelector('.label')?.textContent.includes('抓取数据')),mobile=$id('mobileCollectCard');
-  let decision=$id('g81Decision');if(!decision){decision=document.createElement('section');decision.id='g81Decision';decision.className='g81-decision';decision.innerHTML='<div class="g81-decision-main"><div class="g81-kicker" id="g81Platform">小红书 · 本轮结论</div><h2 id="g81Conclusion">等待抓取数据</h2><div class="g81-proof" id="g81Proof">系统会先判断高价值笔记赢在哪一层，再找与普通笔记真正不同的内容变量。</div><div class="g81-metrics" id="g81Metrics"></div><div class="g81-confidence"><span>综合可信度</span><b id="g81Confidence">—</b><em id="g81ConfidenceNote">等待分析</em></div></div><div class="g81-next"><small>下一条最值得测试</small><strong id="g81Next">先完成抓取</strong><p id="g81NextSub">一次只测试一个主要变量。</p><div class="g81-actions"><button id="g81GenerateTop" class="g81-primary">生成下一轮测试内容</button><button id="g81Alternate" class="g81-secondary">换一个测试方向</button><button id="g81ToggleDetails" class="g81-link">查看分析依据</button></div></div>';document.querySelector('.top')?.after(decision)}
-  let report=$id('g81Report');if(!report){report=document.createElement('section');report.id='g81Report';report.className='g81-report';report.innerHTML='<div class="g81-report-head"><div><span>本轮分析报告</span><b id="g81ReportTitle">等待分析</b></div><button id="g81CopyReport" class="g81-secondary">复制报告</button></div><div id="g81ReportSummary" class="g81-report-summary"></div><div id="g81ReportSignals" class="g81-report-signals"></div><div id="g81ReportLimit" class="g81-report-limit"></div>';decision.after(report)}
-  let middle=$id('g81Middle');if(!middle){middle=document.createElement('section');middle.id='g81Middle';middle.className='g81-middle';middle.innerHTML='<div class="g81-reason-panel"><div class="g81-section-title"><b>高价值内容为什么表现好</b><span>最多3个真正有差异的变量</span></div><div id="g81Reasons" class="g81-reasons"></div></div><div class="g81-generator"><div class="g81-section-title"><b>生成下一轮测试内容</b><span>严格执行本轮测试变量</span></div><div class="g81-input-row"><input id="g81Product" placeholder="输入真实商品信息，例如：柚木 910×125×18 530元/㎡"><button id="g81Generate" class="g81-primary">生成</button></div><div id="g81Need" class="g81-need"></div><div id="g81Output" class="g81-output g81-empty-output">输入商品信息后生成可直接发布的小红书方案。</div></div>';report.after(middle)}
-  let details=$id('g81Details');if(!details){details=document.createElement('section');details.id='g81Details';details.className='g81-details';details.innerHTML='<div class="g81-detail-grid"><div><div class="g81-section-title"><b>关键分析依据</b><span>高表现组 VS 普通组</span></div><div id="g81Evidence" class="g81-evidence"></div></div><div><div class="g81-section-title"><b>典型高价值笔记</b><span>默认3条</span></div><div id="g81High" class="g81-high-list"></div><button id="g81ShowHigh" class="g81-more">查看全部高价值样本</button></div></div><div class="g81-detail-foot" id="g81DetailFoot"></div>';middle.after(details)}
-  details.classList.remove('show');if(capture&&details.nextElementSibling!==capture)details.after(capture);if(mobile&&capture&&capture.nextElementSibling!==mobile)capture.after(mobile);
-  if(raw&&!raw.dataset.g81){raw.dataset.g81='1';const head=raw.querySelector('.head');if(head)head.querySelector('.muted').textContent='原始数据默认折叠，只在核查证据时展开。';const children=[...raw.children].filter(x=>x!==head),body=document.createElement('div');body.id='g81RawBody';body.className='g81-raw-body';children.forEach(x=>body.appendChild(x));const btn=document.createElement('button');btn.className='g81-raw-toggle';btn.innerHTML='<span>查看原始抓取数据</span><span>展开</span>';btn.onclick=()=>{body.classList.toggle('show');btn.lastElementChild.textContent=body.classList.contains('show')?'收起':'展开'};raw.appendChild(btn);raw.appendChild(body)}
-  $id('g81ToggleDetails').onclick=()=>{$id('g81Details').classList.toggle('show');$id('g81ToggleDetails').textContent=$id('g81Details').classList.contains('show')?'收起分析依据':'查看分析依据'};
-  $id('g81GenerateTop').onclick=()=>{const i=$id('g81Product');if(!i.value.trim()){i.focus();middle.scrollIntoView({behavior:'smooth',block:'start'});return}generateCurrent()};
-  $id('g81Generate').onclick=generateCurrent;$id('g81Alternate').onclick=()=>{window.__g81Seed=(window.__g81Seed||0)+1;renderAnalysis(window.__g81Analysis);const i=$id('g81Product');if(i.value.trim())generateCurrent()};
+  document.querySelector('.stats')?.classList.add('g81-hide');
+  $id('marketAnalysisCard')?.classList.add('g81-hide');
+  $id('g81Decision')?.classList.add('g81-hide');
+  $id('g81Report')?.classList.add('g81-hide');
+  const oldGen=$id('genKeyword')?.closest('.card');if(oldGen)oldGen.classList.add('g81-hide');
+  const raw=[...document.querySelectorAll('.card')].find(x=>x.querySelector('.label')?.textContent==='抓取结果');
+  const capture=[...document.querySelectorAll('.card')].find(x=>x.querySelector('.label')?.textContent.includes('抓取数据'));
+  const mobile=$id('mobileCollectCard');
+
+  let report=$id('g82Report');
+  if(!report){
+    report=document.createElement('section');report.id='g82Report';report.className='g82-report';
+    report.innerHTML='<div class="g82-head"><div><span>小红书 · 本轮综合分析</span><h2>这批数据告诉了我什么</h2></div><div id="g82ReportMeta" class="g82-meta"></div></div><p id="g82Summary" class="g82-summary">正在分析本轮数据…</p><div class="g82-grid"><div class="g82-main"><div class="g82-section-title">本轮最值得看的发现</div><div id="g82Findings"></div><div class="g82-section-title">高表现主要赢在哪里</div><div id="g82Layers" class="g82-layers"></div><div class="g82-section-title">本轮高价值内容画像</div><div id="g82Profile" class="g82-profile"></div></div><aside class="g82-side"><small>下一轮建议</small><strong id="g82NextTitle">等待分析</strong><p id="g82NextDo"></p><div class="g82-dont"><b>不要</b><span id="g82NextDont"></span></div><div class="g82-purpose"><b>目的</b><span id="g82NextPurpose"></span></div><button id="g82GenerateTop" class="g81-primary">生成下一轮测试内容</button><button id="g82CopyReport" class="g81-secondary">复制综合报告</button></aside></div><div class="g82-section-title">内容机会地图</div><div id="g82Map" class="g82-map"></div><div id="g82Limit" class="g82-limit"></div>';
+    document.querySelector('.top')?.after(report);
+  }
+
+  let middle=$id('g81Middle');
+  if(!middle){
+    middle=document.createElement('section');middle.id='g81Middle';middle.className='g81-middle';
+    middle.innerHTML='<div class="g81-generator"><div class="g81-section-title"><b>生成下一轮测试内容</b><span>先理解产品，再执行测试策略</span></div><div class="g81-input-row"><input id="g81Product" placeholder="输入真实商品信息，例如：柚木 910×125×17 530元/㎡"><button id="g81Generate" class="g81-primary">生成</button></div><div id="g81Need" class="g81-need"></div><div id="g81Output" class="g81-output g81-empty-output">输入商品信息后，生成两个属于同一测试变量的自然小红书方案。</div></div>';
+    report.after(middle);
+  }else{
+    const rp=middle.querySelector('.g81-reason-panel');if(rp)rp.style.display='none';
+  }
+
+  let details=$id('g81Details');
+  if(!details){
+    details=document.createElement('section');details.id='g81Details';details.className='g81-details';
+    details.innerHTML='<div class="g81-detail-grid"><div><div class="g81-section-title"><b>关键证据</b><span>高表现 VS 普通</span></div><div id="g81Evidence" class="g81-evidence"></div></div><div><div class="g81-section-title"><b>典型高价值案例</b><span>默认3条</span></div><div id="g81High" class="g81-high-list"></div><button id="g81ShowHigh" class="g81-more">查看全部高价值样本</button></div></div><div class="g81-detail-foot" id="g81DetailFoot"></div>';
+    middle.after(details);
+  }
+  details.classList.remove('show');
+  if(!$id('g82DetailToggle')){const b=document.createElement('button');b.id='g82DetailToggle';b.className='g81-more';b.textContent='查看详细分析';middle.after(b);b.onclick=()=>{details.classList.toggle('show');b.textContent=details.classList.contains('show')?'收起详细分析':'查看详细分析'}}
+  if(capture&&details.nextElementSibling!==capture)details.after(capture);
+  if(mobile&&capture&&capture.nextElementSibling!==mobile)capture.after(mobile);
+
+  if(raw&&!raw.dataset.g81){raw.dataset.g81='1';const head=raw.querySelector('.head');if(head&&head.querySelector('.muted'))head.querySelector('.muted').textContent='原始数据默认折叠，只在核查证据时展开。';const children=[...raw.children].filter(x=>x!==head),body=document.createElement('div');body.id='g81RawBody';body.className='g81-raw-body';children.forEach(x=>body.appendChild(x));const btn=document.createElement('button');btn.className='g81-raw-toggle';btn.innerHTML='<span>查看原始抓取数据</span><span>展开</span>';btn.onclick=()=>{body.classList.toggle('show');btn.lastElementChild.textContent=body.classList.contains('show')?'收起':'展开'};raw.appendChild(btn);raw.appendChild(body)}
+
+  $id('g82GenerateTop').onclick=()=>{const i=$id('g81Product');middle.scrollIntoView({behavior:'smooth',block:'start'});setTimeout(()=>i.focus(),250)};
+  $id('g81Generate').onclick=generateCurrent;
   $id('g81ShowHigh').onclick=()=>{window.__g81ShowAll=!window.__g81ShowAll;renderHigh(window.__g81Analysis);$id('g81ShowHigh').textContent=window.__g81ShowAll?'只看3条典型样本':'查看全部高价值样本'};
 }
-function buildReport(r){
-  if(!r||r.empty||r.unsupported)return null;
-  const active=r.strongest||r.exploratory||null;
-  const top=(r.reusable.concat(r.testable).length?r.reusable.concat(r.testable):r.observed||[]).filter(x=>x.diff>0).slice(0,3);
-  const stop=db.lastMeta&&db.lastMeta.stoppedBy;
-  const stopMap={target:'达到目标500条',manual:'手动停止',saturated:'平台样本已饱和','safety-time-limit':'达到安全时限'};
-  const sample='本轮抓取 '+r.batch.length+' 条，进入可比较分析 '+r.pool.length+' 条；高价值组 '+r.high.length+' 条，普通组 '+r.normal.length+' 条。';
-  const layer='高价值内容当前主要赢在：'+r.dominant+(r.rankOnlyRate>=.5?'。注意：超过一半样本主要依据搜索排序/时效识别，只能作为探索性参考。':'。');
-  const decision=active?('本轮建议：'+(active.category==='探索性测试'?'探索测试「':'优先测试「')+active.label+'」，高表现 '+fmtPct(active.hp)+'，普通 '+fmtPct(active.np)+'，差异 '+(active.diff>=0?'+':'')+Math.round(active.diff*100)+'%。'):'本轮没有足够大的内容差异，不强行指定测试变量。';
-  const limit='核心表现数据覆盖 '+Math.round(r.coverage*100)+'%；去偏后保留 '+Math.round(r.stability*100)+'%；异常高表现 '+r.anomalies.length+' 条。'+(stop&&stopMap[stop]?(' 采集结束原因：'+stopMap[stop]+'。'):'');
-  const signals=top.map(x=>({label:x.label,hp:x.hp,np:x.np,diff:x.diff,level:x.category==='暂无价值'?'观察信号':x.level,category:x.category}));
-  return{id:(db.lastCapturedAt||'latest')+'|'+r.platform,platform:r.platform,createdAt:nowISO(),sample,layer,decision,limit,signals,active};
-}
-function saveReport(rep){
-  if(!rep)return;
-  let a=[];try{a=JSON.parse(localStorage.getItem(REPORTKEY)||'[]')}catch{}
-  const i=a.findIndex(x=>x.id===rep.id);if(i>=0)a[i]=rep;else a.push(rep);
-  localStorage.setItem(REPORTKEY,JSON.stringify(a.slice(-30)));
-}
-function reportText(rep){
-  if(!rep)return'暂无报告';
-  const lines=['【本轮分析报告】',rep.sample,rep.layer,'',...rep.signals.map((x,i)=>(i+1)+'. '+x.label+'：高表现 '+fmtPct(x.hp)+' / 普通 '+fmtPct(x.np)+' / '+(x.diff>=0?'+':'')+Math.round(x.diff*100)+'% / '+x.level),'',rep.decision,rep.limit];
-  return lines.join('\n');
-}
-function renderReport(r){
-  const rep=buildReport(r);if(!rep)return;
-  saveReport(rep);
-  $id('g81ReportTitle').textContent=rep.active?(rep.active.category==='探索性测试'?'有探索方向，但证据仍弱':'已找到可执行测试方向'):'样本充足，但差异不足以形成稳定测试变量';
-  $id('g81ReportSummary').innerHTML='<p>'+esc(rep.sample)+'</p><p>'+esc(rep.layer)+'</p><p><b>'+esc(rep.decision)+'</b></p>';
-  $id('g81ReportSignals').innerHTML=rep.signals.length?rep.signals.map((x,i)=>'<div><span>'+(i+1)+'</span><b>'+esc(x.label)+'</b><em>'+fmtPct(x.hp)+' vs '+fmtPct(x.np)+'</em><strong>'+(x.diff>=0?'+':'')+Math.round(x.diff*100)+'%</strong><small>'+esc(x.level)+'</small></div>').join(''):'<div class="g81-report-empty">高表现组和普通组目前没有明显正向内容差异。</div>';
-  $id('g81ReportLimit').textContent=rep.limit;
-  $id('g81CopyReport').onclick=async()=>{try{await navigator.clipboard.writeText(reportText(rep));setStatus('本轮分析报告已复制。','oktxt')}catch{setStatus('复制失败，请手动复制。','warn')}};
-}
+
 function renderHigh(r){
   if(!r||!r.high){$id('g81High').innerHTML='';return}const arr=window.__g81ShowAll?r.high:r.high.slice(0,3);
   $id('g81High').innerHTML=arr.map((x,i)=>'<a class="g81-high" href="'+esc(x.url||'#')+'" target="_blank" rel="noopener"><span class="g81-no">'+(i+1)+'</span><div><b>'+esc(x.title||'未命名')+'</b><small>'+esc(x.__kind)+' · '+esc(itemReasons(x,r.model).join('；'))+'</small></div><span class="g81-open">打开</span></a>').join('')||'<div class="g81-muted">暂无足够高价值样本。</div>';$id('g81ShowHigh').style.display=r.high.length>3?'inline-flex':'none';
 }
 function signalPool(r){return r.reusable.concat(r.testable)}
 function metrics(r){const s=r.strongest,signal=s?((s.diff>=0?'+':'')+Math.round(s.diff*100)+'%'):'—';return[[r.pool.length,'有效样本'],[r.high.length,'高价值样本'],[Math.round(r.coverage*100)+'%','核心数据覆盖'],[signal,'本轮最强信号'],[r.confidence[0],'综合可信度']]}
+
 function renderAnalysis(r){
-  ensureUI();window.__g81Analysis=r;$id('g81Platform').textContent=(r.platform||currentPlatform())+' · 本轮结论';
-  if(r.unsupported){$id('g81Conclusion').textContent='当前平台尚未建立独立模型';$id('g81Proof').textContent='不会套用小红书算法。';return}
-  if(r.empty){$id('g81Conclusion').textContent='先抓取一轮真实数据';$id('g81Proof').textContent='完成抓取后，这里直接告诉你最强信号和下一条怎么发。';$id('g81Metrics').innerHTML='';$id('g81Reasons').innerHTML='';return}
+  ensureUI();window.__g81Analysis=r;
+  if(r.unsupported){$id('g82Summary').textContent='当前平台尚未建立独立分析模型。';return}
+  if(r.empty){$id('g82Summary').textContent='还没有本轮抓取数据。完成抓取后会自动生成综合报告。';return}
   const pool=signalPool(r),active=pool.length?pool[(window.__g81Seed||0)%pool.length]:null;window.__g81ActiveSignal=active;
-  if(active){$id('g81Conclusion').textContent=(active.category==='探索性测试'?'探索性测试：':'')+active.label;$id('g81Proof').innerHTML='高表现 '+active.hc+'/'+r.high.length+' = <b>'+fmtPct(active.hp)+'</b> ｜ 普通 '+active.nc+'/'+r.normal.length+' = <b>'+fmtPct(active.np)+'</b> ｜ 差异 <b>'+(active.diff>=0?'+':'')+Math.round(active.diff*100)+'%</b> ｜ '+active.level;$id('g81Next').textContent=active.label;$id('g81NextSub').textContent=active.category==='探索性测试'?'当前属于探索信号：下一篇只测试这一变量，用真实发布结果验证。':'下一篇只测试这一变量，其他主要内容尽量保持接近。'}else{$id('g81Conclusion').textContent='样本不少，但高低表现组写法接近';$id('g81Proof').textContent='本轮没有达到测试门槛的正向差异。分析报告仍会列出最接近的观察信号和数据缺口。';$id('g81Next').textContent='先看本轮分析报告';$id('g81NextSub').textContent='如果所有差异都很小，继续抓更多同类样本并不会自动产生规律，应优先补完整互动数据。'}
-  $id('g81Confidence').textContent=r.confidence[0];$id('g81Confidence').className='g81-conf '+r.confidence[1];$id('g81ConfidenceNote').textContent=r.rankOnlyRate>=.5?'多数样本只有排序/时效参考，结论只能用于探索测试。':'按样本量、数据覆盖和去偏后稳定性判断。';$id('g81Metrics').innerHTML=metrics(r).map(([v,l])=>'<div><b>'+esc(v)+'</b><span>'+esc(l)+'</span></div>').join('');
-  const useful=r.reusable.concat(r.testable),good=(useful.length?useful:(r.observed||[]).filter(x=>x.diff>0)).slice(0,3);$id('g81Reasons').innerHTML=good.length?good.map((f,i)=>'<div class="g81-reason"><span class="g81-reason-no">'+(i+1)+'</span><div><b>'+esc(f.label)+'</b><small>'+fmtPct(f.hp)+' vs '+fmtPct(f.np)+'　<b>'+(f.diff>=0?'+':'')+Math.round(f.diff*100)+'%</b>　'+(f.category==='暂无价值'?'观察信号':f.level)+'</small></div></div>').join(''):'<div class="g81-muted">高表现组与普通组目前没有明显正向内容差异。</div>';
-  $id('g81Evidence').innerHTML=r.findings.slice(0,8).map(f=>'<div class="g81-evidence-row"><div><b>'+esc(f.label)+'</b><span>'+esc(f.category)+' · '+esc(f.level)+'</span></div><strong>'+(f.diff>=0?'+':'')+Math.round(f.diff*100)+'%</strong><small>高表现 '+f.hc+'/'+r.high.length+' = '+fmtPct(f.hp)+' ｜ 普通 '+f.nc+'/'+r.normal.length+' = '+fmtPct(f.np)+' ｜ 样本 '+f.total+'</small></div>').join('');$id('g81DetailFoot').textContent='本轮高价值主要类型：'+r.dominant+'。去偏保留 '+Math.round(r.stability*100)+'%；异常高表现 '+r.anomalies.length+' 条已单独剥离；排序参考占 '+Math.round(r.rankOnlyRate*100)+'%。';renderHigh(r);
+  renderReport(r);
+  $id('g81Evidence').innerHTML=r.findings.slice(0,10).map(f=>'<div class="g81-evidence-row"><div><b>'+esc(f.label)+'</b><span>'+esc(f.category)+' · '+esc(f.level)+'</span></div><strong>'+(f.diff>=0?'+':'')+Math.round(f.diff*100)+'%</strong><small>高表现 '+f.hc+'/'+r.high.length+' = '+fmtPct(f.hp)+' ｜ 普通 '+f.nc+'/'+r.normal.length+' = '+fmtPct(f.np)+' ｜ 样本 '+f.total+'</small></div>').join('');
+  $id('g81DetailFoot').textContent='本轮高价值主要类型：'+r.dominant+'。去偏保留 '+Math.round(r.stability*100)+'%；异常高表现 '+r.anomalies.length+' 条已单独剥离；排序参考占 '+Math.round(r.rankOnlyRate*100)+'%。';
+  renderHigh(r);
 }
-function generatorWhy(r,s,p){return[['相关样本',r.high.length+' 高价值 / '+r.normal.length+' 普通'],['本轮测试变量',s.label],['价格策略',p.price?p.price+'元/㎡（真实输入）':'未提供则不编造'],['流量依据',s.level+'；差异 '+(s.diff>=0?'+':'')+Math.round(s.diff*100)+'%']]}
-function renderOutput(r,s,p,o,ok){
-  const w=generatorWhy(r,s,p).map(([a,b])=>'<div><span>'+esc(a)+'</span><b>'+esc(b)+'</b></div>').join('');$id('g81Output').classList.remove('g81-empty-output');
-  $id('g81Output').innerHTML='<div class="g81-output-grid"><div class="g81-why"><div class="g81-mini-title">为什么这样发</div>'+w+'</div><div class="g81-publish"><div class="g81-testline"><span>本轮测试</span><b>'+esc(s.label)+'</b><em class="'+(ok?'ok':'bad')+'">'+(ok?'✓ 已执行':'✕ 未执行')+'</em></div><div class="g81-field"><span>标题</span><strong>'+esc(o.title)+'</strong></div><div class="g81-field"><span>正文</span><pre>'+esc(o.body)+'</pre></div><div class="g81-field-row"><div class="g81-field"><span>话题 / 搜索词</span><p>'+esc(o.tags)+'</p></div><div class="g81-field"><span>封面建议</span><p>'+esc(o.cover)+'</p></div></div><div class="g81-field"><span>图片内容建议</span><p>'+esc(o.images)+'</p></div><div class="g81-output-actions"><button id="g81Copy" class="g81-primary">复制全部</button><button id="g81Record" class="g81-secondary">记录发布结果</button></div><div id="g81Feedback" class="g81-feedback"></div></div></div>';
-  $id('g81Copy').onclick=async()=>{const text='【本轮测试】'+s.label+'\n\n【标题】\n'+o.title+'\n\n【正文】\n'+o.body+'\n\n【话题】\n'+o.tags+'\n\n【封面建议】\n'+o.cover+'\n\n【图片建议】\n'+o.images;try{await navigator.clipboard.writeText(text);setStatus('已复制完整发布方案。','oktxt')}catch{setStatus('复制失败，请手动复制。','warn')}};
-  $id('g81Record').onclick=renderFeedback;
+
+
+function generatorWhy(r,s,p){
+  const plan=strategyPlan(s,p,'A');
+  return[['本轮测试变量',s.label],['策略怎么执行',plan.action+'；'+plan.angle],['为什么这样写',plan.why],['证据',s.level+'；高表现 '+fmtPct(s.hp)+' / 普通 '+fmtPct(s.np)+' / '+(s.diff>=0?'+':'')+Math.round(s.diff*100)+'%']];
 }
-function saveDraft(r,s,p,o){let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}a.push({id:'exp_'+Date.now(),platform:r.platform,product:p.raw,strategy:s.label,signalId:s.id,category:s.category,evidence:s.level,title:o.title,body:o.body,cover:o.cover,images:o.images,createdAt:nowISO(),status:'draft'});localStorage.setItem(EXPKEY,JSON.stringify(a.slice(-120)))}
+function versionHtml(v,idx){
+  const ok=v.check&&v.check.ok;
+  return '<div class="g82-version"><div class="g82-version-head"><div><span>'+esc(v.label)+'</span><b>'+esc(v.mode)+'</b></div><em class="'+(ok?'ok':'bad')+'">'+(ok?'✓ 可读性通过':'✕ 需重生成')+'</em></div><div class="g81-field"><span>标题</span><strong>'+esc(v.title)+'</strong></div><div class="g81-field"><span>正文</span><pre>'+esc(v.body)+'</pre></div><div class="g81-field-row"><div class="g81-field"><span>话题 / 搜索词</span><p>'+esc(v.tags)+'</p></div><div class="g81-field"><span>封面建议</span><p>'+esc(v.cover)+'</p></div></div><div class="g81-field"><span>图片内容建议</span><p>'+esc(v.images)+'</p></div><div class="g81-output-actions"><button class="g81-primary g82-copy-version" data-i="'+idx+'">复制'+esc(v.label)+'</button><button class="g81-secondary g82-record-version" data-i="'+idx+'">记录发布结果</button></div></div>';
+}
+function renderOutput(r,s,p,versions){
+  const w=generatorWhy(r,s,p).map(([a,b])=>'<div><span>'+esc(a)+'</span><b>'+esc(b)+'</b></div>').join('');
+  $id('g81Output').classList.remove('g81-empty-output');
+  $id('g81Output').innerHTML='<div class="g82-strategy"><div class="g81-mini-title">后台策略（不会写进正文）</div>'+w+'<div class="g82-check">✓ 两个方案都必须执行同一个主变量，但用不同表达方式。</div></div><div class="g82-versions">'+versions.map(versionHtml).join('')+'</div><div id="g81Feedback" class="g81-feedback"></div>';
+  window.__g82Versions=versions;
+  document.querySelectorAll('.g82-copy-version').forEach(btn=>btn.onclick=async()=>{const v=versions[+btn.dataset.i],text='【标题】\\n'+v.title+'\\n\\n【正文】\\n'+v.body+'\\n\\n【话题】\\n'+v.tags+'\\n\\n【封面建议】\\n'+v.cover+'\\n\\n【图片建议】\\n'+v.images;try{await navigator.clipboard.writeText(text);setStatus(v.label+'已复制。','oktxt')}catch{setStatus('复制失败，请手动复制。','warn')}});
+  document.querySelectorAll('.g82-record-version').forEach(btn=>btn.onclick=()=>{window.__g82RecordIndex=+btn.dataset.i;renderFeedback()});
+}
+function saveDraft(r,s,p,versions){
+  let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}
+  versions.forEach((o,i)=>a.push({id:'exp_'+Date.now()+'_'+i,platform:r.platform,product:p.raw,strategy:s.label,signalId:s.id,category:s.category,evidence:s.level,variant:o.label,title:o.title,body:o.body,cover:o.cover,images:o.images,createdAt:nowISO(),status:'draft'}));
+  localStorage.setItem(EXPKEY,JSON.stringify(a.slice(-120)));
+}
 function generateCurrent(){
-  const r=window.__g81Analysis||analyze(),s=window.__g81ActiveSignal||r.strongest,raw=$id('g81Product')?.value.trim();if(!raw)return setStatus('先输入你准备发布的真实商品信息。','bad');if(!s)return setStatus('本轮没有达到最低测试门槛的变量。先看“本轮分析报告”里的观察信号与数据缺口。','warn');
-  const p=parseProduct(raw),elig=eligibility(s,p);if(!elig.ok){$id('g81Need').textContent='当前变量「'+s.label+'」需要补充：'+elig.need+'。也可以点“换一个测试方向”。';$id('g81Product').focus();return}$id('g81Need').textContent='';
-  let o=xhsGenerate(p,s),ok=validateSignal(s,o,p);if(!ok){o=forceSignal(s,o,p);ok=validateSignal(s,o,p)}if(!ok)return setStatus('生成结果没有执行本轮测试变量，已停止输出。','bad');renderOutput(r,s,p,o,true);saveDraft(r,s,p,o);setStatus('已生成：本轮只测试「'+s.label+'」'+(s.category==='探索性测试'?'（探索性）':'')+'，并已自动校验执行。','oktxt');
+  const r=window.__g81Analysis||analyze(),s=window.__g81ActiveSignal||r.strongest||r.exploratory,raw=$id('g81Product')?.value.trim();
+  if(!raw)return setStatus('先输入你准备发布的真实商品信息。','bad');
+  if(!s)return setStatus('本轮没有达到最低测试门槛的变量。先看综合报告里的观察信号和数据缺口。','warn');
+  const p=parseProduct(raw),elig=eligibility(s,p);
+  if(!elig.ok){$id('g81Need').textContent='当前策略「'+s.label+'」还缺：'+elig.need+'。系统不会为了执行变量而硬编内容。';$id('g81Product').focus();return}
+  $id('g81Need').textContent='';
+  let versions=makeTwoVersions(p,s);
+  if(versions.some(v=>!validateSignal(s,v,p)||!v.check.ok)){
+    versions=makeTwoVersions(p,s);
+  }
+  const bad=versions.find(v=>!validateSignal(s,v,p)||!v.check.ok);
+  if(bad)return setStatus('可读性自检未通过：'+(bad.check?.reason||'测试变量未执行')+'。请补充更完整的商品信息后再生成。','bad');
+  renderOutput(r,s,p,versions);saveDraft(r,s,p,versions);
+  setStatus('已生成两个自然版本，并通过“测试变量执行 + 可读性”双重检查。','oktxt');
 }
+
 function renderFeedback(){const box=$id('g81Feedback');box.innerHTML='<div class="g81-feedback-title">发布后记录结果</div><div class="g81-feedback-grid"><label>浏览<input data-k="views" inputmode="decimal"></label><label>点赞<input data-k="likes" inputmode="decimal"></label><label>收藏<input data-k="favs" inputmode="decimal"></label><label>评论<input data-k="comments" inputmode="decimal"></label><label>转发<input data-k="shares" inputmode="decimal"></label><label>发布天数<input data-k="days" inputmode="decimal"></label></div><button id="g81SaveFeedback" class="g81-primary">保存结果</button>';box.classList.add('show');$id('g81SaveFeedback').onclick=saveFeedback}
-function saveFeedback(){let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}const d=[...a].reverse().find(x=>x.platform===currentPlatform()&&x.status==='draft');if(!d)return setStatus('没有找到待验证的生成记录。','warn');const m={};$id('g81Feedback').querySelectorAll('input').forEach(i=>{const v=num(i.value);if(v!==null)m[i.dataset.k]=v});const total=(m.likes||0)+(m.favs||0)+(m.comments||0)+(m.shares||0),days=m.days||1;d.metrics=m;d.performance=m.views?total/m.views:total/Math.max(.25,days);d.status='measured';d.measuredAt=nowISO();localStorage.setItem(EXPKEY,JSON.stringify(a.slice(-120)));$id('g81Feedback').innerHTML='<div class="g81-saved">✓ 已保存，本轮结果会进入后续同平台验证。</div>';setStatus('发布结果已记录。','oktxt')}
-function runAll(){ensureUI();const r=analyze();window.__g81Analysis=r;renderAnalysis(r);const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const sub=document.querySelector('.top .sub');if(sub)sub.textContent='小红书：高价值分析 → 测试变量 → 内容生成 → 发布验证';const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.1.4';document.title='多平台内容增长决策系统 V8.1.4';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.1.4：结论在前、行动其次、关键证据随后、原始数据最后；生成结果必须通过测试变量执行校验。'}
+function saveFeedback(){let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}const wanted=window.__g82Versions&&window.__g82Versions[window.__g82RecordIndex||0]?.label;const d=[...a].reverse().find(x=>x.platform===currentPlatform()&&x.status==='draft'&&(!wanted||x.variant===wanted));if(!d)return setStatus('没有找到待验证的生成记录。','warn');const m={};$id('g81Feedback').querySelectorAll('input').forEach(i=>{const v=num(i.value);if(v!==null)m[i.dataset.k]=v});const total=(m.likes||0)+(m.favs||0)+(m.comments||0)+(m.shares||0),days=m.days||1;d.metrics=m;d.performance=m.views?total/m.views:total/Math.max(.25,days);d.status='measured';d.measuredAt=nowISO();localStorage.setItem(EXPKEY,JSON.stringify(a.slice(-120)));$id('g81Feedback').innerHTML='<div class="g81-saved">✓ 已保存，本轮结果会进入后续同平台验证。</div>';setStatus('发布结果已记录。','oktxt')}
+function runAll(){ensureUI();const r=analyze();window.__g81Analysis=r;renderAnalysis(r);const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const sub=document.querySelector('.top .sub');if(sub)sub.textContent='小红书：抓取 → 综合分析 → 测试策略 → 自然内容 → 发布验证';const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.2.0';document.title='多平台内容增长决策系统 V8.2.0';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.2.0：结论在前、行动其次、关键证据随后、原始数据最后；生成结果必须通过测试变量执行校验。'}
 const oldRender=window.render;if(typeof oldRender==='function'){window.render=function(){const v=oldRender.apply(this,arguments);setTimeout(runAll,40);return v}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(runAll,90));else setTimeout(runAll,90);
 })();
