@@ -301,3 +301,19 @@
 @media(max-width:700px){
   .g823-raw-count{margin-left:5px;padding:3px 6px}
 }
+
+
+/* V8.2.5 — image-pattern analysis */
+.g825-image-findings{display:grid;margin-top:4px}
+.g825-image-findings>p{font-size:10.5px;line-height:1.55;color:#555;margin:0 0 5px}
+.g825-image-findings>div{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line);min-width:0}
+.g825-image-findings b{font-size:10.5px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g825-image-findings span{font-size:9.5px;color:var(--muted);white-space:nowrap}
+.g825-image-findings strong{font-size:10.5px;white-space:nowrap}
+.g825-image-findings small{font-size:9px;color:var(--muted);white-space:nowrap}
+.g825-image-basis{display:block;margin-top:5px;font-size:9px!important;line-height:1.45;color:#8b6b18}
+@media(max-width:650px){
+  .g825-image-findings>div{grid-template-columns:minmax(0,1fr) auto auto}
+  .g825-image-findings>div small{grid-column:2/4;grid-row:2;text-align:right}
+  .g825-image-findings span{white-space:normal}
+}
