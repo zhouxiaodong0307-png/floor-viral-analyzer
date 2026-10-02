@@ -424,6 +424,95 @@ function ensureUI(){
   $id('g81ShowHigh').onclick=()=>{window.__g81ShowAll=!window.__g81ShowAll;renderHigh(window.__g81Analysis);$id('g81ShowHigh').textContent=window.__g81ShowAll?'只看3条典型样本':'查看全部高价值样本'};
 }
 
+
+function dimCoverage(rows,key){if(!rows.length)return 0;return rows.filter(x=>x.__dims&&x.__dims[key]!==null&&x.__dims[key]!==undefined).length/rows.length}
+function metricLayers(r){
+  if(r.platform!=='小红书')return[];
+  const specs=[
+    ['高浏览型','views','浏览'],
+    ['高点赞型',dimCoverage(r.pool,'likeRate')>=.25?'likeRate':'likes','点赞'],
+    ['高收藏型',dimCoverage(r.pool,'favRate')>=.25?'favRate':'favs','收藏'],
+    ['高评论型',dimCoverage(r.pool,'commentRate')>=.25?'commentRate':'comments','评论'],
+    ['高转发型',dimCoverage(r.pool,'shareRate')>=.25?'shareRate':'shares','转发'],
+    ['综合互动型','totalRate','综合互动'],
+    ['短期增长型','speed','增长速度']
+  ];
+  return specs.map(([name,key,label])=>{
+    const rows=r.pool.filter(x=>x.__dims[key]!==null&&x.__dims[key]!==undefined&&Number.isFinite(x.__dims[key]));
+    const cov=r.pool.length?rows.length/r.pool.length:0;
+    if(rows.length<20||cov<.15)return{name,key,label,available:false,coverage:cov,reason:'当前该指标覆盖不足，无法可靠分析'};
+    const sorted=rows.slice().sort((a,b)=>b.__dims[key]-a.__dims[key]),n=Math.max(5,Math.ceil(sorted.length*.20)),high=sorted.slice(0,n),normal=sorted.slice(n);
+    const fs=evidence(high,normal,r.model.features,cov,1,0).filter(x=>x.diff>0).sort((a,b)=>b.diff-a.diff||b.z-a.z);
+    return{name,key,label,available:true,coverage:cov,count:rows.length,highCount:high.length,top:fs[0]||null};
+  });
+}
+function explainFinding(f){
+  if(!f)return'';
+  if(f.category==='可以复用')return'这个特征在高表现内容中明显更常见，而且当前证据相对稳定，可以继续使用。';
+  if(f.category==='值得测试')return'高表现内容中出现得更多，但还不能证明是稳定规律，更适合放进下一轮做单变量测试。';
+  if(f.diff>0)return'高表现内容中略多一些，但差异还不足以支撑固定做法，目前只作为观察信号。';
+  return'高低表现组差异很小，本轮不建议参考。';
+}
+function contentProfile(r){return r.reusable.concat(r.testable).filter(x=>x.diff>0).slice(0,5).map(x=>x.label)}
+function opportunityMap(r){
+  const reuse=r.reusable.slice(0,4),test=r.testable.slice(0,5);
+  if(!test.length&&r.exploratory)test.push(r.exploratory);
+  const noRef=r.findings.filter(x=>x.category==='暂无价值'&&Math.abs(x.diff)<.05).slice(0,5);
+  return{reuse,test,noRef};
+}
+function humanSummary(r){
+  const s=r.strongest||r.exploratory;
+  if(r.reusable.length){
+    const names=r.reusable.slice(0,3).map(x=>'“'+x.label+'”').join('、');
+    return'本轮'+r.batch.length+'条小红书笔记中，已经出现相对稳定的内容差异：'+names+'更常出现在高表现内容里，可以优先用于下一轮内容。';
+  }
+  if(s){
+    return'本轮'+r.batch.length+'条小红书笔记中，暂时没有发现足够稳定的强规律；目前最明显的信号是“'+s.label+'”，高表现 '+fmtPct(s.hp)+'、普通 '+fmtPct(s.np)+'、差异 '+(s.diff>=0?'+':'')+Math.round(s.diff*100)+'%，属于'+s.level+'，更适合继续测试而不是直接固化成模板。';
+  }
+  return'本轮'+r.batch.length+'条小红书笔记中，没有发现足够稳定的强规律，高表现组和普通组的内容写法整体较接近；这本身也是有效结论，当前更应该补完整互动数据，而不是硬造一个“爆款公式”。';
+}
+function nextAdvice(r){
+  const s=r.strongest||r.exploratory;
+  if(!s)return{title:'本轮先不固定内容模板',doText:'先看分析报告里的观察信号，同时优先补充点赞、收藏、评论、转发等表现数据。',dont:'不要因为样本接近500条就强行制造规律。',purpose:'下一轮先提高可判断性，再验证内容差异。'};
+  let doText=s.label;
+  if(s.id==='titleSpec'||s.id==='titleNumber')doText='标题加入与用户决策有关的完整具体信息，例如完整规格，并围绕空间适配、铺装效果或规格差异设计问题。';
+  else if(s.id==='titleScene'||s.id==='sceneBody')doText='从真实家装场景切入，先让用户看到“这和我的空间有什么关系”。';
+  else if(s.id==='titleCompare')doText='用真实对比回答一个选择问题，不做没有依据的结论。';
+  else if(s.id==='titleQuestion')doText='标题直接提出一个具体选购问题，正文必须真正回答。';
+  return{title:s.label,doText,dont:(s.id==='titleSpec'||s.id==='titleNumber')?'不要把“910”这种孤立数字硬塞进标题；数字必须有单位、有意义。':'不要把后台统计标签直接写进正文。',purpose:'本轮只测试这一主变量，正文和图片风格尽量保持接近，用发布结果验证这个信号。'};
+}
+function buildReport(r){
+  if(!r||r.empty||r.unsupported)return null;
+  const layers=metricLayers(r),opp=opportunityMap(r),topFindings=(r.reusable.concat(r.testable).length?r.reusable.concat(r.testable):(r.observed||[]).filter(x=>x.diff>0)).slice(0,5);
+  const stop=db.lastMeta&&db.lastMeta.stoppedBy,stopMap={target:'达到目标500条',manual:'手动停止',saturated:'平台样本已饱和','safety-time-limit':'达到安全时限'};
+  return{id:(db.lastCapturedAt||'latest')+'|'+r.platform,platform:r.platform,createdAt:nowISO(),summary:humanSummary(r),sample:{raw:r.batch.length,valid:r.pool.length,high:r.high.length,normal:r.normal.length},topFindings:topFindings.map(x=>({...x,explain:explainFinding(x)})),layers,profile:contentProfile(r),opportunity:opp,next:nextAdvice(r),limits:{coverage:r.coverage,stability:r.stability,anomalies:r.anomalies.length,rankOnlyRate:r.rankOnlyRate,stop:stopMap[stop]||''},confidence:r.confidence};
+}
+function saveReport(rep){
+  if(!rep)return;let a=[];try{a=JSON.parse(localStorage.getItem(REPORTKEY)||'[]')}catch{}
+  const i=a.findIndex(x=>x.id===rep.id);if(i>=0)a[i]=rep;else a.push(rep);
+  localStorage.setItem(REPORTKEY,JSON.stringify(a.slice(-30)));
+}
+function reportText(rep){
+  if(!rep)return'暂无报告';
+  const f=rep.topFindings.map((x,i)=>(i+1)+'. '+x.label+'｜高表现 '+fmtPct(x.hp)+'｜普通 '+fmtPct(x.np)+'｜差异 '+(x.diff>=0?'+':'')+Math.round(x.diff*100)+'%｜'+x.level+'\n   '+x.explain).join('\n');
+  const layer=rep.layers.map(x=>x.available?(x.name+'：'+(x.top?('最明显差异“'+x.top.label+'” '+(x.top.diff>=0?'+':'')+Math.round(x.top.diff*100)+'%'):'暂未发现明显内容差异')):(x.name+'：当前无法分析该维度')).join('\n');
+  const reuse=rep.opportunity.reuse.length?rep.opportunity.reuse.map(x=>x.label).join('、'):'暂无';
+  const test=rep.opportunity.test.length?rep.opportunity.test.map(x=>x.label).join('、'):'暂无';
+  const noRef=rep.opportunity.noRef.length?rep.opportunity.noRef.map(x=>x.label).join('、'):'暂无明确项目';
+  return ['【本轮小红书综合分析】',rep.summary,'','【样本】','抓取 '+rep.sample.raw+'｜进入分析 '+rep.sample.valid+'｜高价值 '+rep.sample.high+'｜普通 '+rep.sample.normal,'','【本轮发现】',f||'没有达到展示门槛的正向差异。','','【高表现主要赢在哪里】',layer,'','【高价值内容画像】',rep.profile.length?rep.profile.join('、'):'暂无足够差异支持稳定画像','','【内容机会地图】','可以直接复用：'+reuse,'值得测试：'+test,'暂时不要参考：'+noRef,'','【下一轮建议】',rep.next.title,rep.next.doText,'不要：'+rep.next.dont,'目的：'+rep.next.purpose,'','【可信度限制】','核心数据覆盖 '+Math.round(rep.limits.coverage*100)+'%｜去偏保留 '+Math.round(rep.limits.stability*100)+'%｜异常案例 '+rep.limits.anomalies+'｜排序参考 '+Math.round(rep.limits.rankOnlyRate*100)+'%'+(rep.limits.stop?'｜采集结束：'+rep.limits.stop:'')].join('\n');
+}
+function renderReport(r){
+  const rep=buildReport(r);if(!rep)return;saveReport(rep);window.__g82Report=rep;
+  $id('g82Summary').textContent=rep.summary;
+  $id('g82ReportMeta').innerHTML='<b>'+rep.sample.raw+'</b><span>抓取笔记</span><b>'+rep.sample.high+'</b><span>高价值样本</span><b>'+rep.confidence[0]+'</b><span>综合可信度</span>';
+  $id('g82Findings').innerHTML=rep.topFindings.length?rep.topFindings.map((x,i)=>'<div class="g82-finding"><span>'+(i+1)+'</span><div><b>'+esc(x.label)+'</b><small>高表现 '+fmtPct(x.hp)+' ｜ 普通 '+fmtPct(x.np)+' ｜ <strong>'+(x.diff>=0?'+':'')+Math.round(x.diff*100)+'%</strong> ｜ '+esc(x.level)+'</small><p>'+esc(x.explain)+'</p></div></div>').join(''):'<div class="g82-empty">本轮没有达到展示门槛的正向差异；这不是分析失败，而是高表现组和普通组写法目前比较接近。</div>';
+  $id('g82Layers').innerHTML=rep.layers.map(x=>'<div><b>'+esc(x.name)+'</b><span>'+(x.available?(x.top?('更常见：'+esc(x.top.label)+' '+(x.top.diff>=0?'+':'')+Math.round(x.top.diff*100)+'%'):'暂未发现明显内容差异'):'当前无法分析该维度')+'</span></div>').join('');
+  $id('g82Profile').innerHTML=rep.profile.length?rep.profile.map(x=>'<span>'+esc(x)+'</span>').join(''):'<span class="muted">暂无足够差异支持稳定画像</span>';
+  const map=rep.opportunity;$id('g82Map').innerHTML='<div><b>可以直接复用</b><p>'+(map.reuse.length?map.reuse.map(x=>esc(x.label)).join('、'):'暂无')+'</p></div><div><b>值得测试</b><p>'+(map.test.length?map.test.map(x=>esc(x.label)).join('、'):'暂无')+'</p></div><div><b>暂时不要参考</b><p>'+(map.noRef.length?map.noRef.map(x=>esc(x.label)).join('、'):'暂无明确项目')+'</p></div>';
+  $id('g82NextTitle').textContent=rep.next.title;$id('g82NextDo').textContent=rep.next.doText;$id('g82NextDont').textContent=rep.next.dont;$id('g82NextPurpose').textContent=rep.next.purpose;
+  $id('g82Limit').textContent='核心数据覆盖 '+Math.round(rep.limits.coverage*100)+'% · 去偏保留 '+Math.round(rep.limits.stability*100)+'% · 异常案例 '+rep.limits.anomalies+' · 排序参考 '+Math.round(rep.limits.rankOnlyRate*100)+'%'+(rep.limits.stop?' · '+rep.limits.stop:'');
+  $id('g82CopyReport').onclick=async()=>{try{await navigator.clipboard.writeText(reportText(rep));setStatus('综合分析报告已复制。','oktxt')}catch{setStatus('复制失败，请手动复制。','warn')}};
+}
 function renderHigh(r){
   if(!r||!r.high){$id('g81High').innerHTML='';return}const arr=window.__g81ShowAll?r.high:r.high.slice(0,3);
   $id('g81High').innerHTML=arr.map((x,i)=>'<a class="g81-high" href="'+esc(x.url||'#')+'" target="_blank" rel="noopener"><span class="g81-no">'+(i+1)+'</span><div><b>'+esc(x.title||'未命名')+'</b><small>'+esc(x.__kind)+' · '+esc(itemReasons(x,r.model).join('；'))+'</small></div><span class="g81-open">打开</span></a>').join('')||'<div class="g81-muted">暂无足够高价值样本。</div>';$id('g81ShowHigh').style.display=r.high.length>3?'inline-flex':'none';
