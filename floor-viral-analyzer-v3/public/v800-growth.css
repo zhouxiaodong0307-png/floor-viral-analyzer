@@ -1,3 +1,5 @@
+/* prevent legacy analysis flash */
+.stats,#marketAnalysisCard{display:none!important}
 /* V8.0 — multi-platform growth decision UI. Keeps crawler/layout foundation; changes information priority only. */
 .v8-hidden{display:none!important}
 .v8-decision{border:1px solid var(--line);border-radius:18px;background:#fff;padding:16px;margin-bottom:12px}
