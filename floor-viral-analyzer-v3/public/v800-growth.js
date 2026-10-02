@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='8.2.4';
+const VERSION='8.2.5';
 const EXPKEY='floorGrowthExperimentsV81';
 const REPORTKEY='floorGrowthReportsV814';
 const $id=id=>document.getElementById(id);
@@ -395,7 +395,7 @@ function eligibility(s,p){
   return{ok:true,need:''};
 }
 function makeTwoVersions(p,s){
-  const a=naturalXhsGenerate(p,s,'A'),b=naturalXhsGenerate(p,s,'B');
+  const a=applyImageAdvice(naturalXhsGenerate(p,s,'A')),b=applyImageAdvice(naturalXhsGenerate(p,s,'B'));
   const ca=readabilityCheck(a,s,p),cb=readabilityCheck(b,s,p);
   return[{...a,label:'方案A',mode:'严格测试当前变量',check:ca},{...b,label:'方案B',mode:'同一变量的另一种表达',check:cb}];
 }
@@ -414,7 +414,7 @@ function ensureUI(){
   let report=$id('g82Report');
   if(!report){
     report=document.createElement('section');report.id='g82Report';report.className='g82-report';
-    report.innerHTML='<div class="g82-head"><div><span>小红书 · 本轮综合分析</span><h2>这批数据告诉了我什么</h2></div><div id="g82ReportMeta" class="g82-meta"></div></div><p id="g82Summary" class="g82-summary">正在分析本轮数据…</p><div id="g82BestRef" class="g82-best-ref" style="display:none"></div><div class="g82-grid"><div class="g82-main"><div class="g82-section-title">本轮最值得看的发现</div><div id="g82Findings"></div><div class="g82-section-title">高表现主要赢在哪里</div><div id="g82Layers" class="g82-layers"></div><div class="g82-section-title">本轮高价值内容画像</div><div id="g82Profile" class="g82-profile"></div></div><aside class="g82-side"><small>下一轮建议</small><strong id="g82NextTitle">等待分析</strong><p id="g82NextDo"></p><div class="g82-dont"><b>不要</b><span id="g82NextDont"></span></div><div class="g82-purpose"><b>目的</b><span id="g82NextPurpose"></span></div><button id="g82GenerateTop" class="g81-primary">生成下一轮测试内容</button><button id="g82CopyReport" class="g81-secondary">复制综合报告</button></aside></div><div class="g82-section-title">内容机会地图</div><div id="g82Map" class="g82-map"></div><div id="g82Limit" class="g82-limit"></div>';
+    report.innerHTML='<div class="g82-head"><div><span>小红书 · 本轮综合分析</span><h2>这批数据告诉了我什么</h2></div><div id="g82ReportMeta" class="g82-meta"></div></div><p id="g82Summary" class="g82-summary">正在分析本轮数据…</p><div id="g82BestRef" class="g82-best-ref" style="display:none"></div><div class="g82-grid"><div class="g82-main"><div class="g82-section-title">本轮最值得看的发现</div><div id="g82Findings"></div><div class="g82-section-title">高表现主要赢在哪里</div><div id="g82Layers" class="g82-layers"></div><div class="g82-section-title">本轮高价值内容画像</div><div id="g82Profile" class="g82-profile"></div><div class="g82-section-title">图片 / 封面规律</div><div id="g825ImageFindings" class="g825-image-findings"></div></div><aside class="g82-side"><small>下一轮建议</small><strong id="g82NextTitle">等待分析</strong><p id="g82NextDo"></p><div class="g82-dont"><b>不要</b><span id="g82NextDont"></span></div><div class="g82-purpose"><b>目的</b><span id="g82NextPurpose"></span></div><button id="g82GenerateTop" class="g81-primary">生成下一轮测试内容</button><button id="g82CopyReport" class="g81-secondary">复制综合报告</button></aside></div><div class="g82-section-title">内容机会地图</div><div id="g82Map" class="g82-map"></div><div id="g82Limit" class="g82-limit"></div>';
     document.querySelector('.top')?.after(report);
   }
 
@@ -532,11 +532,75 @@ function bestReference(r){
     rank:pick.rank||null
   };
 }
+
+function imageFeatureRows(r){
+  const hi=r.high||[],no=r.normal||[];
+  const defs=[
+    ['coverVertical','竖版封面',x=>!!x.coverRatioType,x=>x.coverRatioType==='竖版'],
+    ['coverSquare','方形/近方形封面',x=>!!x.coverRatioType,x=>x.coverRatioType==='方形/近方形'],
+    ['coverText','封面有文字叠加',x=>typeof x.coverHasTextOverlay==='boolean',x=>x.coverHasTextOverlay===true],
+    ['multiImage','多图/轮播（4张及以上）',x=>num(x.carouselCount??x.imageCount)!==null,x=>num(x.carouselCount??x.imageCount)>=4],
+    ['mediaVideo','视频内容',x=>!!x.mediaType,x=>x.mediaType==='视频'],
+    ['sceneCover','真实空间/实景封面线索',x=>!!x.coverVisualType&&x.coverVisualConfidence!=='低',x=>x.coverVisualType==='实景/空间'],
+    ['factoryCover','工厂/生产封面线索',x=>!!x.coverVisualType&&x.coverVisualConfidence!=='低',x=>x.coverVisualType==='工厂/生产'],
+    ['installCover','施工/铺装封面线索',x=>!!x.coverVisualType&&x.coverVisualConfidence!=='低',x=>x.coverVisualType==='施工/铺装'],
+    ['closeupCover','板材/木纹近景封面线索',x=>!!x.coverVisualType&&x.coverVisualConfidence!=='低',x=>x.coverVisualType==='板材/木纹近景'],
+    ['compareCover','对比/拼图封面线索',x=>!!x.coverVisualType&&x.coverVisualConfidence!=='低',x=>x.coverVisualType==='对比/拼图'],
+    ['infoCover','信息/清单型封面线索',x=>!!x.coverVisualType&&x.coverVisualConfidence!=='低',x=>x.coverVisualType==='信息/清单']
+  ];
+  const z=(p1,n1,p2,n2)=>{if(!n1||!n2)return 0;const p=(p1*n1+p2*n2)/(n1+n2),se=Math.sqrt(Math.max(1e-9,p*(1-p)*(1/n1+1/n2)));return Math.abs(p1-p2)/se};
+  return defs.map(([id,label,available,hit])=>{
+    const h=hi.filter(available),n=no.filter(available),hc=h.filter(hit).length,nc=n.filter(hit).length,hp=h.length?hc/h.length:0,np=n.length?nc/n.length:0,diff=hp-np,zz=z(hp,h.length,np,n.length);
+    const cov=(hi.length+no.length)?(h.length+n.length)/(hi.length+no.length):0;
+    let level='数据不足',category='暂不参考';
+    if(h.length>=30&&n.length>=60&&cov>=.55&&diff>=.15&&zz>=2){level='强证据';category='可以复用'}
+    else if(h.length>=20&&n.length>=40&&cov>=.35&&diff>=.10&&zz>=1.6){level='中等证据';category='值得测试'}
+    else if(h.length>=10&&n.length>=20&&cov>=.25&&diff>=.07){level='弱证据';category='值得测试'}
+    else if(cov>=.15&&diff>=.04){level='探索性';category='观察'}
+    return{id,label,hc,nc,hCount:h.length,nCount:n.length,hp,np,diff,z:zz,coverage:cov,level,category}
+  }).filter(x=>x.coverage>0).sort((a,b)=>{const rank={可以复用:4,值得测试:3,观察:2,'暂不参考':1};return(rank[b.category]-rank[a.category])||b.diff-a.diff});
+}
+function imageAnalysis(r){
+  if(r.platform!=='小红书')return{coverage:0,findings:[],summary:'当前平台未启用图片规律分析。',reusable:[],testable:[]};
+  const fs=imageFeatureRows(r),covered=(r.pool||[]).filter(x=>x.coverRatioType||typeof x.coverHasTextOverlay==='boolean'||x.mediaType||x.carouselCount||x.coverVisualType).length,cov=r.pool.length?covered/r.pool.length:0;
+  const findings=fs.filter(x=>x.diff>0&&x.category!=='暂不参考').slice(0,3),reusable=findings.filter(x=>x.category==='可以复用'),testable=findings.filter(x=>x.category==='值得测试');
+  let summary='';
+  if(cov<.15)summary='当前这批数据缺少图片结构元数据；重新抓取后会自动比较封面比例、文字叠加、多图/视频和可识别的封面内容线索。';
+  else if(findings.length){const x=findings[0];summary='图片侧目前最明显的信号是“'+x.label+'”：高表现 '+fmtPct(x.hp)+'，普通 '+fmtPct(x.np)+'，差异 '+(x.diff>=0?'+':'')+Math.round(x.diff*100)+'%，'+x.level+'。'}
+  else summary='图片数据已经有覆盖，但高表现与普通内容暂时没有明显稳定差异。';
+  return{coverage:cov,findings,reusable,testable,summary};
+}
+function imageAdvice(img){
+  if(!img)return{cover:'',images:'',basis:''};
+  const x=img.reusable?.[0]||img.testable?.[0]||null;
+  if(!x)return{cover:'',images:'',basis:img.summary||''};
+  const map={
+    coverVertical:['封面优先用竖版比例。','整组图片保持竖版为主，避免横竖混乱。'],
+    coverSquare:['封面优先使用方形/近方形比例。','图片比例尽量统一，突出主体。'],
+    coverText:['封面可以保留少量短文字，但不要做成大段海报。','首图文字只负责说明主题，后续图片回到真实内容。'],
+    multiImage:['优先使用多图轮播。','建议至少4张：整体 → 近景 → 关键细节 → 收口/对比。'],
+    mediaVideo:['如果有合适素材，优先考虑视频形式。','视频前3秒直接展示空间或产品重点，避免长片头。'],
+    sceneCover:['封面优先真实空间/实际铺装场景。','图片顺序：整体空间 → 板面近景 → 铺法/规格 → 收口细节。'],
+    factoryCover:['如果内容确实来自工厂，封面优先真实生产/库存现场。','图片顺序：现场 → 板面 → 规格 → 包装/库存。'],
+    installCover:['封面优先施工或铺装过程。','图片顺序：施工过程 → 拼接细节 → 完成效果 → 收口。'],
+    closeupCover:['封面优先板面/木纹近景。','图片顺序：近景 → 整体 → 规格/铺法 → 细节。'],
+    compareCover:['封面优先对比图。','图片顺序：A/B对比 → 各自细节 → 实际空间。'],
+    infoCover:['封面优先信息清单型表达。','首图给结论，后续每张图对应一个信息点。']
+  };
+  const pair=map[x.id]||['',''];
+  return{cover:pair[0],images:pair[1],basis:x.label+' '+(x.diff>=0?'+':'')+Math.round(x.diff*100)+'% · '+x.level,signal:x};
+}
+function applyImageAdvice(v){
+  const ia=window.__g825ImageAnalysis,ad=imageAdvice(ia);
+  if(!ad.signal)return v;
+  const suffix=ad.signal.category==='可以复用'?'':'（弱/测试信号，本轮若要严格单变量测试可保持原图片风格）';
+  return{...v,cover:(ad.cover||v.cover)+(ad.cover?' '+suffix:''),images:(ad.images||v.images),imageBasis:ad.basis};
+}
 function buildReport(r){
   if(!r||r.empty||r.unsupported)return null;
   const layers=metricLayers(r),opp=opportunityMap(r),primary=r.reusable.concat(r.testable),seen=new Set(primary.map(x=>x.id)),secondary=(r.observed||[]).filter(x=>x.diff>=.03&&!seen.has(x.id)),topFindings=primary.concat(secondary).slice(0,5);
   const stop=db.lastMeta&&db.lastMeta.stoppedBy,stopMap={target:'达到目标500条',manual:'手动停止',saturated:'平台样本已饱和','safety-time-limit':'达到安全时限'};
-  return{id:(db.lastCapturedAt||'latest')+'|'+r.platform,platform:r.platform,createdAt:nowISO(),summary:humanSummary(r),sample:{raw:r.batch.length,valid:r.pool.length,high:r.high.length,normal:r.normal.length},topFindings:topFindings.map(x=>({...x,explain:explainFinding(x)})),layers,profile:contentProfile(r),opportunity:opp,next:nextAdvice(r),reference:bestReference(r),limits:{coverage:r.coverage,stability:r.stability,anomalies:r.anomalies.length,rankOnlyRate:r.rankOnlyRate,stop:stopMap[stop]||''},confidence:r.confidence};
+  return{id:(db.lastCapturedAt||'latest')+'|'+r.platform,platform:r.platform,createdAt:nowISO(),summary:humanSummary(r),sample:{raw:r.batch.length,valid:r.pool.length,high:r.high.length,normal:r.normal.length},topFindings:topFindings.map(x=>({...x,explain:explainFinding(x)})),layers,profile:contentProfile(r),images:imageAnalysis(r),opportunity:opp,next:nextAdvice(r),reference:bestReference(r),limits:{coverage:r.coverage,stability:r.stability,anomalies:r.anomalies.length,rankOnlyRate:r.rankOnlyRate,stop:stopMap[stop]||''},confidence:r.confidence};
 }
 function saveReport(rep){
   if(!rep)return;let a=[];try{a=JSON.parse(localStorage.getItem(REPORTKEY)||'[]')}catch{}
@@ -550,7 +614,7 @@ function reportText(rep){
   const reuse=rep.opportunity.reuse.length?rep.opportunity.reuse.map(x=>x.label).join('、'):'暂无';
   const test=rep.opportunity.test.length?rep.opportunity.test.map(x=>x.label).join('、'):'暂无';
   const noRef=rep.opportunity.noRef.length?rep.opportunity.noRef.map(x=>x.label).join('、'):'暂无明确项目';
-  const ref=rep.reference?['','【最值得查看的1条高价值笔记】',rep.reference.title,rep.reference.reasons.join('；'),rep.reference.url]:[];return ['【本轮小红书综合分析】',rep.summary,'','【样本】','抓取 '+rep.sample.raw+'｜进入分析 '+rep.sample.valid+'｜高价值 '+rep.sample.high+'｜普通 '+rep.sample.normal,'','【本轮发现】',f||'没有达到展示门槛的正向差异。','','【高表现主要赢在哪里】',layer,'','【高价值内容画像】',rep.profile.length?rep.profile.join('、'):'暂无足够差异支持稳定画像','','【内容机会地图】','可以直接复用：'+reuse,'值得测试：'+test,'暂时不要参考：'+noRef,...ref,'','【下一轮建议】',rep.next.title,rep.next.doText,'不要：'+rep.next.dont,'目的：'+rep.next.purpose,'','【可信度限制】','核心数据覆盖 '+Math.round(rep.limits.coverage*100)+'%｜去偏保留 '+Math.round(rep.limits.stability*100)+'%｜异常案例 '+rep.limits.anomalies+'｜排序参考 '+Math.round(rep.limits.rankOnlyRate*100)+'%'+(rep.limits.stop?'｜采集结束：'+rep.limits.stop:'')].join('\n');
+  const img=rep.images,imgs=img?['','【图片 / 封面规律】',img.summary,...img.findings.map((x,i)=>(i+1)+'. '+x.label+'｜高表现 '+fmtPct(x.hp)+'｜普通 '+fmtPct(x.np)+'｜'+(x.diff>=0?'+':'')+Math.round(x.diff*100)+'%｜'+x.level)]:[];const ref=rep.reference?['','【最值得查看的1条高价值笔记】',rep.reference.title,rep.reference.reasons.join('；'),rep.reference.url]:[];return ['【本轮小红书综合分析】',rep.summary,'','【样本】','抓取 '+rep.sample.raw+'｜进入分析 '+rep.sample.valid+'｜高价值 '+rep.sample.high+'｜普通 '+rep.sample.normal,'','【本轮发现】',f||'没有达到展示门槛的正向差异。','','【高表现主要赢在哪里】',layer,'','【高价值内容画像】',rep.profile.length?rep.profile.join('、'):'暂无足够差异支持稳定画像',...imgs,'','【内容机会地图】','可以直接复用：'+reuse,'值得测试：'+test,'暂时不要参考：'+noRef,...ref,'','【下一轮建议】',rep.next.title,rep.next.doText,'不要：'+rep.next.dont,'目的：'+rep.next.purpose,'','【可信度限制】','核心数据覆盖 '+Math.round(rep.limits.coverage*100)+'%｜去偏保留 '+Math.round(rep.limits.stability*100)+'%｜异常案例 '+rep.limits.anomalies+'｜排序参考 '+Math.round(rep.limits.rankOnlyRate*100)+'%'+(rep.limits.stop?'｜采集结束：'+rep.limits.stop:'')].join('\n');
 }
 function renderReport(r){
   const rep=buildReport(r);if(!rep)return;saveReport(rep);window.__g82Report=rep;
@@ -559,6 +623,7 @@ function renderReport(r){
   $id('g82Findings').innerHTML=rep.topFindings.length?rep.topFindings.map((x,i)=>'<div class="g82-finding"><span>'+(i+1)+'</span><div><b>'+esc(x.label)+'</b><small>高表现 '+fmtPct(x.hp)+' ｜ 普通 '+fmtPct(x.np)+' ｜ <strong>'+(x.diff>=0?'+':'')+Math.round(x.diff*100)+'%</strong> ｜ '+esc(x.level)+'</small><p>'+esc(x.explain)+'</p></div></div>').join(''):'<div class="g82-empty">本轮没有达到展示门槛的正向差异；这不是分析失败，而是高表现组和普通组写法目前比较接近。</div>';
   $id('g82Layers').innerHTML=rep.layers.map(x=>'<div><b>'+esc(x.name)+'</b><span>'+(x.available?(x.top?('更常见：'+esc(x.top.label)+' '+(x.top.diff>=0?'+':'')+Math.round(x.top.diff*100)+'%'):'暂未发现明显内容差异'):'当前无法分析该维度')+'</span></div>').join('');
   $id('g82Profile').innerHTML=rep.profile.length?rep.profile.map(x=>'<span>'+esc(x)+'</span>').join(''):'<span class="muted">暂无足够差异支持稳定画像</span>';
+  window.__g825ImageAnalysis=rep.images;const imgBox=$id('g825ImageFindings');if(imgBox){imgBox.innerHTML='<p>'+esc(rep.images.summary)+'</p>'+(rep.images.findings.length?rep.images.findings.map(x=>'<div><b>'+esc(x.label)+'</b><span>高表现 '+fmtPct(x.hp)+' vs 普通 '+fmtPct(x.np)+'</span><strong>'+(x.diff>=0?'+':'')+Math.round(x.diff*100)+'%</strong><small>'+esc(x.level)+'</small></div>').join(''):'');}
   const map=rep.opportunity;$id('g82Map').innerHTML='<div><b>可以直接复用</b><p>'+(map.reuse.length?map.reuse.map(x=>esc(x.label)).join('、'):'暂无')+'</p></div><div><b>值得测试</b><p>'+(map.test.length?map.test.map(x=>esc(x.label)).join('、'):'暂无')+'</p></div><div><b>暂时不要参考</b><p>'+(map.noRef.length?map.noRef.map(x=>esc(x.label)).join('、'):'暂无明确项目')+'</p></div>';
   $id('g82NextTitle').textContent=rep.next.title;$id('g82NextDo').textContent=rep.next.doText;$id('g82NextDont').textContent=rep.next.dont;$id('g82NextPurpose').textContent=rep.next.purpose;
   $id('g82Limit').textContent='核心数据覆盖 '+Math.round(rep.limits.coverage*100)+'% · 去偏保留 '+Math.round(rep.limits.stability*100)+'% · 异常案例 '+rep.limits.anomalies+' · 排序参考 '+Math.round(rep.limits.rankOnlyRate*100)+'%'+(rep.limits.stop?' · '+rep.limits.stop:'');
@@ -591,7 +656,7 @@ function generatorWhy(r,s,p){
 }
 function versionHtml(v,idx){
   const ok=v.check&&v.check.ok;
-  return '<div class="g82-version g823-version-'+idx+'"><div class="g82-version-head"><div><span>'+esc(v.label)+'</span><b>'+esc(v.mode)+'</b></div><em class="'+(ok?'ok':'bad')+'">'+(ok?'✓ 可读性通过':'✕ 需重生成')+'</em></div><div class="g81-field g823-field-title"><span>标题</span><strong>'+esc(v.title)+'</strong></div><div class="g81-field g823-field-body"><span>正文</span><pre>'+esc(v.body)+'</pre></div><div class="g81-field-row"><div class="g81-field g823-field-tags"><span>话题 / 搜索词</span><p>'+esc(v.tags)+'</p></div><div class="g81-field g823-field-cover"><span>封面建议</span><p>'+esc(v.cover)+'</p></div></div><div class="g81-field g823-field-images"><span>图片内容建议</span><p>'+esc(v.images)+'</p></div><div class="g81-output-actions"><button class="g81-primary g82-copy-version" data-i="'+idx+'">复制'+esc(v.label)+'</button><button class="g81-secondary g82-record-version" data-i="'+idx+'">记录发布结果</button></div></div>';
+  return '<div class="g82-version g823-version-'+idx+'"><div class="g82-version-head"><div><span>'+esc(v.label)+'</span><b>'+esc(v.mode)+'</b></div><em class="'+(ok?'ok':'bad')+'">'+(ok?'✓ 可读性通过':'✕ 需重生成')+'</em></div><div class="g81-field g823-field-title"><span>标题</span><strong>'+esc(v.title)+'</strong></div><div class="g81-field g823-field-body"><span>正文</span><pre>'+esc(v.body)+'</pre></div><div class="g81-field-row"><div class="g81-field g823-field-tags"><span>话题 / 搜索词</span><p>'+esc(v.tags)+'</p></div><div class="g81-field g823-field-cover"><span>封面建议</span><p>'+esc(v.cover)+'</p></div></div><div class="g81-field g823-field-images"><span>图片内容建议</span><p>'+esc(v.images)+'</p>'+(v.imageBasis?'<small class="g825-image-basis">本轮图片依据：'+esc(v.imageBasis)+'</small>':'')+'</div><div class="g81-output-actions"><button class="g81-primary g82-copy-version" data-i="'+idx+'">复制'+esc(v.label)+'</button><button class="g81-secondary g82-record-version" data-i="'+idx+'">记录发布结果</button></div></div>';
 }
 function renderOutput(r,s,p,versions){
   const w=generatorWhy(r,s,p).map(([a,b],i)=>'<div class="g823-strategy-tone g823-tone-'+i+'"><span>'+esc(a)+'</span><b>'+esc(b)+'</b></div>').join('');
@@ -625,7 +690,7 @@ function generateCurrent(){
 
 function renderFeedback(){const box=$id('g81Feedback');box.innerHTML='<div class="g81-feedback-title">发布后记录结果</div><div class="g81-feedback-grid"><label>浏览<input data-k="views" inputmode="decimal"></label><label>点赞<input data-k="likes" inputmode="decimal"></label><label>收藏<input data-k="favs" inputmode="decimal"></label><label>评论<input data-k="comments" inputmode="decimal"></label><label>转发<input data-k="shares" inputmode="decimal"></label><label>发布天数<input data-k="days" inputmode="decimal"></label></div><button id="g81SaveFeedback" class="g81-primary">保存结果</button>';box.classList.add('show');$id('g81SaveFeedback').onclick=saveFeedback}
 function saveFeedback(){let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}const wanted=window.__g82Versions&&window.__g82Versions[window.__g82RecordIndex||0]?.label;const d=[...a].reverse().find(x=>x.platform===currentPlatform()&&x.status==='draft'&&(!wanted||x.variant===wanted));if(!d)return setStatus('没有找到待验证的生成记录。','warn');const m={};$id('g81Feedback').querySelectorAll('input').forEach(i=>{const v=num(i.value);if(v!==null)m[i.dataset.k]=v});const total=(m.likes||0)+(m.favs||0)+(m.comments||0)+(m.shares||0),days=m.days||1;d.metrics=m;d.performance=m.views?total/m.views:total/Math.max(.25,days);d.status='measured';d.measuredAt=nowISO();localStorage.setItem(EXPKEY,JSON.stringify(a.slice(-120)));$id('g81Feedback').innerHTML='<div class="g81-saved">✓ 已保存，本轮结果会进入后续同平台验证。</div>';setStatus('发布结果已记录。','oktxt')}
-function runAll(){ensureUI();const r=analyze();window.__g81Analysis=r;renderAnalysis(r);const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const sub=document.querySelector('.top .sub');if(sub)sub.textContent='小红书：抓取 → 综合分析 → 测试策略 → 自然内容 → 发布验证';const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.2.4';document.title='多平台内容增长决策系统 V8.2.4';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.2.4：结论在前、行动其次、关键证据随后、原始数据最后；生成结果必须通过测试变量执行校验。'}
+function runAll(){ensureUI();const r=analyze();window.__g81Analysis=r;renderAnalysis(r);const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const sub=document.querySelector('.top .sub');if(sub)sub.textContent='小红书：抓取 → 综合分析 → 测试策略 → 自然内容 → 发布验证';const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.2.5';document.title='多平台内容增长决策系统 V8.2.5';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.2.5：结论在前、行动其次、关键证据随后、原始数据最后；生成结果必须通过测试变量执行校验。'}
 const oldRender=window.render;if(typeof oldRender==='function'){window.render=function(){const v=oldRender.apply(this,arguments);setTimeout(runAll,40);return v}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(runAll,90));else setTimeout(runAll,90);
 })();
