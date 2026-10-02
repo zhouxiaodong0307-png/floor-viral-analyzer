@@ -71,6 +71,11 @@ function normalizeItems(rows, source, site) {
     favs: nullableNumber(x.favs),
     comments: nullableNumber(x.comments),
     views: nullableNumber(x.views),
+    exposure: nullableNumber(x.exposure ?? x.impressions),
+    impressions: nullableNumber(x.impressions ?? x.exposure),
+    consults: nullableNumber(x.consults),
+    sales: nullableNumber(x.sales ?? x.sold),
+    sold: nullableNumber(x.sold ?? x.sales),
     shares: nullableNumber(x.shares),
     specs: clean(x.specs, 140),
     ageText: clean(x.ageText, 80),
@@ -79,6 +84,10 @@ function normalizeItems(rows, source, site) {
     productId: clean(x.productId, 180),
     keywordHits: Array.isArray(x.keywordHits) ? x.keywordHits.map(v => clean(v, 100)).filter(Boolean).slice(0, 30) : [],
     sampleTier: clean(x.sampleTier, 10),
+    seller: clean(x.seller, 160),
+    publishedAt: clean(x.publishedAt, 80),
+    contentType: clean(x.contentType, 80),
+    coverType: clean(x.coverType, 80),
     site
   })).filter(x => x.title);
 }
@@ -147,7 +156,7 @@ async function analyzeUrl(url) {
 }
 
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, version: "7.4.0", mode: "decision-system-permanent-collector" });
+  res.json({ ok: true, version: "8.0.0", mode: "decision-system-permanent-collector" });
 });
 
 app.get("/browser-bridge.zip", (req, res) => {
@@ -187,4 +196,4 @@ app.post("/import", (req, res) => {
   }
 });
 
-app.listen(PORT, "0.0.0.0", () => console.log(`V7.4.0 running on :${PORT}`));
+app.listen(PORT, "0.0.0.0", () => console.log(`V8.0.0 running on :${PORT}`));
