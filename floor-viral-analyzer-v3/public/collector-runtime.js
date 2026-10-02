@@ -3,6 +3,8 @@ if(window.__FLOOR_V721_COLLECTING__)return;
 window.__FLOOR_V721_COLLECTING__=true;
 
 const TARGET=500, MAX_MS=105000, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
+const COLLECTOR_VERSION='8.0.4';
+const safeQuery=(root,sel)=>{try{return root&&root.querySelector?root.querySelector(sel):null}catch{return null}};
 const START=Date.now();
 const C=s=>String(s||'').replace(/\s+/g,' ').trim();
 const N=s=>{const m=String(s||'').replace(/,/g,'').match(/([\d.]+)\s*(万|w|W|k|K|千)?/i);if(!m)return null;let v=+m[1],u=m[2]||'';if(/万|w/i.test(u))v*=1e4;if(/k|千/i.test(u))v*=1e3;return Math.round(v)};
@@ -37,7 +39,7 @@ function status(win,msg){
     win.document.title='采集 '+out.size+'/500｜'+(Q||'闲鱼');
   }catch{}
 }
-status(window,'准备深度抓取 0/500…');
+status(window,'采集器 V'+COLLECTOR_VERSION+'｜准备深度抓取 0/500…');
 
 function idOf(u){
   let m=String(u||'').match(/[?&](?:id|itemId|goodsId|noteId)=([^&#]+)/i)||String(u||'').match(/\/(?:item|detail|goods|note|explore|search_result)\/([A-Za-z0-9_-]{6,})/i);
@@ -82,7 +84,7 @@ function scanXhs(win,q,tier){
     const card=xhsCard(doc,a);if(!card)continue;
     const baseText=C(card.innerText),attrs=[...card.querySelectorAll('[aria-label],[title]')].map(el=>C(el.getAttribute('aria-label')||el.getAttribute('title'))).filter(Boolean).join(' '),t=C(baseText+' '+attrs);
     const lines=(card.innerText||'').split(/\n+/).map(C).filter(Boolean);
-    const explicitTitle=C(card.querySelector('[class*="title"],[class*="note-title"]')?.innerText||'');
+    const explicitTitle=C(safeQuery(card,'[class*="title"],[class*="note-title"]')?.innerText||'');
     const title=explicitTitle||titleOf(lines,q);if(!title)continue;
     const img=card.querySelector('img'),imgSrc=img?.currentSrc||img?.src||'';
     const lm=t.match(/(?:点赞|赞)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:点赞|赞)/i);
@@ -93,7 +95,7 @@ function scanXhs(win,q,tier){
     const sm=t.match(/(?:转发|分享)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:转发|分享)/i);
     const vm=t.match(/(?:浏览|小眼睛|阅读)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:浏览|阅读)/i);
     const tm=t.match(/(刚刚|今天|昨天|\d+\s*(?:分钟|小时|天|周|个月|年)前)(?:发布)?/);
-    let seller=C(card.querySelector('[class*="author"],[class*="user"],[class*="name"]')?.innerText||'');
+    let seller=C(safeQuery(card,'[class*="author"],[class*="user"],[class*="name"]')?.innerText||'');
     if(!seller){
       seller=lines.find(x=>x!==title&&x.length>=2&&x.length<=30&&!/^\d/.test(x)&&!/刚刚|今天|昨天|分钟前|小时前|天前|周前|个月前|年前/.test(x))||'';
     }
@@ -221,5 +223,5 @@ setTimeout(()=>{form.remove();document.getElementById('__floor_v721_status__')?.
 })().catch(e=>{
   window.__FLOOR_V721_COLLECTING__=false;
   document.getElementById('__floor_v721_status__')?.remove();
-  alert('深度抓取失败：'+(e?.message||e))
+  alert('深度抓取失败（V'+COLLECTOR_VERSION+'）：'+(e?.message||e))
 });
