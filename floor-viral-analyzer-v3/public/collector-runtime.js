@@ -3,7 +3,7 @@ if(window.__FLOOR_V721_COLLECTING__)return;
 window.__FLOOR_V721_COLLECTING__=true;
 
 const TARGET=500, MAX_TOTAL_MS=8*60*1000, SATURATED_ROUNDS=2, MIN_ROUND_GAIN=3, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
-const COLLECTOR_VERSION='8.2.3';
+const COLLECTOR_VERSION='8.2.4';
 window.__FLOOR_MANUAL_STOP__=false;
 let fatalReason='',stopReason='';
 const safeQuery=(root,sel)=>{try{return root&&root.querySelector?root.querySelector(sel):null}catch{return null}};
