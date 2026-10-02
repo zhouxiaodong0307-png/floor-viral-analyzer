@@ -2,10 +2,10 @@
 if(window.__FLOOR_V721_COLLECTING__)return;
 window.__FLOOR_V721_COLLECTING__=true;
 
-const TARGET=500, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
-const COLLECTOR_VERSION='8.1.2';
+const TARGET=500, MAX_TOTAL_MS=8*60*1000, SATURATED_ROUNDS=2, MIN_ROUND_GAIN=3, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
+const COLLECTOR_VERSION='8.1.3';
 window.__FLOOR_MANUAL_STOP__=false;
-let fatalReason='';
+let fatalReason='',stopReason='';
 const safeQuery=(root,sel)=>{try{return root&&root.querySelector?root.querySelector(sel):null}catch{return null}};
 const START=Date.now();
 const C=s=>String(s||'').replace(/\s+/g,' ').trim();
@@ -202,6 +202,7 @@ if(!worker||worker.closed){
 let win=worker;
 let round=0,noGrowthRounds=0;
 while(out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__){
+  if(Date.now()-START>=MAX_TOTAL_MS){stopReason='safety-time-limit';break}
   if(!win||win.closed){fatalReason='采集窗口被关闭';break}
   round++;
   const roundStart=out.size;
@@ -211,7 +212,7 @@ while(out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__){
     if(u.searchParams.has('q')||!u.searchParams.has('keyword'))u.searchParams.set('q',step.q);else u.searchParams.set('keyword',step.q);
     u.searchParams.set('__floor_round',String(round));
     let loaded=false;
-    for(let attempt=1;attempt<=3&&!loaded&&!window.__FLOOR_MANUAL_STOP__;attempt++){
+    for(let attempt=1;attempt<=3&&!loaded&&!window.__FLOOR_MANUAL_STOP__&&Date.now()-START<MAX_TOTAL_MS;attempt++){
       try{
         status(window,'第'+round+'轮｜关键词 '+(i+1)+'/'+plan.length+'：'+step.q+'｜已采 '+out.size+'/500');
         win.location.href=u.href;
@@ -226,9 +227,20 @@ while(out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__){
     await collectQuery(win,step,i)
   }
   if(out.size>=TARGET||window.__FLOOR_MANUAL_STOP__||fatalReason)break;
-  if(out.size===roundStart)noGrowthRounds++;else noGrowthRounds=0;
-  status(window,'第'+round+'轮完成｜'+out.size+'/500｜本轮新增 '+(out.size-roundStart)+'；未到500，继续下一轮');
-  await new Promise(r=>setTimeout(r,noGrowthRounds>=2?3000:1000));
+  const roundGain=out.size-roundStart;
+  if(roundGain<MIN_ROUND_GAIN)noGrowthRounds++;else noGrowthRounds=0;
+  if(noGrowthRounds>=SATURATED_ROUNDS){
+    stopReason='saturated';
+    status(window,'平台当前可获取唯一样本已基本饱和｜'+out.size+'/500｜连续 '+SATURATED_ROUNDS+' 轮新增不足 '+MIN_ROUND_GAIN+' 条，准备导入实际结果');
+    break
+  }
+  if(Date.now()-START>=MAX_TOTAL_MS){
+    stopReason='safety-time-limit';
+    status(window,'达到安全时限｜'+out.size+'/500｜准备导入实际结果');
+    break
+  }
+  status(window,'第'+round+'轮完成｜'+out.size+'/500｜本轮新增 '+roundGain+'；继续尝试');
+  await new Promise(r=>setTimeout(r,noGrowthRounds?2200:900));
 }
 if(worker&&!worker.closed)try{worker.close()}catch{}
 window.__FLOOR_V721_COLLECTING__=false;
@@ -245,14 +257,15 @@ if(!out.size){
 }
 const tierCounts={A:0,B:0,C:0};
 for(const x of out.values())tierCounts[x.sampleTier]=(tierCounts[x.sampleTier]||0)+1;
-status(window,(out.size>=TARGET?'已达到500条':'手动停止')+'｜当前 '+out.size+'/500｜A '+tierCounts.A+' · B '+tierCounts.B+' · C '+tierCounts.C+'，正在导入…');
+const stopLabel=out.size>=TARGET?'已达到500条':window.__FLOOR_MANUAL_STOP__?'手动停止':stopReason==='saturated'?'平台样本已饱和':stopReason==='safety-time-limit'?'达到8分钟安全时限':'结束';
+status(window,stopLabel+'｜当前 '+out.size+'/500｜A '+tierCounts.A+' · B '+tierCounts.B+' · C '+tierCounts.C+'，正在导入实际结果…');
 
 const payload={
   source:location.href,keyword:Q,
   meta:{
     target:TARGET,rawCount:rawKeys.size,validCount:out.size,duplicateCount:Math.max(0,rawKeys.size-out.size),
     tierCounts,queryStats,expanded:true,durationSeconds:Math.round((Date.now()-START)/1000),
-    stoppedBy:out.size>=TARGET?'target':(window.__FLOOR_MANUAL_STOP__?'manual':'unknown')
+    stoppedBy:out.size>=TARGET?'target':(window.__FLOOR_MANUAL_STOP__?'manual':(stopReason||'unknown')),rounds:round
   },
   items:[...out.values()]
 };
