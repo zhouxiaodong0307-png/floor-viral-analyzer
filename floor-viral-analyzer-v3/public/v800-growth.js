@@ -593,8 +593,8 @@ function imageAdvice(img){
 function applyImageAdvice(v){
   const ia=window.__g825ImageAnalysis,ad=imageAdvice(ia);
   if(!ad.signal)return v;
-  const suffix=ad.signal.category==='可以复用'?'':'（弱/测试信号，本轮若要严格单变量测试可保持原图片风格）';
-  return{...v,cover:(ad.cover||v.cover)+(ad.cover?' '+suffix:''),images:(ad.images||v.images),imageBasis:ad.basis};
+  if(ad.signal.category!=='可以复用')return{...v,imageBasis:'发现待验证图片信号：'+ad.basis+'；为避免同时改变多个变量，本轮不自动改图片方案。'};
+  return{...v,cover:ad.cover||v.cover,images:ad.images||v.images,imageBasis:'可复用图片信号：'+ad.basis};
 }
 function buildReport(r){
   if(!r||r.empty||r.unsupported)return null;
