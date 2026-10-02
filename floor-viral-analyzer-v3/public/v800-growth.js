@@ -121,7 +121,7 @@ const PLATFORM={
     dims(x){
       const exp=pos(x.exposure??x.impressions),views=pos(x.views),wants=n(x.wants),consults=n(x.consults),sales=n(x.sales??x.sold),days=ageDays(x);
       return {
-        exposure:exp,views,wants,consults,sales,days,
+        exposure:exp,views,wants,comments:n(x.comments),consults,sales,days,
         clickRate:exp>0&&views!==null?views/exp:null,
         wantRate:views>0&&wants!==null?wants/views:null,
         consultRate:views>0&&consults!==null?consults/views:null,
@@ -130,8 +130,9 @@ const PLATFORM={
       };
     },
     weights:{exposure:.12,views:.12,clickRate:.22,wantRate:.22,consultRate:.26,saleRate:.30,speed:.18},
-    kinds:{exposure:'流量型',views:'流量型',clickRate:'点击型',wantRate:'互动型',consultRate:'咨询型',saleRate:'成交转化型',speed:'异常爆发型'},
-    dimLabels:{exposure:'曝光',views:'浏览',clickRate:'浏览率',wantRate:'想要率',consultRate:'咨询率',saleRate:'成交转化',speed:'增长速度'},
+    fallbackWeights:{wants:.75,comments:.25},
+    kinds:{exposure:'流量型',views:'流量型',clickRate:'点击型',wantRate:'互动型',consultRate:'咨询型',saleRate:'成交转化型',speed:'异常爆发型',wants:'互动型',comments:'互动型'},
+    dimLabels:{exposure:'曝光',views:'浏览',clickRate:'浏览率',wantRate:'想要率',consultRate:'咨询率',saleRate:'成交转化',speed:'增长速度',wants:'想要',comments:'评论/互动'},
     coreCoverage:d=>[d.views,d.wants,d.consults,d.days],
     group(x,strict){
       const type=floorType(x),cond=conditionOf(x),mat=materialOf(x),d=ageDays(x),p=n(x.price);
@@ -165,8 +166,9 @@ const PLATFORM={
       };
     },
     weights:{views:.18,likeRate:.16,favRate:.27,commentRate:.17,shareRate:.22,totalRate:.18,speed:.18},
-    kinds:{views:'流量型',likeRate:'互动型',favRate:'收藏型',commentRate:'评论讨论型',shareRate:'传播型',totalRate:'互动型',speed:'异常爆发型'},
-    dimLabels:{views:'浏览',likeRate:'点赞率',favRate:'收藏率',commentRate:'评论率',shareRate:'转发率',totalRate:'综合互动率',speed:'增长速度'},
+    fallbackWeights:{likes:.18,favs:.36,comments:.24,shares:.22},
+    kinds:{views:'流量型',likeRate:'互动型',favRate:'收藏型',commentRate:'评论讨论型',shareRate:'传播型',totalRate:'互动型',speed:'异常爆发型',likes:'互动型',favs:'收藏型',comments:'评论讨论型',shares:'传播型'},
+    dimLabels:{views:'浏览',likeRate:'点赞率',favRate:'收藏率',commentRate:'评论率',shareRate:'转发率',totalRate:'综合互动率',speed:'增长速度',likes:'点赞',favs:'收藏',comments:'评论',shares:'转发'},
     coreCoverage:d=>[d.views,d.likes,d.favs,d.comments,d.shares,d.days],
     group(x){return {type:xhsContentType(x),cond:'',mat:materialOf(x),d:ageDays(x),p:null}}
   }
@@ -211,17 +213,21 @@ function scoreRows(usable,model){
   for(const x of usable){if(!byCohort.has(x.__cohortKey))byCohort.set(x.__cohortKey,x.__cohort)}
   return usable.map(x=>{
     const cohort=byCohort.get(x.__cohortKey)||x.__cohort;
-    let sum=0,w=0,best={key:null,p:-1};
-    for(const [k,wt] of Object.entries(model.weights)){
-      const v=x.__dims[k];if(v===null||v===undefined)continue;
-      const arr=cohort.map(z=>z.__dims[k]).filter(v=>v!==null&&v!==undefined&&Number.isFinite(v));
-      if(arr.length<5)continue;
-      const p=percentile(v,arr);if(p===null)continue;
-      sum+=p*wt;w+=wt;if(p>best.p)best={key:k,p};
-    }
-    const completeness=model.coreCoverage(x.__dims).filter(v=>v!==null&&v!==undefined).length/model.coreCoverage(x.__dims).length;
+    let sum=0,w=0,best={key:null,p:-1},mode='效率指标';
+    const applyWeights=weights=>{
+      for(const [k,wt] of Object.entries(weights||{})){
+        const v=x.__dims[k];if(v===null||v===undefined)continue;
+        const arr=cohort.map(z=>z.__dims[k]).filter(v=>v!==null&&v!==undefined&&Number.isFinite(v));
+        if(arr.length<5)continue;
+        const p=percentile(v,arr);if(p===null)continue;
+        sum+=p*wt;w+=wt;if(p>best.p)best={key:k,p};
+      }
+    };
+    applyWeights(model.weights);
+    if(!w&&model.fallbackWeights){mode='高互动/潜在高表现';applyWeights(model.fallbackWeights)}
+    const core=model.coreCoverage(x.__dims),completeness=core.length?core.filter(v=>v!==null&&v!==undefined).length/core.length:0;
     const score=w?sum/w:null;
-    return {...x,__score:score,__complete:completeness,__best:best,__kind:model.kinds[best.key]||'高表现'};
+    return {...x,__score:score,__complete:completeness,__best:best,__mode:mode,__kind:model.kinds[best.key]||'潜在高表现'};
   }).filter(x=>x.__score!==null);
 }
 function outlierRows(rows){
@@ -324,9 +330,9 @@ function analyze(){
   else if(high.length>=30&&normal.length>=60&&coverage>=.40){conf='中';confClass='base'}
   else if(high.length>=10){conf='低';confClass='low'}
   else conf='探索';
-  const strongest=reusable[0]||testable[0]||findings2[0]||null;
+  const strongest=reusable[0]||testable[0]||null;
   saveFindings(platform,findings2);
-  return{platform,model,batch,rawComparable:comparable0.usable.length,debias:deb,rows:normalPool,high,normal,anomalies,anomalyCases,typeFindings,findings:findings2,reusable,testable,none,coverage,stability,confidence:[conf,confClass],strongest,dominant,empty:false};
+  return{platform,model,batch,rawComparable:comparable0.usable.length,debias:deb,rows:normalPool,high,normal,anomalies,anomalyCases,typeFindings,findings:findings2,reusable,testable,none,coverage,stability,confidence:[conf,confClass],strongest,dominant,insufficientPerformance:normalPool.length===0,empty:false};
 }
 
 function ensureUI(){
@@ -378,6 +384,15 @@ function metricsFor(r){
 }
 function renderDecision(r){
   ensureUI();
+  if(r.insufficientPerformance){
+    $id('v8Conclusion').textContent='数据已导入，但当前缺少可用于高价值判断的表现指标';
+    $id('v8Why').textContent='抓取数据没有丢失。当前这批商品如果没有浏览、想要/互动、咨询或发布时间等至少一类可比较表现数据，系统不会硬判高价值。';
+    $id('v8Action').textContent='保留数据，补充/抓取可用表现指标';
+    $id('v8ActionSub').textContent='原始数据仍在下方“查看原始数据”中，不会被清空。';
+    $id('v8Metrics').innerHTML='<div class="v8-metric"><b>'+r.batch.length+'</b><span>本次已导入</span></div><div class="v8-metric"><b>'+r.rawComparable+'</b><span>结构可比较</span></div><div class="v8-metric"><b>0</b><span>表现可比较</span></div><div class="v8-metric"><b>不足</b><span>本轮最强信号</span></div><div class="v8-metric"><b>探索</b><span>综合可信度</span></div>';
+    $id('v8Reasons').innerHTML='<div class="v8-reason"><strong>数据没有消失</strong><span>只是本轮没有足够表现指标进入高价值模型。</span></div>';
+    $id('v8Evidence').innerHTML='';$id('v8HighList').innerHTML='';if($id('v8AnomalyList'))$id('v8AnomalyList').innerHTML='';return;
+  }
   if(r.unsupported){
     $id('v8Conclusion').textContent='当前平台尚未建立独立高价值模型';
     $id('v8Why').textContent='系统不会套用闲鱼或小红书算法。需要先定义这个平台的曝光→点击→互动→转化/传播链路，之后才允许输出高价值判断。';
@@ -393,9 +408,9 @@ function renderDecision(r){
     $id('v8Action').textContent='完成一次抓取';
     $id('v8Metrics').innerHTML='';$id('v8Reasons').innerHTML='';$id('v8Evidence').innerHTML='';$id('v8HighList').innerHTML='';return;
   }
-  const s=r.strongest,lead=s?(s.category==='可以复用'?'可以复用：':'值得测试：')+s.label:'本轮没有足够稳定的内容规律';
+  const s=r.strongest,lead=s?(s.category==='可以复用'?'可以复用：':'值得测试：')+s.label:'本轮没有足够稳定的内容规律';const fallbackCount=r.rows.filter(x=>x.__mode==='高互动/潜在高表现').length;
   $id('v8Conclusion').textContent=lead;
-  $id('v8Why').innerHTML=s?('高表现组 '+s.hc+'/'+r.high.length+' = <b>'+fmtPct(s.hp)+'</b>，普通组 '+s.nc+'/'+r.normal.length+' = <b>'+fmtPct(s.np)+'</b>，差异 <b>'+(s.diff>=0?'+':'')+Math.round(s.diff*100)+'%</b>；'+s.evidence+'。'):'本轮高低表现组差异不足，系统不会为了“有结论”而硬凑规律。';
+  $id('v8Why').innerHTML=s?('高表现组 '+s.hc+'/'+r.high.length+' = <b>'+fmtPct(s.hp)+'</b>，普通组 '+s.nc+'/'+r.normal.length+' = <b>'+fmtPct(s.np)+'</b>，差异 <b>'+(s.diff>=0?'+':'')+Math.round(s.diff*100)+'%</b>；'+s.evidence+'。'+(fallbackCount?' 本轮有 '+fallbackCount+' 条因缺少浏览/发布时间，只按“高互动/潜在高表现”比较，不代表高流量或高曝光。':'')):'本轮高低表现组差异不足，系统不会为了“有结论”而硬凑规律。'+(fallbackCount?' 当前部分样本只能按累计互动比较，不代表高流量或高曝光。':'');
   $id('v8Action').textContent=s&&s.category!=='暂无价值'?'下一条只测试「'+s.label+'」':'保持当前方案，先补更多有效数据';
   $id('v8ActionSub').textContent=s&&s.category!=='暂无价值'?'价格、主体产品信息、发布时间等尽量保持接近，用下一轮结果验证这个相关性。':'当前证据不足，不建议同时改多个变量。';
   $id('v8Metrics').innerHTML=metricsFor(r).map(([v,l])=>'<div class="v8-metric"><b>'+esc(v)+'</b><span>'+esc(l)+'</span></div>').join('');
