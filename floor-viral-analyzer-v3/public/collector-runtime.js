@@ -39,7 +39,7 @@ function status(win,msg){
 status(window,'准备深度抓取 0/500…');
 
 function idOf(u){
-  let m=String(u||'').match(/[?&](?:id|itemId|goodsId|noteId)=([^&#]+)/i)||String(u||'').match(/\/(?:item|detail|goods|note)\/([A-Za-z0-9_-]{6,})/i);
+  let m=String(u||'').match(/[?&](?:id|itemId|goodsId|noteId)=([^&#]+)/i)||String(u||'').match(/\/(?:item|detail|goods|note|explore)\/([A-Za-z0-9_-]{6,})/i);
   return m?m[1]:''
 }
 function titleOf(lines,q){
@@ -59,11 +59,11 @@ function scan(win,q,tier){
   const before=out.size,doc=win.document;
   for(const a of doc.querySelectorAll('a[href]')){
     const card=getCard(doc,a);if(!card)continue;
-    const t=C(card.innerText),lines=(card.innerText||'').split(/\n+/).map(C).filter(Boolean),title=titleOf(lines,q);
+    const baseText=C(card.innerText),attrs=[...card.querySelectorAll('[aria-label],[title]')].map(el=>C(el.getAttribute('aria-label')||el.getAttribute('title'))).filter(Boolean).join(' '),t=C(baseText+' '+attrs),lines=(card.innerText||'').split(/\n+/).map(C).filter(Boolean),title=titleOf(lines,q);
     if(!title)continue;
     const pm=t.match(/[¥￥]\s*([\d,.]+)/),price=pm?+pm[1].replace(/,/g,''):null,link=a.href||win.location.href,pid=idOf(link);
     rawKeys.add((pid||link.split('#')[0])+'|'+title.slice(0,120));
-    const key=pid||(!/[?&](?:q|keyword|kw|query)=/i.test(link)?link.split('#')[0]:title.slice(0,130)+'|'+(price??''));
+    let canonical='';try{const z=new URL(link);canonical=z.origin+z.pathname.replace(/\/$/,'')}catch{}const key=pid||title.replace(/\s+/g,'').slice(0,150)+'|'+(price??'')+'|'+canonical;
     const old=out.get(key)||{};
     const wm=t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:人想要|想要)/i),
           vm=t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:浏览|浏览量|查看|阅读)/i),
@@ -75,7 +75,7 @@ function scan(win,q,tier){
     const img=card.querySelector('img'),hits=[...(old.keywordHits||[]),q].filter((x,i,a)=>x&&a.indexOf(x)===i);
     const prev=old.sampleTier||tier,finalTier=(prev==='A'||tier==='A')?'A':(prev==='B'||tier==='B')?'B':'C';
     out.set(key,{
-      rank:old.rank||out.size+1,productId:pid||old.productId||'',title,text:t,url:link,image:img?.src||old.image||'',
+      rank:old.rank||out.size+1,queryRank:old.queryRank||Math.max(1,queryStats.filter(s=>s.query===q).length+1),productId:pid||old.productId||'',title,text:t,url:link,image:img?.src||old.image||'',
       imageCount:card.querySelectorAll('img').length||old.imageCount||null,price:Number.isFinite(price)?price:(old.price??null),
       wants:wm?N(wm[1]):(old.wants??null),views:vm?N(vm[1]):(old.views??null),likes:lm?N(lm[1]):(old.likes??null),
       favs:fm?N(fm[1]):(old.favs??null),comments:cm?N(cm[1]):(old.comments??null),ageText:tm?tm[1]:(old.ageText||''),
