@@ -82,7 +82,7 @@ function scanXhs(win,q,tier){
     const card=xhsCard(doc,a);if(!card)continue;
     const baseText=C(card.innerText),attrs=[...card.querySelectorAll('[aria-label],[title]')].map(el=>C(el.getAttribute('aria-label')||el.getAttribute('title'))).filter(Boolean).join(' '),t=C(baseText+' '+attrs);
     const lines=(card.innerText||'').split(/\n+/).map(C).filter(Boolean);
-    const explicitTitle=C(card.querySelector('[class*="title"],[class*="note-title"],[data-v-*] [class*="title"]')?.innerText||'');
+    const explicitTitle=C(card.querySelector('[class*="title"],[class*="note-title"]')?.innerText||'');
     const title=explicitTitle||titleOf(lines,q);if(!title)continue;
     const img=card.querySelector('img'),imgSrc=img?.currentSrc||img?.src||'';
     const lm=t.match(/(?:点赞|赞)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:点赞|赞)/i);
