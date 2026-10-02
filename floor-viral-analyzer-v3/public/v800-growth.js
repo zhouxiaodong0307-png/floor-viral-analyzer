@@ -1,42 +1,36 @@
 (()=>{
 'use strict';
-const VERSION='8.0.3', FINDKEY='floorGrowthFindingsV8', EXPKEY='floorGrowthExperimentsV8';
+const VERSION='8.1.0';
+const EXPKEY='floorGrowthExperimentsV81';
 const $id=id=>document.getElementById(id);
-const n=v=>(v===null||v===undefined||v===''||!Number.isFinite(Number(v)))?null:Number(v);
-const pos=v=>{const x=n(v);return x!==null&&x>0?x:null};
-const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
-const med=a=>{if(!a.length)return null;const s=a.slice().sort((x,y)=>x-y),m=(s.length-1)/2,i=Math.floor(m),j=Math.ceil(m);return i===j?s[i]:s[i]+(s[j]-s[i])*(m-i)};
-const quant=(a,p)=>{if(!a.length)return null;const s=a.slice().sort((x,y)=>x-y),i=(s.length-1)*p,l=Math.floor(i),h=Math.ceil(i);return l===h?s[l]:s[l]+(s[h]-s[l])*(i-l)};
-const percentile=(v,a)=>{if(v===null||!a.length)return null;const cap=quant(a,.97),x=cap===null?v:Math.min(v,cap);let k=0;for(const z of a)if(z<=x)k++;return k/a.length};
+const num=v=>(v===null||v===undefined||v===''||!Number.isFinite(Number(v)))?null:Number(v);
+const pos=v=>{const x=num(v);return x!==null&&x>0?x:null};
+const normText=s=>String(s||'').toLowerCase().replace(/\s+/g,' ').replace(/[^\u4e00-\u9fa5a-z0-9#×x㎡?？]+/g,' ').trim();
 const fmtPct=v=>v==null?'—':(v*100).toFixed(v<.1?1:0)+'%';
-const normText=s=>String(s||'').toLowerCase().replace(/\s+/g,' ').replace(/[^\u4e00-\u9fa5a-z0-9]+/g,' ').trim();
-const siteName=()=>site||db.lastSite||'未知平台';
 const nowISO=()=>new Date().toISOString();
+const currentPlatform=()=>site||db.lastSite||'未知平台';
+const quant=(a,p)=>{if(!a.length)return null;const s=a.slice().sort((a,b)=>a-b),i=(s.length-1)*p,l=Math.floor(i),h=Math.ceil(i);return l===h?s[l]:s[l]+(s[h]-s[l])*(i-l)};
+const percentile=(v,a)=>{if(v===null||!a.length)return null;const cap=quant(a,.97),x=cap===null?v:Math.min(v,cap);let n=0;for(const z of a)if(z<=x)n++;return n/a.length};
 
 function ageDays(x){
-  const h=ageHours(x.ageText);
-  if(h!=null)return Math.max(.04,h/24);
+  const h=ageHours(x.ageText);if(h!=null)return Math.max(.04,h/24);
   const t=String(x.ageText||'');let m=t.match(/(\d+)\s*周/);if(m)return +m[1]*7;
   m=t.match(/(\d+)\s*个月/);if(m)return +m[1]*30;
   m=t.match(/(\d+)\s*年/);if(m)return +m[1]*365;
   return null;
 }
-function interactions(x,platform){
-  if(platform==='闲鱼'){
-    const a=[n(x.wants),n(x.comments),n(x.consults)].filter(v=>v!==null);
-    return a.length?a.reduce((s,v)=>s+v,0):null;
-  }
-  if(platform==='小红书'){
-    const a=[n(x.likes),n(x.favs),n(x.comments),n(x.shares)].filter(v=>v!==null);
-    return a.length?a.reduce((s,v)=>s+v,0):null;
-  }
-  const a=[n(x.wants),n(x.likes),n(x.favs),n(x.comments),n(x.shares)].filter(v=>v!==null);
-  return a.length?a.reduce((s,v)=>s+v,0):null;
-}
 function materialOf(x){
   const t=(x.title||'')+' '+(x.text||'');
-  const m=['红檀香','缅甸柚木','柚木','橡木','白橡','欧橡','紫檀','菠萝格','龙凤檀','二翅豆','圆盘豆','黑胡桃','白蜡木','重蚁木','相思木'];
-  return m.find(w=>t.includes(w))||'材质未知';
+  const a=['红檀香','缅甸柚木','柚木','橡木','白橡','欧橡','紫檀','菠萝格','龙凤檀','二翅豆','圆盘豆','黑胡桃','白蜡木','重蚁木','相思木'];
+  return a.find(w=>t.includes(w))||'材质未知';
+}
+function xhsType(x){
+  const t=normText((x.title||'')+' '+(x.text||''));
+  if(/怎么|为什么|避坑|攻略|科普|区别|选择|选购|知识|干货|清单/.test(t))return'知识/攻略';
+  if(/完工|实景|案例|家装|客厅|卧室|装修|铺装效果|现场/.test(t))return'案例/场景';
+  if(/价格|特价|清仓|多少钱|预算|性价比/.test(t))return'价格/预算';
+  if(/工厂|车间|库存|生产|仓库/.test(t))return'工厂/货源';
+  return'产品展示';
 }
 function floorType(x){
   const t=normText((x.title||'')+' '+(x.text||''));
@@ -54,511 +48,217 @@ function conditionOf(x){
   if(/全新|新品/.test(t))return'全新';
   return'状态未知';
 }
-function xhsContentType(x){
-  const t=normText((x.title||'')+' '+(x.text||''));
-  if(/怎么|为什么|避坑|攻略|科普|区别|选择|选购|知识|干货/.test(t))return'知识/攻略';
-  if(/完工|实景|案例|家装|客厅|卧室|装修|铺装效果|现场/.test(t))return'案例/场景';
-  if(/价格|特价|清仓|多少钱|预算|性价比/.test(t))return'价格/预算';
-  if(/工厂|车间|库存|生产|仓库/.test(t))return'工厂/货源';
-  return'产品展示';
+function bigrams(s){s=normText(s).replace(/\s+/g,'');const o=new Set();for(let i=0;i<s.length-1;i++)o.add(s.slice(i,i+2));return o}
+function jac(a,b){if(!a.size||!b.size)return 0;let n=0;for(const x of a)if(b.has(x))n++;return n/(a.size+b.size-n)}
+function rawInteraction(x,p){
+  if(p==='小红书'){const a=[num(x.likes),num(x.favs),num(x.comments),num(x.shares)].filter(v=>v!==null);return a.length?a.reduce((s,v)=>s+v,0):null}
+  const a=[num(x.wants),num(x.comments),num(x.consults)].filter(v=>v!==null);return a.length?a.reduce((s,v)=>s+v,0):null;
 }
-function priceBand(p,prices){
-  if(p===null||prices.length<6)return'价格未知';
-  const a=quant(prices,.33),b=quant(prices,.67);return p<=a?'低价段':p<=b?'中价段':'高价段';
-}
-function ageBand(d){if(d===null)return'时间未知';return d<=7?'近7天':d<=30?'8-30天':'30天以上'}
-
-function bigrams(s){
-  s=normText(s).replace(/\s+/g,'');const set=new Set();
-  for(let i=0;i<s.length-1;i++)set.add(s.slice(i,i+2));
-  return set;
-}
-function jac(a,b){
-  if(!a.size||!b.size)return 0;let i=0;for(const x of a)if(b.has(x))i++;
-  return i/(a.size+b.size-i);
-}
-function preScore(x,platform){
-  const d=ageDays(x),eng=interactions(x,platform),views=n(x.views),exp=n(x.exposure??x.impressions),consult=n(x.consults),sales=n(x.sales??x.sold);
-  let s=0;
-  if(exp!==null)s+=Math.log1p(exp)*1.2;if(views!==null)s+=Math.log1p(views)*2;
-  if(eng!==null)s+=Math.log1p(eng)*3;if(consult!==null)s+=Math.log1p(consult)*3;if(sales!==null)s+=Math.log1p(sales)*4;
-  if(d!==null&&eng!==null)s+=Math.log1p(eng/Math.max(.25,d))*4;
+function preScore(x,p){
+  const d=ageDays(x),eng=rawInteraction(x,p),views=pos(x.views);let s=0;
+  if(views!==null)s+=Math.log1p(views)*2;if(eng!==null)s+=Math.log1p(eng)*3;if(d!==null&&eng!==null)s+=Math.log1p(eng/Math.max(.25,d))*3;
   return s;
 }
-function debias(items,platform){
-  const sorted=items.slice().sort((a,b)=>preScore(b,platform)-preScore(a,platform));
-  const kept=[],sellerCount=new Map(),clusters=[],removed={duplicate:0,seller:0,template:0};
-  const exact=new Set();
+function debias(items,p){
+  const sorted=items.slice().sort((a,b)=>preScore(b,p)-preScore(a,p)),kept=[],sellerCount=new Map(),clusters=[],exact=new Set(),removed={duplicate:0,seller:0,template:0};
   for(const x of sorted){
-    const title=normText(x.title),body=normText(x.text).slice(0,260),exactKey=(x.productId||x.url||title)+'|'+(n(x.price)??'');
-    if(exact.has(exactKey)){removed.duplicate++;continue} exact.add(exactKey);
-    const seller=String(x.seller||'').trim();
-    if(seller){const c=sellerCount.get(seller)||0;if(c>=3){removed.seller++;continue}sellerCount.set(seller,c+1)}
-    const tg=bigrams(title),bg=bigrams(body);
-    let similar=false;
-    for(const c of clusters){
-      if(jac(tg,c.tg)>=.86 || (jac(tg,c.tg)>=.72&&jac(bg,c.bg)>=.78)){similar=true;break}
-    }
+    const title=normText(x.title),body=normText(x.text).slice(0,260),key=(x.productId||x.url||title)+'|'+(num(x.price)??'');
+    if(exact.has(key)){removed.duplicate++;continue}exact.add(key);
+    const seller=String(x.seller||'').trim();if(seller){const n=sellerCount.get(seller)||0;if(n>=3){removed.seller++;continue}sellerCount.set(seller,n+1)}
+    const tg=bigrams(title),bg=bigrams(body);let similar=false;
+    for(const c of clusters){if(jac(tg,c.tg)>=.88||(jac(tg,c.tg)>=.74&&jac(bg,c.bg)>=.80)){similar=true;break}}
     if(similar){removed.template++;continue}
     kept.push(x);clusters.push({tg,bg});
   }
-  return {items:kept,removed};
+  return{items:kept,removed};
 }
 
-const PLATFORM={
-  '闲鱼':{
-    label:'闲鱼',
-    featureDefs:[
-      ['spec','规格信息完整',x=>/\d{2,4}\s*[x×*]\s*\d{2,4}/i.test((x.title||'')+' '+(x.text||''))],
-      ['priceTitle','标题/首屏明确价格',x=>/[¥￥]\s*\d|(\d+(?:\.\d+)?)\s*元/.test(x.title||'')],
-      ['stock','现货/库存表达',x=>/现货|库存|仓库/.test((x.title||'')+' '+(x.text||''))],
-      ['factory','厂家/货源表达',x=>/工厂|厂家|厂价|车间|一手货源/.test((x.title||'')+' '+(x.text||''))],
-      ['logistics','物流/交付明确',x=>/物流|发货|自提|送货|到付|运费/.test((x.title||'')+' '+(x.text||''))],
-      ['scene','使用场景切入',x=>/客厅|卧室|家装|装修|原木风|奶油风|铺装|实景|效果/.test((x.title||'')+' '+(x.text||''))],
-      ['trust','信任信息',x=>/实拍|可看货|看样|寄样|支持验货|售后|工厂/.test((x.title||'')+' '+(x.text||''))],
-      ['cta','咨询行动引导',x=>/私聊|咨询|问我|发面积|发尺寸|联系|沟通/.test((x.title||'')+' '+(x.text||''))],
-      ['materialFront','木种/产品前置',x=>/^(红檀香|缅甸柚木|柚木|橡木|白橡|欧橡|紫檀|菠萝格|龙凤檀|黑胡桃|白蜡木|重蚁木|实木|多层|三层)/.test(String(x.title||'').trim())],
-      ['shortTitle','标题更精简',x=>String(x.title||'').replace(/\s+/g,'').length>0&&String(x.title||'').replace(/\s+/g,'').length<=24],
-      ['numberTitle','标题含具体数字',x=>/\d/.test(x.title||'')]
-    ],
-    dims(x){
-      const exp=pos(x.exposure??x.impressions),views=pos(x.views),wants=n(x.wants),consults=n(x.consults),sales=n(x.sales??x.sold),days=ageDays(x);
-      return {
-        exposure:exp,views,wants,comments:n(x.comments),consults,sales,days,
-        clickRate:exp>0&&views!==null?views/exp:null,
-        wantRate:views>0&&wants!==null?wants/views:null,
-        consultRate:views>0&&consults!==null?consults/views:null,
-        saleRate:consults>0&&sales!==null?sales/consults:(views>0&&sales!==null?sales/views:null),
-        speed:days!==null?((consults??wants??views??null)!==null?(consults??wants??views)/Math.max(.25,days):null):null
-      };
-    },
-    weights:{exposure:.12,views:.12,clickRate:.22,wantRate:.22,consultRate:.26,saleRate:.30,speed:.18},
-    fallbackWeights:{wants:.75,comments:.25},
-    kinds:{exposure:'流量型',views:'流量型',clickRate:'点击型',wantRate:'互动型',consultRate:'咨询型',saleRate:'成交转化型',speed:'异常爆发型',wants:'互动型',comments:'互动型'},
-    dimLabels:{exposure:'曝光',views:'浏览',clickRate:'浏览率',wantRate:'想要率',consultRate:'咨询率',saleRate:'成交转化',speed:'增长速度',wants:'想要',comments:'评论/互动'},
-    coreCoverage:d=>[d.views,d.wants,d.consults,d.days],
-    group(x,strict){
-      const type=floorType(x),cond=conditionOf(x),mat=materialOf(x),d=ageDays(x),p=n(x.price);
-      return {type,cond,mat,d,p,strict};
-    }
-  },
-  '小红书':{
-    label:'小红书',
-    featureDefs:[
-      ['question','标题问题/好奇心切入',x=>/[？?]|为什么|怎么|到底|区别|避坑/.test(x.title||'')],
-      ['scene','真实场景/案例',x=>/实景|案例|完工|客厅|卧室|家装|装修|铺装|现场/.test((x.title||'')+' '+(x.text||''))],
-      ['howto','攻略/方法型',x=>/攻略|教程|怎么选|避坑|科普|知识|建议|清单/.test((x.title||'')+' '+(x.text||''))],
-      ['specific','标题具体信息',x=>/\d|规格|尺寸|价格|预算|平方|㎡/.test(x.title||'')],
-      ['factory','工厂/生产现场',x=>/工厂|车间|生产|仓库|库存/.test((x.title||'')+' '+(x.text||''))],
-      ['saveValue','收藏价值表达',x=>/收藏|记住|清单|对比|总结|攻略|避坑/.test((x.title||'')+' '+(x.text||''))],
-      ['discussion','讨论/提问引导',x=>/你们|大家|你会|你觉得|评论|怎么选|哪种/.test((x.title||'')+' '+(x.text||''))],
-      ['tags','话题/标签完整',x=>/#\S+/.test(x.text||'')],
-      ['materialFront','木种/主题前置',x=>/^(红檀香|缅甸柚木|柚木|橡木|白橡|欧橡|紫檀|菠萝格|龙凤檀|黑胡桃|白蜡木|重蚁木|实木|木地板)/.test(String(x.title||'').trim())],
-      ['shortTitle','标题更精简',x=>String(x.title||'').replace(/\s+/g,'').length>0&&String(x.title||'').replace(/\s+/g,'').length<=22],
-      ['experience','真实经验/结果表达',x=>/用了|使用|实测|真话|后悔|踩坑|翻车|住了|装完|完工/.test((x.title||'')+' '+(x.text||''))],
-      ['contrast','对比/反差表达',x=>/对比|区别|vs|VS|还是|没想到|居然|一砸一个坑|别买|真相/.test((x.title||'')+' '+(x.text||''))],
-      ['numberTitle','标题含具体数字',x=>/\d/.test(x.title||'')]
-    ],
-    dims(x){
-      const views=pos(x.views),likes=n(x.likes),favs=n(x.favs),comments=n(x.comments),shares=n(x.shares),days=ageDays(x);
-      const total=[likes,favs,comments,shares].filter(v=>v!==null).reduce((s,v)=>s+v,0);
-      const any=[likes,favs,comments,shares].some(v=>v!==null);
-      return {
-        views,likes,favs,comments,shares,days,
-        likeRate:views>0&&likes!==null?likes/views:null,
-        favRate:views>0&&favs!==null?favs/views:null,
-        commentRate:views>0&&comments!==null?comments/views:null,
-        shareRate:views>0&&shares!==null?shares/views:null,
-        totalRate:views>0&&any?total/views:null,
-        speed:days!==null?(views!==null?views:(any?total:null))/Math.max(.25,days):null
-      };
-    },
-    weights:{views:.18,likeRate:.16,favRate:.27,commentRate:.17,shareRate:.22,totalRate:.18,speed:.18},
-    fallbackWeights:{likes:.18,favs:.36,comments:.24,shares:.22},
-    kinds:{views:'流量型',likeRate:'互动型',favRate:'收藏型',commentRate:'评论讨论型',shareRate:'传播型',totalRate:'互动型',speed:'异常爆发型',likes:'互动型',favs:'收藏型',comments:'评论讨论型',shares:'传播型'},
-    dimLabels:{views:'浏览',likeRate:'点赞率',favRate:'收藏率',commentRate:'评论率',shareRate:'转发率',totalRate:'综合互动率',speed:'增长速度',likes:'点赞',favs:'收藏',comments:'评论',shares:'转发'},
-    coreCoverage:d=>[d.views,d.likes,d.favs,d.comments,d.shares,d.days],
-    group(x){return {type:xhsContentType(x),cond:'',mat:materialOf(x),d:ageDays(x),p:null}}
-  }
-};
-PLATFORM.default={unsupported:true,label:'未建模平台'};
+const XHS_FEATURES=[
+  ['titleSpec','标题加入具体规格数字',x=>/\d{2,4}\s*[x×*]\s*\d{2,4}(?:\s*[x×*]\s*\d{1,3})?/i.test(x.title||'')],
+  ['titleNumber','标题加入具体数字',x=>/\d/.test(x.title||'')],
+  ['titlePrice','标题直接出现具体价格',x=>/[¥￥]\s*\d|\d+(?:\.\d+)?\s*元/.test(x.title||'')],
+  ['titleMaterial','标题直接出现具体木种',x=>/(红檀香|缅甸柚木|柚木|橡木|白橡|欧橡|紫檀|菠萝格|龙凤檀|黑胡桃|白蜡木|重蚁木)/.test(x.title||'')],
+  ['titleScene','标题直接出现使用场景',x=>/客厅|卧室|家装|装修|新房|老房|民宿|办公室|写字楼|地暖/.test(x.title||'')],
+  ['titleQuestion','标题用具体问题切入',x=>/[？?]|为什么|怎么选|到底|能不能|值不值/.test(x.title||'')],
+  ['titleResult','标题直接出现使用结果',x=>/用了|实测|装完|铺完|住了|后悔|真话|效果|翻车|踩坑/.test(x.title||'')],
+  ['titleCompare','标题加入明确对比/反差',x=>/对比|区别|vs|VS|还是|不一样|差别|没想到|居然|一砸一个坑|别买|真相/.test(x.title||'')],
+  ['titleLayout','标题出现具体户型',x=>/\d室|\d房|一居|两居|三居|四居|户型/.test(x.title||'')],
+  ['titleArea','标题出现具体面积',x=>/\d+(?:\.\d+)?\s*(?:㎡|平米|平方)/.test(x.title||'')],
+  ['titleInstall','标题出现具体施工/铺法',x=>/鱼骨|人字|工字|369|自由拼|悬浮|平扣|锁扣|龙骨|直铺/.test(x.title||'')],
+  ['sceneBody','正文从真实使用场景切入',x=>/客厅|卧室|家装|装修|新房|老房|实际空间|铺进家里|现场/.test((x.text||'').slice(0,220))],
+  ['howto','正文采用攻略/清单结构',x=>/攻略|清单|第一|第二|1[.、]|2[.、]|怎么选|避坑/.test(x.text||'')],
+  ['saveValue','正文强调可收藏的信息价值',x=>/清单|记住|收藏|对比|总结|避坑|尺寸|用量/.test(x.text||'')],
+  ['discussion','正文有明确讨论触发',x=>/你们|大家|你会|你觉得|评论|怎么选|哪种|你家/.test(x.text||'')],
+  ['experience','正文使用真实经验/结果表达',x=>/用了|使用|实测|真话|后悔|踩坑|翻车|住了|装完|完工/.test((x.title||'')+' '+(x.text||''))],
+  ['factory','内容直接展示工厂/生产现场',x=>/工厂|车间|生产|仓库|刚下线|刚生产/.test((x.title||'')+' '+(x.text||''))],
+  ['coverScene','封面为真实使用/铺装场景',x=>/实景|场景|铺装|家装|案例/.test(String(x.coverType||x.imageType||''))],
+  ['video','内容形式为视频',x=>/视频/.test(String(x.contentType||''))]
+];
+const XY_FEATURES=[
+  ['spec','标题带具体规格',x=>/\d{2,4}\s*[x×*]\s*\d{2,4}/i.test(x.title||'')],
+  ['priceTitle','标题直接写价格',x=>/[¥￥]\s*\d|\d+(?:\.\d+)?\s*元/.test(x.title||'')],
+  ['stock','现货/库存表达',x=>/现货|库存|仓库/.test((x.title||'')+' '+(x.text||''))],
+  ['factory','厂家/货源表达',x=>/工厂|厂家|厂价|车间|一手货源/.test((x.title||'')+' '+(x.text||''))],
+  ['logistics','物流/交付明确',x=>/物流|发货|自提|送货|到付|运费/.test((x.title||'')+' '+(x.text||''))],
+  ['scene','使用场景切入',x=>/客厅|卧室|家装|装修|铺装|实景|效果/.test((x.title||'')+' '+(x.text||''))]
+];
 
-function platformModel(){return PLATFORM[siteName()]||PLATFORM.default}
-function buildComparable(items,model){
-  const base=items.filter(x=>{
-    if(siteName()==='闲鱼')return floorType(x)!=='exclude';
-    return !!String(x.title||'').trim();
-  });
-  const pricesBy=new Map();
-  for(const x of base){
-    const g=model.group(x),k=g.type+'|'+g.cond;
-    if(!pricesBy.has(k))pricesBy.set(k,[]);
-    if(g.p!==null)pricesBy.get(k).push(g.p);
-  }
-  const rows=base.map(x=>{
-    const g=model.group(x),pb=priceBand(g.p,pricesBy.get(g.type+'|'+g.cond)||[]),ab=ageBand(g.d);
-    return {...x,__dims:model.dims(x),__g:{...g,pb,ab}};
-  });
-  const keys=[
-    x=>[x.__g.type,x.__g.cond,x.__g.mat,x.__g.pb,x.__g.ab].join('|'),
-    x=>[x.__g.type,x.__g.cond,x.__g.pb,x.__g.ab].join('|'),
-    x=>[x.__g.type,x.__g.cond,x.__g.pb].join('|'),
-    x=>[x.__g.type,x.__g.cond].join('|'),
-    x=>x.__g.type
-  ];
+function modelFor(p){
+  if(p==='小红书')return{
+    features:XHS_FEATURES,
+    dims(x){
+      const views=pos(x.views),likes=num(x.likes),favs=num(x.favs),comments=num(x.comments),shares=num(x.shares),days=ageDays(x);
+      const total=[likes,favs,comments,shares].filter(v=>v!==null).reduce((s,v)=>s+v,0),any=[likes,favs,comments,shares].some(v=>v!==null);
+      return{views,likes,favs,comments,shares,days,likeRate:views&&likes!==null?likes/views:null,favRate:views&&favs!==null?favs/views:null,commentRate:views&&comments!==null?comments/views:null,shareRate:views&&shares!==null?shares/views:null,totalRate:views&&any?total/views:null,speed:days!==null?(views!==null?views:(any?total:null))/Math.max(.25,days):null};
+    },
+    weights:{views:.14,likeRate:.14,favRate:.25,commentRate:.16,shareRate:.20,totalRate:.16,speed:.18},
+    fallback:{likes:.20,favs:.34,comments:.24,shares:.22},
+    labels:{views:'浏览',likeRate:'点赞率',favRate:'收藏率',commentRate:'评论率',shareRate:'转发率',totalRate:'综合互动率',speed:'增长速度',likes:'点赞',favs:'收藏',comments:'评论',shares:'转发'},
+    kinds:{views:'流量型',likeRate:'点赞型',favRate:'收藏型',commentRate:'评论讨论型',shareRate:'传播型',totalRate:'互动型',speed:'异常爆发型',likes:'点赞型',favs:'收藏型',comments:'评论讨论型',shares:'传播型',searchRank:'排序参考'},
+    core:d=>[d.views,d.likes,d.favs,d.comments,d.shares,d.days],
+    group:x=>({type:xhsType(x),material:materialOf(x),days:ageDays(x)})
+  };
+  if(p==='闲鱼')return{
+    features:XY_FEATURES,
+    dims(x){const exp=pos(x.exposure??x.impressions),views=pos(x.views),wants=num(x.wants),consults=num(x.consults),sales=num(x.sales??x.sold),days=ageDays(x);return{exp,views,wants,comments:num(x.comments),consults,sales,days,clickRate:exp&&views!==null?views/exp:null,wantRate:views&&wants!==null?wants/views:null,consultRate:views&&consults!==null?consults/views:null,saleRate:consults&&sales!==null?sales/consults:null,speed:days!==null?((consults??wants??views??null)!==null?(consults??wants??views)/Math.max(.25,days):null):null}},
+    weights:{exp:.1,views:.1,clickRate:.20,wantRate:.24,consultRate:.28,saleRate:.30,speed:.18},fallback:{wants:.75,comments:.25},
+    labels:{exp:'曝光',views:'浏览',clickRate:'浏览率',wantRate:'想要率',consultRate:'咨询率',saleRate:'成交转化',speed:'增长速度',wants:'想要',comments:'互动'},
+    kinds:{exp:'流量型',views:'流量型',clickRate:'点击型',wantRate:'互动型',consultRate:'咨询型',saleRate:'成交转化型',speed:'异常爆发型',wants:'互动型',comments:'互动型',searchRank:'排序参考'},
+    core:d=>[d.views,d.wants,d.consults,d.days],
+    group:x=>({type:floorType(x),condition:conditionOf(x),material:materialOf(x),days:ageDays(x)})
+  };
+  return null;
+}
+function ageBand(d){if(d===null)return'时间未知';return d<=7?'近7天':d<=30?'8-30天':'30天以上'}
+function buildComparable(batch,p,model){
+  const base=batch.filter(x=>p==='闲鱼'?floorType(x)!=='exclude':!!String(x.title||'').trim());
+  const rows=base.map(x=>({...x,__dims:model.dims(x),__group:model.group(x)}));
+  const keys=p==='小红书'?[x=>[x.__group.type,x.__group.material,ageBand(x.__group.days)].join('|'),x=>[x.__group.type,ageBand(x.__group.days)].join('|'),x=>x.__group.type]:[x=>[x.__group.type,x.__group.condition,x.__group.material,ageBand(x.__group.days)].join('|'),x=>[x.__group.type,x.__group.condition].join('|'),x=>x.__group.type];
   const maps=keys.map(fn=>{const m=new Map();for(const x of rows){const k=fn(x);if(!m.has(k))m.set(k,[]);m.get(k).push(x)}return m});
-  const usable=[];
-  for(const x of rows){
-    let cohort=null,key='',level=keys.length-1;
-    for(let i=0;i<keys.length;i++){const k=keys[i](x),a=maps[i].get(k)||[];if(a.length>=10){cohort=a;key=k;level=i;break}}
-    if(!cohort)continue;
-    usable.push({...x,__cohort:cohort,__cohortKey:key,__strictness:level});
-  }
-  return {raw:base,usable};
+  const usable=[];for(const x of rows){for(let i=0;i<keys.length;i++){const k=keys[i](x),a=maps[i].get(k)||[];if(a.length>=10){usable.push({...x,__cohort:a,__cohortKey:k,__strictness:i});break}}}
+  return{base,usable};
 }
-function scoreRows(usable,model){
-  const byCohort=new Map();
-  for(const x of usable){if(!byCohort.has(x.__cohortKey))byCohort.set(x.__cohortKey,x.__cohort)}
-  return usable.map(x=>{
-    const cohort=byCohort.get(x.__cohortKey)||x.__cohort;
-    let sum=0,w=0,best={key:null,p:-1},mode='效率指标';
-    const applyWeights=weights=>{
-      for(const [k,wt] of Object.entries(weights||{})){
-        const v=x.__dims[k];if(v===null||v===undefined)continue;
-        const arr=cohort.map(z=>z.__dims[k]).filter(v=>v!==null&&v!==undefined&&Number.isFinite(v));
-        if(arr.length<5)continue;
-        const p=percentile(v,arr);if(p===null)continue;
-        sum+=p*wt;w+=wt;if(p>best.p)best={key:k,p};
-      }
-    };
-    applyWeights(model.weights);
-    if(!w&&model.fallbackWeights){mode='高互动/潜在高表现';applyWeights(model.fallbackWeights)}
-    if(!w){
-      const rank=n(x.queryRank??x.rank),ranks=cohort.map(z=>n(z.queryRank??z.rank)).filter(v=>v!==null&&v>0);
-      const days=ageDays(x);
-      if(rank!==null&&rank>0&&ranks.length>=5){
-        const rp=1-(percentile(rank,ranks)??1),fresh=days===null?0:days<=7?.12:days<=30?.05:0;
-        sum=clamp(rp+fresh);w=1;best={key:'searchRank',p:rp};mode='搜索排序/时效参考';
-      }
-    }
-    const core=model.coreCoverage(x.__dims),completeness=core.length?core.filter(v=>v!==null&&v!==undefined).length/core.length:0;
-    const score=w?sum/w:null;
-    return {...x,__score:score,__complete:completeness,__best:best,__mode:mode,__kind:model.kinds[best.key]||'潜在高表现'};
+function scoreRows(rows,model){
+  return rows.map(x=>{
+    const cohort=x.__cohort||[],apply=weights=>{let sum=0,w=0,best={key:null,p:-1};for(const [k,wt] of Object.entries(weights||{})){const v=x.__dims[k];if(v===null||v===undefined)continue;const arr=cohort.map(z=>z.__dims[k]).filter(v=>v!==null&&v!==undefined&&Number.isFinite(v));if(arr.length<5)continue;const p=percentile(v,arr);if(p===null)continue;sum+=p*wt;w+=wt;if(p>best.p)best={key:k,p}}return{sum,w,best}};
+    let r=apply(model.weights),mode='效率指标';if(!r.w){r=apply(model.fallback);mode='高互动/潜在高表现'}
+    if(!r.w){const rank=num(x.rank),ranks=cohort.map(z=>num(z.rank)).filter(v=>v!==null&&v>0);if(rank!==null&&ranks.length>=5){const rp=1-(percentile(rank,ranks)??1);r={sum:rp,w:1,best:{key:'searchRank',p:rp}};mode='搜索排序/时效参考'}}
+    const core=model.core(x.__dims),complete=core.length?core.filter(v=>v!==null&&v!==undefined).length/core.length:0;
+    return{...x,__score:r.w?r.sum/r.w:null,__best:r.best,__mode:mode,__kind:model.kinds[r.best.key]||'潜在高表现',__complete:complete};
   }).filter(x=>x.__score!==null);
 }
 function outlierRows(rows){
-  const scores=rows.map(x=>x.__score),q1=quant(scores,.25),q3=quant(scores,.75),iqr=(q3??0)-(q1??0),cut=iqr>0?q3+2.5*iqr:quant(scores,.995);
-  return rows.map(x=>({...x,__outlier:cut!==null&&x.__score>cut}));
+  if(rows.length<15)return rows.map(x=>({...x,__outlier:false}));
+  const a=rows.map(x=>x.__score),q1=quant(a,.25),q3=quant(a,.75),iqr=q3-q1,cut=iqr>0?q3+2.5*iqr:quant(a,.995);
+  return rows.map(x=>({...x,__outlier:x.__score>cut}));
 }
-function itemReasons(x,model){
-  const cohort=x.__cohort||[];const rs=[];
-  for(const [k,label] of Object.entries(model.dimLabels)){
-    const v=x.__dims[k];if(v===null||v===undefined)continue;
-    const arr=cohort.map(z=>z.__dims[k]).filter(v=>v!==null&&v!==undefined&&Number.isFinite(v));
-    if(arr.length<5)continue;
-    const p=percentile(v,arr);if(p===null||p<.78)continue;
-    const top=Math.max(1,Math.round((1-p)*100));
-    if(/Rate$/.test(k)||['clickRate','wantRate','consultRate','saleRate','engRate'].includes(k))rs.push(label+' '+fmtPct(v)+'，同类前'+top+'%');
-    else if(k==='speed')rs.push(label+'处于同类前'+top+'%');
-    else rs.push(label+'处于同类前'+top+'%');
-  }
-  if(!rs.length)rs.push('综合表现位于同类前列');
-  return rs.slice(0,3);
-}
-function featureEvidence(high,normal,defs,coverage,stability,cycleCount){
+function evidence(high,normal,features,coverage,stability,rankOnlyRate){
   const rank={可以复用:3,值得测试:2,暂无价值:1};
   const z=(p1,n1,p2,n2)=>{if(!n1||!n2)return 0;const p=(p1*n1+p2*n2)/(n1+n2),se=Math.sqrt(Math.max(1e-9,p*(1-p)*(1/n1+1/n2)));return Math.abs(p1-p2)/se};
-  return defs.map(([id,label,fn])=>{
-    const hc=high.filter(fn).length,nc=normal.filter(fn).length,hp=high.length?hc/high.length:0,np=normal.length?nc/normal.length:0,diff=hp-np,zz=z(hp,high.length,np,normal.length);
-    let ev='探索性信号';
-    if(high.length>=50&&normal.length>=100&&diff>=.15&&zz>=2&&coverage>=.55&&stability>=.70&&cycleCount>=2)ev='强证据';
-    else if(high.length>=30&&normal.length>=60&&diff>=.12&&zz>=1.6&&coverage>=.42&&stability>=.60)ev='中等证据';
-    else if(high.length>=10&&normal.length>=30&&diff>=.08)ev='弱证据';
-    let category='暂无价值';
-    if(ev==='强证据'&&diff>=.15)category='可以复用';
-    else if((ev==='中等证据'||ev==='弱证据')&&diff>=.10)category='值得测试';
-    else if(ev==='探索性信号'&&diff>=.16&&high.length>=10)category='值得测试';
-    return{id,label,hc,nc,hp,np,diff,z:zz,evidence:ev,category,total:high.length+normal.length,cycles:cycleCount};
-  }).sort((a,b)=>((rank[b.category]||0)-(rank[a.category]||0))||b.diff-a.diff);
-}
-function loadFindings(){try{return JSON.parse(localStorage.getItem(FINDKEY)||'[]')}catch{return[]}}
-function cycleCount(platform,id){
-  const h=loadFindings().filter(x=>x.platform===platform&&x.id===id&&(x.category==='可以复用'||x.category==='值得测试'));
-  return new Set(h.map(x=>String(x.at||'').slice(0,10))).size+1;
-}
-function saveFindings(platform,findings){
-  let h=loadFindings();const day=nowISO().slice(0,10);
-  h=h.filter(x=>!(x.platform===platform&&String(x.at||'').slice(0,10)===day));
-  for(const f of findings.filter(x=>x.category!=='暂无价值').slice(0,5))h.push({platform,id:f.id,label:f.label,category:f.category,evidence:f.evidence,diff:f.diff,at:nowISO()});
-  localStorage.setItem(FINDKEY,JSON.stringify(h.slice(-80)));
-}
-function crossSignal(id,platform){
-  const p=new Set(loadFindings().filter(x=>x.id===id&&x.platform!==platform&&(x.category==='可以复用'||x.category==='值得测试')).map(x=>x.platform));
-  return p.size?('跨平台也出现于 '+[...p].join('、')):'';
+  return features.map(([id,label,fn])=>{const hc=high.filter(fn).length,nc=normal.filter(fn).length,hp=high.length?hc/high.length:0,np=normal.length?nc/normal.length:0,diff=hp-np,zz=z(hp,high.length,np,normal.length);let level='探索性信号';if(rankOnlyRate<.5&&high.length>=50&&normal.length>=100&&diff>=.15&&zz>=2&&coverage>=.55&&stability>=.70)level='强证据';else if(rankOnlyRate<.7&&high.length>=30&&normal.length>=60&&diff>=.12&&zz>=1.6&&coverage>=.40)level='中等证据';else if(high.length>=10&&normal.length>=30&&diff>=.08)level='弱证据';let category='暂无价值';if(level==='强证据'&&diff>=.15)category='可以复用';else if((level==='中等证据'||level==='弱证据')&&diff>=.10)category='值得测试';else if(level==='探索性信号'&&diff>=.12&&high.length>=10&&normal.length>=20)category='值得测试';return{id,label,hc,nc,hp,np,diff,z:zz,level,category,total:high.length+normal.length}}).sort((a,b)=>((rank[b.category]||0)-(rank[a.category]||0))||b.diff-a.diff);
 }
 function batchItems(){
-  const all=db.items.filter(x=>x.site===siteName()).map(enrich),stamp=db.lastCapturedAt,expected=Number(db.lastValidCount||(db.lastMeta&&db.lastMeta.validCount)||0);
-  let batch=stamp?all.filter(x=>x._capturedAt===stamp):[];
-  if(batch.length<Math.min(20,expected||20)&&expected>0)batch=all.slice().sort((a,b)=>new Date(b._capturedAt||0)-new Date(a._capturedAt||0)).slice(0,Math.min(expected,all.length));
+  const p=currentPlatform(),all=db.items.filter(x=>x.site===p).map(enrich),stamp=db.lastCapturedAt,expected=Number(db.lastValidCount||(db.lastMeta&&db.lastMeta.validCount)||0);
+  let batch=stamp?all.filter(x=>x._capturedAt===stamp):[];if(batch.length<Math.min(20,expected||20)&&expected>0)batch=all.slice().sort((a,b)=>new Date(b._capturedAt||0)-new Date(a._capturedAt||0)).slice(0,Math.min(expected,all.length));
   return batch.length?batch:all;
 }
+function itemReasons(x,model){
+  const out=[],cohort=x.__cohort||[];for(const [k,label] of Object.entries(model.labels)){const v=x.__dims[k];if(v===null||v===undefined)continue;const a=cohort.map(z=>z.__dims[k]).filter(v=>v!==null&&v!==undefined&&Number.isFinite(v));if(a.length<5)continue;const p=percentile(v,a);if(p===null||p<.78)continue;out.push(label+'同类前'+Math.max(1,Math.round((1-p)*100))+'%')}
+  if(!out.length)out.push(x.__mode==='搜索排序/时效参考'?'搜索排序靠前，仅作探索参考':'综合表现位于同类前列');return out.slice(0,3);
+}
 function analyze(){
-  const platform=siteName(),model=platformModel(),batch=batchItems();
-  if(model.unsupported)return{platform,model,batch,unsupported:true,empty:false};
-  if(!batch.length)return{platform,model,batch:[],empty:true};
-  const comparable0=buildComparable(batch,model),deb=debias(comparable0.usable,platform),rescored=scoreRows(deb.items,model),rows=outlierRows(rescored);
-  const anomalies=rows.filter(x=>x.__outlier),normalPool=rows.filter(x=>!x.__outlier).sort((a,b)=>b.__score-a.__score);
-  const highN=normalPool.length?Math.max(1,Math.ceil(normalPool.length*.20)):0,high=normalPool.slice(0,highN),normal=normalPool.slice(highN);
-  const covVals=normalPool.flatMap(x=>model.coreCoverage(x.__dims)).filter(v=>v!==null&&v!==undefined);
-  const possible=normalPool.length*(normalPool[0]?model.coreCoverage(normalPool[0].__dims).length:1),coverage=possible?covVals.length/possible:0;
-  const stability=comparable0.usable.length?deb.items.length/comparable0.usable.length:0;
-  const defs=model.featureDefs;
-  const preliminary=defs.map(d=>({id:d[0]}));
-  const findings=featureEvidence(high,normal,defs,coverage,stability,1);
-  for(const f of findings){f.cycles=cycleCount(platform,f.id)}
-  const findings2=featureEvidence(high,normal,defs,coverage,stability,1);
-  const rankOnlyRate=normalPool.length?normalPool.filter(x=>x.__mode==='搜索排序/时效参考').length/normalPool.length:0;
-  if(rankOnlyRate>=.5){
-    for(const f of findings2){
-      f.evidence='探索性信号';
-      f.category=(f.diff>=.10&&high.length>=10&&normal.length>=20)?'值得测试':'暂无价值';
-    }
-  }
-  // restore per-feature cycle counts and cross-platform notes
-  for(const f of findings2){f.cycles=cycleCount(platform,f.id);f.cross=crossSignal(f.id,platform)}
-  // re-evaluate strong evidence with its own repeated-cycle count
-  for(const f of findings2){
-    if(rankOnlyRate<.5&&f.cycles>=2&&f.evidence==='中等证据'&&high.length>=50&&normal.length>=100&&f.diff>=.15&&f.z>=2&&coverage>=.55&&stability>=.70)f.evidence='强证据';
-    if(f.evidence==='强证据'&&f.diff>=.15)f.category='可以复用';
-  }
-  const reusable=findings2.filter(f=>f.category==='可以复用'),testable=findings2.filter(f=>f.category==='值得测试'),none=findings2.filter(f=>f.category==='暂无价值');
-  const types={};for(const x of high)types[x.__kind]=(types[x.__kind]||0)+1;
-  const dominant=Object.entries(types).sort((a,b)=>b[1]-a[1])[0]?.[0]||'高表现';
-  const typeFindings={};
-  for(const [kind,count] of Object.entries(types)){
-    if(count<5)continue;
-    const subset=high.filter(x=>x.__kind===kind);
-    typeFindings[kind]=featureEvidence(subset,normal,defs,coverage,stability,1).filter(f=>f.diff>=.08).slice(0,3);
-  }
-  const anomalyCases=anomalies.slice(0,6).map(x=>{
-    const cp=x.__cohort||[],prices=cp.map(z=>n(z.price)).filter(v=>v!==null),pm=med(prices),p=n(x.price),d=ageDays(x);
-    let mark='值得研究';
-    if(p!==null&&pm!==null&&p<pm*.55)mark='特殊低价';
-    else if(d!==null&&d>90)mark='上架时间较久';
-    else if(x.__complete<.4)mark='数据异常/覆盖不足';
-    return {title:x.title,url:x.url,mark};
-  });
-  let conf='低',confClass='low';
-  if(high.length>=50&&normal.length>=100&&coverage>=.55&&stability>=.70){conf='高';confClass='good'}
-  else if(high.length>=30&&normal.length>=60&&coverage>=.40){conf='中';confClass='base'}
-  else if(high.length>=10){conf='低';confClass='low'}
-  else conf='探索';
-  const strongest=reusable[0]||testable[0]||null;
-  saveFindings(platform,findings2);
-  return{platform,model,batch,rawComparable:comparable0.usable.length,debias:deb,rows:normalPool,high,normal,anomalies,anomalyCases,typeFindings,findings:findings2,reusable,testable,none,coverage,stability,confidence:[conf,confClass],strongest,dominant,insufficientPerformance:normalPool.length===0,empty:false};
+  const platform=currentPlatform(),model=modelFor(platform),batch=batchItems();if(!model)return{platform,batch,unsupported:true};if(!batch.length)return{platform,batch,empty:true};
+  const comp=buildComparable(batch,platform,model),deb=debias(comp.usable,platform),scored=outlierRows(scoreRows(deb.items,model)),anomalies=scored.filter(x=>x.__outlier),pool=scored.filter(x=>!x.__outlier).sort((a,b)=>b.__score-a.__score),highN=pool.length?Math.max(1,Math.ceil(pool.length*.20)):0,high=pool.slice(0,highN),normal=pool.slice(highN);
+  const coreCount=pool[0]?model.core(pool[0].__dims).length:1,covered=pool.reduce((s,x)=>s+model.core(x.__dims).filter(v=>v!==null&&v!==undefined).length,0),coverage=pool.length?covered/(pool.length*coreCount):0,stability=comp.usable.length?deb.items.length/comp.usable.length:0,rankOnlyRate=pool.length?pool.filter(x=>x.__mode==='搜索排序/时效参考').length/pool.length:0;
+  const findings=evidence(high,normal,model.features,coverage,stability,rankOnlyRate),reusable=findings.filter(x=>x.category==='可以复用'),testable=findings.filter(x=>x.category==='值得测试'),none=findings.filter(x=>x.category==='暂无价值'),strongest=reusable[0]||testable[0]||null;
+  let conf='探索',confClass='low';if(high.length>=50&&normal.length>=100&&coverage>=.55&&rankOnlyRate<.5){conf='高';confClass='good'}else if(high.length>=30&&normal.length>=60&&coverage>=.4&&rankOnlyRate<.7){conf='中';confClass='base'}else if(high.length>=10){conf='低';confClass='low'}
+  const kinds={};for(const x of high)kinds[x.__kind]=(kinds[x.__kind]||0)+1;const dominant=Object.entries(kinds).sort((a,b)=>b[1]-a[1])[0]?.[0]||'潜在高表现';
+  return{platform,model,batch,comp,deb,pool,high,normal,anomalies,findings,reusable,testable,none,strongest,coverage,stability,rankOnlyRate,confidence:[conf,confClass],dominant,empty:false};
+}
+
+function parseProduct(raw){
+  const spec=(raw.match(/\d{2,4}\s*[x×*]\s*\d{2,4}(?:\s*[x×*]\s*\d{1,3})?/i)||[])[0]||'',area=(raw.match(/\d+(?:\.\d+)?\s*(?:㎡|平米|平方)/)||[])[0]||'',layout=(raw.match(/(?:\d室\d厅|\d房|一居|两居|三居|四居|户型)/)||[])[0]||'',install=(raw.match(/鱼骨|人字|工字|369|自由拼|悬浮|平扣|锁扣|龙骨|直铺/)||[])[0]||'';
+  const pm=raw.match(/(?:¥|￥)?\s*(\d+(?:\.\d+)?)\s*元(?:\/㎡|每平方|一平|平)?/),price=pm?pm[1]:'',mats=['红檀香','缅甸柚木','柚木','橡木','白橡','欧橡','紫檀','菠萝格','龙凤檀','黑胡桃','白蜡木','重蚁木'],mat=mats.find(x=>raw.includes(x))||raw.split(/[\s,，/|]+/).find(x=>x.length>=2&&!/^\d/.test(x))||'木地板',otherNum=(raw.match(/\d+(?:\.\d+)?/)||[])[0]||'';
+  return{raw,spec,area,layout,install,price,mat,otherNum,factory:/工厂|厂家|车间/.test(raw),experience:/用了|使用|实测|装完|铺完|住了|完工|后悔|踩坑/.test(raw)};
+}
+function eligibility(s,p){
+  if(!s)return{ok:false,need:'没有可测试信号'};if(s.id==='titleSpec'&&!p.spec)return{ok:false,need:'真实规格，例如 910×125×18'};if(s.id==='titlePrice'&&!p.price)return{ok:false,need:'真实价格，例如 530元/㎡'};if(s.id==='titleNumber'&&!p.otherNum)return{ok:false,need:'一个真实数字信息，例如规格、面积、价格或使用年限'};if(s.id==='titleLayout'&&!p.layout)return{ok:false,need:'真实户型，例如 三房两厅'};if(s.id==='titleArea'&&!p.area)return{ok:false,need:'真实面积，例如 70㎡'};if(s.id==='titleInstall'&&!p.install)return{ok:false,need:'真实铺法，例如 鱼骨 / 人字 / 工字'};if(s.id==='titleResult'&&!p.experience)return{ok:false,need:'真实使用/完工结果，避免编造体验'};if(s.id==='factory'&&!p.factory)return{ok:false,need:'确认这条内容确实是工厂/生产现场'};return{ok:true,need:''};
+}
+function signalPool(r){return r.reusable.concat(r.testable)}
+function xhsGenerate(p,s){
+  const id=s.id,m=p.mat;let title='',body='',cover='',images='';
+  if(id==='titleSpec'){title=m+' '+p.spec+'，这种规格铺家里是什么效果？';body='这次先把规格说清楚：'+p.spec+'。\n\n同样是'+m+'，规格、铺法和空间比例都会影响最后效果。选的时候建议把实际面积、柜体颜色和收口一起考虑。';cover='封面只保留「'+m+' + '+p.spec+'」两个关键信息。';images='首图真实板面/铺装效果；第2张规格细节；第3张实际空间或拼接方式。'}
+  else if(id==='titlePrice'){title=p.price+'元/㎡的'+m+'，实际选的时候我更看这几点';body='价格先写明：'+p.price+'元/㎡。\n\n真正落地时还要一起看规格、铺法、面积和现场收口。单看价格，很容易忽略最后影响使用效果的条件。';cover='封面突出「'+p.price+'元/㎡ + '+m+'」，不要再叠太多文字。';images='首图真实产品；后续补规格、板面和实际空间。'}
+  else if(id==='titleNumber'){title=m+'这次只看'+p.otherNum+'这个具体条件';body='这条不讲泛泛卖点，直接围绕一个具体条件展开：'+p.otherNum+'。\n\n把数字信息说清楚，再结合实际空间和铺法判断，会比只看颜色更有参考价值。';cover='封面突出唯一数字「'+p.otherNum+'」，形成一眼可读的信息点。';images='围绕这个数字对应的真实细节连续展示，避免无关图片。'}
+  else if(id==='titleMaterial'){title=m+'地板，先别急着只看颜色';body='这次直接从'+m+'本身开始看。\n\n实际选择时，更值得先确认的是规格、铺法、面积和现场搭配，再决定颜色和表面效果。';cover='封面直接出现「'+m+'」，搭配真实板面或铺装图。';images='首图木种实拍；第2张板面；第3张铺装或空间效果。'}
+  else if(id==='titleScene'||id==='sceneBody'){title='家里准备铺'+m+'，我会先看这3件事';body='如果是家装在看'+m+'，我会先从真实空间出发：\n1. 采光和柜体颜色\n2. 规格和铺法\n3. 面积与收口条件\n\n先把这些确定，再看具体板面会更实际。';cover='用真实客厅/卧室铺装场景，不用纯白底产品图。';images='首图完整空间；第2张板面近景；第3张柜体/门套/收口关系。'}
+  else if(id==='titleQuestion'){title=m+'地板到底怎么选？先别只看颜色';body='看'+m+'时，我更建议先问三个问题：规格适不适合？铺法适不适合？现场收口怎么做？\n\n这些确认以后，再看颜色会更有效率。';cover='封面只放一个明确问题：「'+m+'到底怎么选？」';images='首图问题对应的真实产品；后面逐项回答规格、铺法、现场。'}
+  else if(id==='titleResult'){title=p.raw.includes(m)?p.raw.replace(/\s+/g,' ').slice(0,28):m+'用过以后，才敢说这几点';body='这条只基于你提供的真实使用/完工信息展开，不额外编造体验。\n\n'+p.raw+'\n\n把真实结果、适用条件和需要注意的地方分开说清楚，比单纯夸材质更有参考价值。';cover='封面突出真实结果，不使用夸张承诺。';images='优先结果图/完工图；再补使用细节和容易忽略的位置。'}
+  else if(id==='titleCompare'){title='同样是'+m+'，单看板和铺进家里真的不一样';body='这次做一个明确对比：单看一块板，和真正铺进空间里，判断标准完全不同。\n\n实际家装要把采光、面积、柜体颜色和铺法放在一起看。';cover='封面左右对比：单板近景 VS 实际铺装空间。';images='第1张对比封面；第2张单板；第3张完整空间；第4张细节差异。'}
+  else if(id==='titleLayout'){title=p.layout+'铺'+m+'，先确认这几个位置';body=p.layout+'准备铺'+m+'，建议先看客厅采光、房间尺度、柜体颜色和收口位置。\n\n户型明确以后，再去选规格和铺法会更有针对性。';cover='封面突出「'+p.layout+' + '+m+'」并用真实户型/空间图。';images='首图完整空间；再补客厅、卧室、收口三个关键位置。'}
+  else if(id==='titleArea'){title=p.area+'铺'+m+'，规格和损耗要先算清楚';body=p.area+'准备铺'+m+'，先别只看单价。\n\n面积明确后，要一起确认规格、铺法和损耗，再决定最终用量和效果。';cover='封面突出「'+p.area+' + '+m+'」，配实际地面/空间图。';images='首图空间；第2张规格；第3张铺法；第4张收口。'}
+  else if(id==='titleInstall'){title=m+'做'+p.install+'，铺出来和普通平铺差别有多大？';body='这次只看一个变量：'+p.install+'。\n\n同样是'+m+'，铺法会直接改变视觉比例和损耗。选择前建议结合房间尺度和实际面积一起判断。';cover='封面突出「'+p.install+'」铺法，直接展示拼接效果。';images='首图完整铺法效果；第2张拼接近景；第3张空间整体。'}
+  else if(id==='howto'||id==='saveValue'){title='准备铺'+m+'的，先把这4点记下来';body='准备铺'+m+'，建议先确认：\n1. 实际面积和损耗\n2. 规格与铺法\n3. 柜体、门套和收口\n4. 真实板面与色差\n\n先把条件确认清楚，再去选具体产品。';cover='清单型封面，只显示「铺'+m+'前先确认4点」。';images='4张图分别对应面积/规格/铺法/收口，方便收藏回看。'}
+  else if(id==='discussion'){title=m+'你会选平铺还是花式拼？';body='如果是你家铺'+m+'，你会更在意稳定耐用，还是更在意铺装效果？\n\n不同空间、面积和预算，最后答案会不一样。你会怎么选？';cover='封面用两种铺法对比，直接形成选择题。';images='首图A/B对比；后面分别展示两种方案细节。'}
+  else if(id==='experience'){title='看了这么多'+m+'，我现在更在意这几个细节';body='看得越多，越觉得选'+m+'不能只靠第一眼颜色。\n\n我更在意规格、铺法、现场搭配和收口条件，这些才真正影响落地效果。';cover='真实观察/现场图，避免纯宣传海报。';images='首图真实现场；后面逐项展示规格、板面和收口。'}
+  else if(id==='factory'){title='刚在工厂看到一批'+m+'，先看真实板面';body='这次直接看工厂现场和真实板面，不做过度滤镜。\n\n同一木种也要结合规格、选材和实际铺装条件看，单看一块样板不够。';cover='工厂现场或刚下线产品实拍。';images='首图生产/库存现场；第2张板面；第3张规格或包装。'}
+  else if(id==='coverScene'){title=m+'铺进家里，和单看样板真的不一样';body='这次内容重点不放在参数堆叠，而是用真实空间展示'+m+'铺进去后的比例、光线和搭配效果。';cover='必须使用真实铺装/使用场景作为首图。';images='首图完整空间；第2张近景；第3张不同光线；第4张收口。'}
+  else {title=m+'地板，先看真实空间再决定';body='这次只围绕一个明确切入点展开，不堆泛泛卖点。\n\n实际选择时先看空间、规格和铺法，再决定具体产品。';cover='真实产品或实际铺装图。';images='首图真实场景；后面补产品细节。'}
+  const tags='#'+[m,m.includes('地板')?null:m+'地板','实木地板','装修','地板选购'].filter(Boolean).join(' #');return{title,body,tags,cover,images};
+}
+function validateSignal(s,o,p){
+  const t=o.title,b=o.body,c=o.cover;
+  if(s.id==='titleSpec')return !!p.spec&&t.includes(p.spec);if(s.id==='titleNumber')return /\d/.test(t);if(s.id==='titlePrice')return !!p.price&&t.includes(p.price);if(s.id==='titleMaterial')return t.includes(p.mat);if(s.id==='titleScene')return /家里|客厅|卧室|家装|装修|新房|老房|民宿|办公室/.test(t);if(s.id==='titleQuestion')return /[？?]|怎么|到底|能不能|值不值/.test(t);if(s.id==='titleResult')return /用了|实测|装完|铺完|住了|后悔|真话|效果|翻车|踩坑/.test(t+' '+b);if(s.id==='titleCompare')return /对比|区别|不一样|差别|还是|VS|vs/.test(t);if(s.id==='titleLayout')return !!p.layout&&t.includes(p.layout);if(s.id==='titleArea')return !!p.area&&t.includes(p.area);if(s.id==='titleInstall')return !!p.install&&t.includes(p.install);if(s.id==='sceneBody')return /家装|实际空间|客厅|卧室|新房|铺进家里/.test((t+' '+b).slice(0,180));if(s.id==='howto'||s.id==='saveValue')return /1[.、]|第一|清单|记下来/.test(b);if(s.id==='discussion')return /你会|你觉得|你们|怎么选|哪种|[？?]/.test(t+' '+b);if(s.id==='experience')return /看了|使用|实测|用了|现场|完工/.test(t+' '+b);if(s.id==='factory')return /工厂|车间|生产/.test(t+' '+b);if(s.id==='coverScene')return /真实|铺装|场景|空间/.test(c);return true;
+}
+function forceSignal(s,o,p){
+  if(s.id==='titleSpec'&&p.spec&&!o.title.includes(p.spec))o.title=p.mat+' '+p.spec+'，实际铺出来什么效果？';if(s.id==='titlePrice'&&p.price&&!o.title.includes(p.price))o.title=p.price+'元/㎡的'+p.mat+'，实际选的时候看什么？';if(s.id==='titleNumber'&&!/\d/.test(o.title)&&p.otherNum)o.title=p.mat+'这次只看'+p.otherNum+'这个具体条件';if(s.id==='titleScene'&&!/家里|客厅|卧室|家装|装修/.test(o.title))o.title='家里准备铺'+p.mat+'，先看这3点';if(s.id==='titleQuestion'&&!/[？?]/.test(o.title))o.title=p.mat+'地板到底怎么选？';if(s.id==='titleCompare'&&!/对比|区别|不一样|差别/.test(o.title))o.title='同样是'+p.mat+'，单看板和铺进家里差别有多大？';if(s.id==='titleLayout'&&p.layout&&!o.title.includes(p.layout))o.title=p.layout+'铺'+p.mat+'，先确认这几个位置';if(s.id==='titleArea'&&p.area&&!o.title.includes(p.area))o.title=p.area+'铺'+p.mat+'，规格和损耗要先算清楚';if(s.id==='titleInstall'&&p.install&&!o.title.includes(p.install))o.title=p.mat+'做'+p.install+'，效果差别有多大？';if(s.id==='sceneBody'&&!/家装|实际空间|客厅|卧室/.test(o.body))o.body='如果是家装在看'+p.mat+'，先从真实空间、采光和柜体颜色开始判断。\n\n'+o.body;return o;
 }
 
 function ensureUI(){
-  const oldStats=document.querySelector('.stats');if(oldStats)oldStats.classList.add('v8-hidden');
-  const oldMarket=$id('marketAnalysisCard');if(oldMarket)oldMarket.classList.add('v8-hidden');
-  const genInput=$id('genKeyword'),genCard=genInput?.closest('.card');
-  if(genCard){genCard.id='v8GeneratorCard';const label=genCard.querySelector('.label');if(label)label.textContent='下一条内容怎么发';const muted=genCard.querySelector('.head .muted');if(muted)muted.textContent='根据当前平台自己的高价值模型和本轮有效信号生成；一次只测试一个主要变量。'}
-  const capture=[...document.querySelectorAll('.card')].find(c=>c.querySelector('.label')?.textContent.includes('抓取数据'));
-  let d=$id('v8Decision');
-  if(!d){
-    d=document.createElement('section');d.id='v8Decision';d.className='v8-decision';
-    d.innerHTML='<div class="v8-kicker">本轮结果</div><div class="v8-hero"><div class="v8-main"><div class="v8-title" id="v8Conclusion">等待数据</div><div class="v8-why" id="v8Why">完成一次抓取后，这里只保留最重要的结论。</div></div><div class="v8-action"><small>下一条最值得测试</small><b id="v8Action">先完成抓取</b><span id="v8ActionSub">一次只改变一个主要变量。</span></div></div><div class="v8-metrics" id="v8Metrics"></div><div class="v8-section"><div class="v8-section-head"><b>高价值内容为什么表现好</b><span>最多3个关键原因</span></div><div class="v8-reasons" id="v8Reasons"></div></div><div class="v8-section"><div class="v8-section-head"><b>关键证据</b><button class="v8-details-btn" id="v8DetailsBtn">查看分析依据</button></div><div class="v8-details" id="v8Details"><div class="v8-pools" id="v8Pools"></div><div class="v8-evidence" id="v8Evidence"></div><div class="v8-section-head" style="margin-top:10px"><b>高价值参考</b><span id="v8HighLabel"></span></div><div class="v8-high-list" id="v8HighList"></div><div class="v8-section-head" style="margin-top:10px"><b>异常高表现案例</b><span>不参与普通规律计算</span></div><div class="v8-high-list" id="v8AnomalyList"></div></div></div>';
-    document.querySelector('.top')?.after(d);
-    $id('v8DetailsBtn').onclick=()=>{$id('v8Details').classList.toggle('show');$id('v8DetailsBtn').textContent=$id('v8Details').classList.contains('show')?'收起分析依据':'查看分析依据'};
-  }
-  if(genCard&&d.nextElementSibling!==genCard) d.after(genCard);
-
-  const raw=[...document.querySelectorAll('.card')].find(c=>c.querySelector('.label')?.textContent==='抓取结果');
-  if(raw&&!raw.dataset.v8){
-    raw.dataset.v8='1';const head=raw.querySelector('.head');if(head)head.querySelector('.muted').textContent='原始数据默认折叠，只在需要核查证据时展开。';
-    const body=document.createElement('div');body.className='v8-raw-wrap';body.id='v8RawBody';
-    [...raw.children].filter(x=>x!==head).forEach(x=>body.appendChild(x));
-    const btn=document.createElement('button');btn.className='v8-raw-toggle';btn.innerHTML='<span>查看原始数据</span><span>展开</span>';
-    btn.onclick=()=>{body.classList.toggle('show');btn.lastElementChild.textContent=body.classList.contains('show')?'收起':'展开'};
-    raw.appendChild(btn);raw.appendChild(body);
-  }
-  if(genCard&&!$id('v8Feedback')){
-    const actions=genCard.querySelector('.output-actions');
-    if(actions){const b=document.createElement('button');b.id='v8FeedbackBtn';b.className='secondary btn';b.textContent='记录发布结果';actions.appendChild(b)}
-    const box=document.createElement('div');box.id='v8Feedback';box.className='v8-feedback';box.innerHTML='<div class="panel-title">记录本轮实际结果</div><div class="v8-feedback-grid" id="v8FeedbackGrid"></div><div class="v8-feedback-actions"><button id="v8SaveFeedback" class="primary">保存结果</button><button id="v8CancelFeedback" class="secondary">取消</button></div>';
-    genCard.appendChild(box);
-    $id('v8FeedbackBtn').onclick=()=>{renderFeedbackFields();box.classList.toggle('show')};
-    $id('v8CancelFeedback').onclick=()=>box.classList.remove('show');
-    $id('v8SaveFeedback').onclick=saveFeedback;
-  }
+  document.querySelector('.stats')?.classList.add('g81-hide');$id('marketAnalysisCard')?.classList.add('g81-hide');const oldGen=$id('genKeyword')?.closest('.card');if(oldGen)oldGen.classList.add('g81-hide');
+  const raw=[...document.querySelectorAll('.card')].find(x=>x.querySelector('.label')?.textContent==='抓取结果'),capture=[...document.querySelectorAll('.card')].find(x=>x.querySelector('.label')?.textContent.includes('抓取数据')),mobile=$id('mobileCollectCard');
+  let decision=$id('g81Decision');if(!decision){decision=document.createElement('section');decision.id='g81Decision';decision.className='g81-decision';decision.innerHTML='<div class="g81-decision-main"><div class="g81-kicker" id="g81Platform">小红书 · 本轮结论</div><h2 id="g81Conclusion">等待抓取数据</h2><div class="g81-proof" id="g81Proof">系统会先判断高价值笔记赢在哪一层，再找与普通笔记真正不同的内容变量。</div><div class="g81-metrics" id="g81Metrics"></div><div class="g81-confidence"><span>综合可信度</span><b id="g81Confidence">—</b><em id="g81ConfidenceNote">等待分析</em></div></div><div class="g81-next"><small>下一条最值得测试</small><strong id="g81Next">先完成抓取</strong><p id="g81NextSub">一次只测试一个主要变量。</p><div class="g81-actions"><button id="g81GenerateTop" class="g81-primary">生成下一轮测试内容</button><button id="g81Alternate" class="g81-secondary">换一个测试方向</button><button id="g81ToggleDetails" class="g81-link">查看分析依据</button></div></div>';document.querySelector('.top')?.after(decision)}
+  let middle=$id('g81Middle');if(!middle){middle=document.createElement('section');middle.id='g81Middle';middle.className='g81-middle';middle.innerHTML='<div class="g81-reason-panel"><div class="g81-section-title"><b>高价值内容为什么表现好</b><span>最多3个真正有差异的变量</span></div><div id="g81Reasons" class="g81-reasons"></div></div><div class="g81-generator"><div class="g81-section-title"><b>生成下一轮测试内容</b><span>严格执行本轮测试变量</span></div><div class="g81-input-row"><input id="g81Product" placeholder="输入真实商品信息，例如：柚木 910×125×18 530元/㎡"><button id="g81Generate" class="g81-primary">生成</button></div><div id="g81Need" class="g81-need"></div><div id="g81Output" class="g81-output g81-empty-output">输入商品信息后生成可直接发布的小红书方案。</div></div>';decision.after(middle)}
+  let details=$id('g81Details');if(!details){details=document.createElement('section');details.id='g81Details';details.className='g81-details';details.innerHTML='<div class="g81-detail-grid"><div><div class="g81-section-title"><b>关键分析依据</b><span>高表现组 VS 普通组</span></div><div id="g81Evidence" class="g81-evidence"></div></div><div><div class="g81-section-title"><b>典型高价值笔记</b><span>默认3条</span></div><div id="g81High" class="g81-high-list"></div><button id="g81ShowHigh" class="g81-more">查看全部高价值样本</button></div></div><div class="g81-detail-foot" id="g81DetailFoot"></div>';middle.after(details)}
+  details.classList.remove('show');if(capture&&details.nextElementSibling!==capture)details.after(capture);if(mobile&&capture&&capture.nextElementSibling!==mobile)capture.after(mobile);
+  if(raw&&!raw.dataset.g81){raw.dataset.g81='1';const head=raw.querySelector('.head');if(head)head.querySelector('.muted').textContent='原始数据默认折叠，只在核查证据时展开。';const children=[...raw.children].filter(x=>x!==head),body=document.createElement('div');body.id='g81RawBody';body.className='g81-raw-body';children.forEach(x=>body.appendChild(x));const btn=document.createElement('button');btn.className='g81-raw-toggle';btn.innerHTML='<span>查看原始抓取数据</span><span>展开</span>';btn.onclick=()=>{body.classList.toggle('show');btn.lastElementChild.textContent=body.classList.contains('show')?'收起':'展开'};raw.appendChild(btn);raw.appendChild(body)}
+  $id('g81ToggleDetails').onclick=()=>{$id('g81Details').classList.toggle('show');$id('g81ToggleDetails').textContent=$id('g81Details').classList.contains('show')?'收起分析依据':'查看分析依据'};
+  $id('g81GenerateTop').onclick=()=>{const i=$id('g81Product');if(!i.value.trim()){i.focus();middle.scrollIntoView({behavior:'smooth',block:'start'});return}generateCurrent()};
+  $id('g81Generate').onclick=generateCurrent;$id('g81Alternate').onclick=()=>{window.__g81Seed=(window.__g81Seed||0)+1;renderAnalysis(window.__g81Analysis);const i=$id('g81Product');if(i.value.trim())generateCurrent()};
+  $id('g81ShowHigh').onclick=()=>{window.__g81ShowAll=!window.__g81ShowAll;renderHigh(window.__g81Analysis);$id('g81ShowHigh').textContent=window.__g81ShowAll?'只看3条典型样本':'查看全部高价值样本'};
 }
-function metricsFor(r){
-  const model=r.model,platform=r.platform,high=r.high.length,valid=r.rows.length+r.anomalies.length;
-  let coverage=Math.round(r.coverage*100)+'%';
-  let metricLabel=platform==='闲鱼'?'关键表现覆盖':platform==='小红书'?'浏览/互动覆盖':'核心指标覆盖';
-  const sig=r.strongest?r.strongest.label:'暂无稳定信号';
-  return [
-    [valid,platform==='小红书'?'有效笔记':'有效样本'],
-    [high,platform==='小红书'?'高价值笔记':'高价值样本'],
-    [coverage,metricLabel],
-    [sig,'本轮最强信号'],
-    [r.confidence[0],'综合可信度']
-  ];
+function renderHigh(r){
+  if(!r||!r.high){$id('g81High').innerHTML='';return}const arr=window.__g81ShowAll?r.high:r.high.slice(0,3);
+  $id('g81High').innerHTML=arr.map((x,i)=>'<a class="g81-high" href="'+esc(x.url||'#')+'" target="_blank" rel="noopener"><span class="g81-no">'+(i+1)+'</span><div><b>'+esc(x.title||'未命名')+'</b><small>'+esc(x.__kind)+' · '+esc(itemReasons(x,r.model).join('；'))+'</small></div><span class="g81-open">打开</span></a>').join('')||'<div class="g81-muted">暂无足够高价值样本。</div>';$id('g81ShowHigh').style.display=r.high.length>3?'inline-flex':'none';
 }
-function renderDecision(r){
-  ensureUI();
-  if(r.insufficientPerformance){
-    $id('v8Conclusion').textContent='数据已导入，但当前缺少可用于高价值判断的表现指标';
-    $id('v8Why').textContent='抓取数据没有丢失。当前这批商品如果没有浏览、想要/互动、咨询或发布时间等至少一类可比较表现数据，系统不会硬判高价值。';
-    $id('v8Action').textContent='保留数据，补充/抓取可用表现指标';
-    $id('v8ActionSub').textContent='原始数据仍在下方“查看原始数据”中，不会被清空。';
-    $id('v8Metrics').innerHTML='<div class="v8-metric"><b>'+r.batch.length+'</b><span>本次已导入</span></div><div class="v8-metric"><b>'+r.rawComparable+'</b><span>结构可比较</span></div><div class="v8-metric"><b>0</b><span>表现可比较</span></div><div class="v8-metric"><b>不足</b><span>本轮最强信号</span></div><div class="v8-metric"><b>探索</b><span>综合可信度</span></div>';
-    $id('v8Reasons').innerHTML='<div class="v8-reason"><strong>数据没有消失</strong><span>只是本轮没有足够表现指标进入高价值模型。</span></div>';
-    $id('v8Evidence').innerHTML='';$id('v8HighList').innerHTML='';if($id('v8AnomalyList'))$id('v8AnomalyList').innerHTML='';return;
-  }
-  if(r.unsupported){
-    $id('v8Conclusion').textContent='当前平台尚未建立独立高价值模型';
-    $id('v8Why').textContent='系统不会套用闲鱼或小红书算法。需要先定义这个平台的曝光→点击→互动→转化/传播链路，之后才允许输出高价值判断。';
-    $id('v8Action').textContent='先建立该平台指标模型';
-    $id('v8ActionSub').textContent='未建模前只保留抓取数据，不生成“爆款规律”。';
-    $id('v8Metrics').innerHTML='<div class="v8-metric"><b>'+esc(r.platform)+'</b><span>当前平台</span></div><div class="v8-metric"><b>'+r.batch.length+'</b><span>已抓数据</span></div>';
-    $id('v8Reasons').innerHTML='<div class="v8-reason"><strong>不套通用算法</strong><span>这是为了避免跨平台指标错用。</span></div>';
-    $id('v8Evidence').innerHTML='';$id('v8HighList').innerHTML='';if($id('v8AnomalyList'))$id('v8AnomalyList').innerHTML='';return;
-  }
-  if(r.empty){
-    $id('v8Conclusion').textContent='先抓取一轮真实数据';
-    $id('v8Why').textContent='系统会按当前平台自己的行为链识别高价值内容，而不是套统一爆款分数。';
-    $id('v8Action').textContent='完成一次抓取';
-    $id('v8Metrics').innerHTML='';$id('v8Reasons').innerHTML='';$id('v8Evidence').innerHTML='';$id('v8HighList').innerHTML='';return;
-  }
-  const s=r.strongest,lead=s?(s.category==='可以复用'?'可以复用：':'值得测试：')+s.label:'本轮没有足够稳定的内容规律';const fallbackCount=r.rows.filter(x=>x.__mode==='高互动/潜在高表现').length,rankRefCount=r.rows.filter(x=>x.__mode==='搜索排序/时效参考').length;
-  $id('v8Conclusion').textContent=lead;
-  $id('v8Why').innerHTML=s?('高表现组 '+s.hc+'/'+r.high.length+' = <b>'+fmtPct(s.hp)+'</b>，普通组 '+s.nc+'/'+r.normal.length+' = <b>'+fmtPct(s.np)+'</b>，差异 <b>'+(s.diff>=0?'+':'')+Math.round(s.diff*100)+'%</b>；'+s.evidence+'。'+(fallbackCount?' 本轮有 '+fallbackCount+' 条因缺少浏览/发布时间，只按“高互动/潜在高表现”比较，不代表高流量或高曝光。':'')+(rankRefCount?' 另有 '+rankRefCount+' 条只能按搜索排序/时效做探索性参考，不代表真实流量。':'')):'本轮高低表现组差异不足，系统不会为了“有结论”而硬凑规律。'+(fallbackCount?' 当前部分样本只能按累计互动比较，不代表高流量或高曝光。':'')+(rankRefCount?' 当前部分样本只能按搜索排序/时效参考。':'');
-  $id('v8Action').textContent=s&&s.category!=='暂无价值'?'下一条只测试「'+s.label+'」':'保持当前方案，先补更多有效数据';
-  $id('v8ActionSub').textContent=s&&s.category!=='暂无价值'?'价格、主体产品信息、发布时间等尽量保持接近，用下一轮结果验证这个相关性。':'当前证据不足，不建议同时改多个变量。';
-  $id('v8Metrics').innerHTML=metricsFor(r).map(([v,l])=>'<div class="v8-metric"><b>'+esc(v)+'</b><span>'+esc(l)+'</span></div>').join('');
-  const reasons=[];
-  if(r.dominant){const tf=(r.typeFindings&&r.typeFindings[r.dominant]||[])[0];reasons.push(['主要高价值类型：'+r.dominant,tf?('这一类型最明显的差异是「'+tf.label+'」，相对普通组 '+(tf.diff>=0?'+':'')+Math.round(tf.diff*100)+'%。'):('高价值内容不是一种“好”，当前这一轮主要赢在 '+r.dominant+'。')]);}
-  for(const f of r.reusable.concat(r.testable).slice(0,2))reasons.push([f.label,(f.category==='可以复用'?'去偏后仍较稳定':'存在明显信号，仍需实测')+'；高表现 '+fmtPct(f.hp)+' / 普通 '+fmtPct(f.np)+'。']);
-  if(reasons.length<3&&r.anomalies.length)reasons.push(['异常爆发案例单独研究',r.anomalies.length+' 条异常高表现已剥离，不会直接拉动普通规律。']);
-  $id('v8Reasons').innerHTML=reasons.slice(0,3).map((x,i)=>'<div class="v8-reason"><strong>'+(i+1)+'. '+esc(x[0])+'</strong><span>'+esc(x[1])+'</span></div>').join('')||'<div class="v8-reason"><strong>暂无足够稳定原因</strong><span>继续补样本，不硬凑结论。</span></div>';
-  $id('v8Pools').innerHTML='<span class="v8-chip good">可以复用 '+r.reusable.length+'</span><span class="v8-chip test">值得测试 '+r.testable.length+'</span><span class="v8-chip none">暂无价值 '+r.none.length+'</span><span class="v8-chip">去偏保留 '+Math.round(r.stability*100)+'%</span><span class="v8-chip">异常案例 '+r.anomalies.length+'</span>';
-  $id('v8Evidence').innerHTML=r.findings.slice(0,6).map(f=>'<div class="v8-evidence-row"><b>'+esc(f.label)+' · '+esc(f.category)+'</b><em>'+(f.diff>=0?'+':'')+Math.round(f.diff*100)+'%</em><span>高表现 '+f.hc+'/'+r.high.length+' = '+fmtPct(f.hp)+'｜普通 '+f.nc+'/'+r.normal.length+' = '+fmtPct(f.np)+'｜样本 '+f.total+'｜'+f.evidence+(f.cycles>1?'｜连续 '+f.cycles+' 轮出现':'')+(f.cross?'｜'+esc(f.cross):'')+'</span></div>').join('');
-  $id('v8HighLabel').textContent='动态前20%，这里只展示前6条';
-  $id('v8HighList').innerHTML=r.high.slice(0,6).map((x,i)=>{
-    const rr=itemReasons(x,r.model);
-    return '<a class="v8-high" href="'+esc(x.url||'#')+'" target="_blank" rel="noopener"><div class="v8-no">'+(i+1)+'</div><div><b>'+esc(x.title||'未命名')+'</b><span>'+esc(x.__kind)+' · '+esc(rr.join('；'))+'</span></div><div class="v8-open">打开</div></a>';
-  }).join('');
-  if($id('v8AnomalyList'))$id('v8AnomalyList').innerHTML=r.anomalyCases.length?r.anomalyCases.map((x,i)=>'<a class="v8-high" href="'+esc(x.url||'#')+'" target="_blank" rel="noopener"><div class="v8-no">'+(i+1)+'</div><div><b>'+esc(x.title||'未命名')+'</b><span>'+esc(x.mark)+'</span></div><div class="v8-open">打开</div></a>').join(''):'<div class="v8-reason"><strong>本轮无明显异常爆发案例</strong><span>没有异常值需要单独剥离研究。</span></div>';
+function signalPool(r){return r.reusable.concat(r.testable)}
+function metrics(r){const s=r.strongest,signal=s?((s.diff>=0?'+':'')+Math.round(s.diff*100)+'%'):'—';return[[r.pool.length,'有效样本'],[r.high.length,'高价值样本'],[Math.round(r.coverage*100)+'%','核心数据覆盖'],[signal,'本轮最强信号'],[r.confidence[0],'综合可信度']]}
+function renderAnalysis(r){
+  ensureUI();window.__g81Analysis=r;$id('g81Platform').textContent=(r.platform||currentPlatform())+' · 本轮结论';
+  if(r.unsupported){$id('g81Conclusion').textContent='当前平台尚未建立独立模型';$id('g81Proof').textContent='不会套用小红书算法。';return}
+  if(r.empty){$id('g81Conclusion').textContent='先抓取一轮真实数据';$id('g81Proof').textContent='完成抓取后，这里直接告诉你最强信号和下一条怎么发。';$id('g81Metrics').innerHTML='';$id('g81Reasons').innerHTML='';return}
+  const pool=signalPool(r),active=pool.length?pool[(window.__g81Seed||0)%pool.length]:null;window.__g81ActiveSignal=active;
+  if(active){$id('g81Conclusion').textContent=active.label;$id('g81Proof').innerHTML='高表现 '+active.hc+'/'+r.high.length+' = <b>'+fmtPct(active.hp)+'</b> ｜ 普通 '+active.nc+'/'+r.normal.length+' = <b>'+fmtPct(active.np)+'</b> ｜ 差异 <b>'+(active.diff>=0?'+':'')+Math.round(active.diff*100)+'%</b> ｜ '+active.level;$id('g81Next').textContent=active.label;$id('g81NextSub').textContent='下一篇只测试这一变量，其他主要内容尽量保持接近。'}else{$id('g81Conclusion').textContent='本轮没有足够稳定的可执行差异';$id('g81Proof').textContent='系统不会为了凑结论而把差异很小或数据不足的项目推给你。';$id('g81Next').textContent='继续补有效样本';$id('g81NextSub').textContent='当前先不要同时改多个变量。'}
+  $id('g81Confidence').textContent=r.confidence[0];$id('g81Confidence').className='g81-conf '+r.confidence[1];$id('g81ConfidenceNote').textContent=r.rankOnlyRate>=.5?'多数样本只有排序/时效参考，结论只能用于探索测试。':'按样本量、数据覆盖和去偏后稳定性判断。';$id('g81Metrics').innerHTML=metrics(r).map(([v,l])=>'<div><b>'+esc(v)+'</b><span>'+esc(l)+'</span></div>').join('');
+  const good=r.reusable.concat(r.testable).slice(0,3);$id('g81Reasons').innerHTML=good.length?good.map((f,i)=>'<div class="g81-reason"><span class="g81-reason-no">'+(i+1)+'</span><div><b>'+esc(f.label)+'</b><small>'+fmtPct(f.hp)+' vs '+fmtPct(f.np)+'　<b>'+(f.diff>=0?'+':'')+Math.round(f.diff*100)+'%</b>　'+f.level+'</small></div></div>').join(''):'<div class="g81-muted">本轮暂时没有值得展示的内容差异。</div>';
+  $id('g81Evidence').innerHTML=r.findings.slice(0,8).map(f=>'<div class="g81-evidence-row"><div><b>'+esc(f.label)+'</b><span>'+esc(f.category)+' · '+esc(f.level)+'</span></div><strong>'+(f.diff>=0?'+':'')+Math.round(f.diff*100)+'%</strong><small>高表现 '+f.hc+'/'+r.high.length+' = '+fmtPct(f.hp)+' ｜ 普通 '+f.nc+'/'+r.normal.length+' = '+fmtPct(f.np)+' ｜ 样本 '+f.total+'</small></div>').join('');$id('g81DetailFoot').textContent='本轮高价值主要类型：'+r.dominant+'。去偏保留 '+Math.round(r.stability*100)+'%；异常高表现 '+r.anomalies.length+' 条已单独剥离；排序参考占 '+Math.round(r.rankOnlyRate*100)+'%。';renderHigh(r);
 }
-function parseProduct(raw){
-  const spec=(raw.match(/\d{2,4}\s*[x×*]\s*\d{2,4}(?:\s*[x×*]\s*\d{1,3})?/i)||[])[0]||'';
-  const pm=raw.match(/(?:¥|￥)?\s*(\d+(?:\.\d+)?)\s*元(?:\/㎡|每平方|一平|平)?/),price=pm?pm[1]:'';
-  const mats=['红檀香','缅甸柚木','柚木','橡木','白橡','欧橡','紫檀','菠萝格','龙凤檀','黑胡桃','白蜡木','重蚁木'];
-  const mat=mats.find(x=>raw.includes(x))||raw.split(/[\s,，/|]+/).find(x=>x.length>=2&&!/^\d/.test(x))||'实木地板';
-  return{raw,spec,price,mat,facts:{stock:/现货|库存/.test(raw),factory:/工厂|厂家/.test(raw),sample:/寄样|样板|看样/.test(raw),logistics:/物流|发货|自提/.test(raw)}};
+function generatorWhy(r,s,p){return[['相关样本',r.high.length+' 高价值 / '+r.normal.length+' 普通'],['本轮测试变量',s.label],['价格策略',p.price?p.price+'元/㎡（真实输入）':'未提供则不编造'],['流量依据',s.level+'；差异 '+(s.diff>=0?'+':'')+Math.round(s.diff*100)+'%']]}
+function renderOutput(r,s,p,o,ok){
+  const w=generatorWhy(r,s,p).map(([a,b])=>'<div><span>'+esc(a)+'</span><b>'+esc(b)+'</b></div>').join('');$id('g81Output').classList.remove('g81-empty-output');
+  $id('g81Output').innerHTML='<div class="g81-output-grid"><div class="g81-why"><div class="g81-mini-title">为什么这样发</div>'+w+'</div><div class="g81-publish"><div class="g81-testline"><span>本轮测试</span><b>'+esc(s.label)+'</b><em class="'+(ok?'ok':'bad')+'">'+(ok?'✓ 已执行':'✕ 未执行')+'</em></div><div class="g81-field"><span>标题</span><strong>'+esc(o.title)+'</strong></div><div class="g81-field"><span>正文</span><pre>'+esc(o.body)+'</pre></div><div class="g81-field-row"><div class="g81-field"><span>话题 / 搜索词</span><p>'+esc(o.tags)+'</p></div><div class="g81-field"><span>封面建议</span><p>'+esc(o.cover)+'</p></div></div><div class="g81-field"><span>图片内容建议</span><p>'+esc(o.images)+'</p></div><div class="g81-output-actions"><button id="g81Copy" class="g81-primary">复制全部</button><button id="g81Record" class="g81-secondary">记录发布结果</button></div><div id="g81Feedback" class="g81-feedback"></div></div></div>';
+  $id('g81Copy').onclick=async()=>{const text='【本轮测试】'+s.label+'\n\n【标题】\n'+o.title+'\n\n【正文】\n'+o.body+'\n\n【话题】\n'+o.tags+'\n\n【封面建议】\n'+o.cover+'\n\n【图片建议】\n'+o.images;try{await navigator.clipboard.writeText(text);setStatus('已复制完整发布方案。','oktxt')}catch{setStatus('复制失败，请手动复制。','warn')}};
+  $id('g81Record').onclick=renderFeedback;
 }
-function personalSignal(platform,label){
-  let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}
-  const measured=a.filter(x=>x.platform===platform&&x.metrics&&n(x.performance)!==null);
-  const rows=measured.filter(x=>x.strategy===label);
-  if(rows.length<3)return null;
-  const groups=new Map();
-  for(const x of measured){if(!groups.has(x.strategy))groups.set(x.strategy,[]);groups.get(x.strategy).push(n(x.performance))}
-  const medians=[...groups.entries()].map(([k,v])=>({k,m:med(v.filter(z=>z!==null))})).filter(x=>x.m!==null);
-  const mine=medians.find(x=>x.k===label);if(!mine)return null;
-  const rank=percentile(mine.m,medians.map(x=>x.m));
-  const weight=Math.min(1,rows.length/10);
-  return rank*weight;
+function saveDraft(r,s,p,o){let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}a.push({id:'exp_'+Date.now(),platform:r.platform,product:p.raw,strategy:s.label,signalId:s.id,category:s.category,evidence:s.level,title:o.title,body:o.body,cover:o.cover,images:o.images,createdAt:nowISO(),status:'draft'});localStorage.setItem(EXPKEY,JSON.stringify(a.slice(-120)))}
+function generateCurrent(){
+  const r=window.__g81Analysis||analyze(),s=window.__g81ActiveSignal||r.strongest,raw=$id('g81Product')?.value.trim();if(!raw)return setStatus('先输入你准备发布的真实商品信息。','bad');if(!s)return setStatus('本轮没有足够可靠的测试变量，暂不硬生成。','warn');
+  const p=parseProduct(raw),elig=eligibility(s,p);if(!elig.ok){$id('g81Need').textContent='当前变量「'+s.label+'」需要补充：'+elig.need+'。也可以点“换一个测试方向”。';$id('g81Product').focus();return}$id('g81Need').textContent='';
+  let o=xhsGenerate(p,s),ok=validateSignal(s,o,p);if(!ok){o=forceSignal(s,o,p);ok=validateSignal(s,o,p)}if(!ok)return setStatus('生成结果没有执行本轮测试变量，已停止输出。','bad');renderOutput(r,s,p,o,true);saveDraft(r,s,p,o);setStatus('已生成：本轮只测试「'+s.label+'」，并已自动校验执行。','oktxt');
 }
-function chooseSignal(r,seed){
-  const pool=r.reusable.concat(r.testable);
-  if(!pool.length)return null;
-  const scored=pool.map((f,i)=>({f,score:(f.category==='可以复用'?3:2)+Math.max(0,f.diff)*4+(personalSignal(r.platform,f.label)||0)*.5-i*.01}));
-  scored.sort((a,b)=>b.score-a.score);
-  return scored[seed%scored.length].f;
-}
-function generateXianyu(p,signal){
-  const name=p.mat.includes('地板')?p.mat:p.mat+'实木地板',id=signal.id;
-  let title='',body='';
-  if(id==='scene'){title='家里准备铺'+p.mat+'？先把规格和铺法确认清楚';body='准备家装在看'+p.mat+'，建议先把面积、铺法和实际规格确认清楚。'+(p.spec?'\n规格：'+p.spec+'。':'')+(p.price?'\n参考价：'+p.price+'元/㎡。':'')+'\n\n把面积和想做的铺法发过来，可以先核对用量和规格。';}
-  else if(id==='spec'){title=[name,p.spec,p.price?p.price+'元/㎡':''].filter(Boolean).join(' ');body=name+(p.spec?'，规格 '+p.spec:'')+(p.price?'，'+p.price+'元/㎡':'')+'。\n\n规格、面积和铺法先确认清楚，再核算实际用量；需要对比板面或尺寸可以直接沟通。';}
-  else if(id==='priceTitle'&&p.price){title=p.price+'元/㎡ '+name+(p.spec?' '+p.spec:'');body=name+(p.spec?'，规格 '+p.spec:'')+'，参考价 '+p.price+'元/㎡。\n\n价格先写明，实际用量仍按面积和铺法核算，需要可以把面积发过来。';}
-  else if(id==='stock'&&p.facts.stock){title=[name,'现货',p.spec].filter(Boolean).join(' ');body=name+(p.spec?'，规格 '+p.spec:'')+'，现货情况按实际数量确认。\n\n需要看板面、核算数量或确认发货安排，可以直接沟通。';}
-  else if(id==='factory'&&p.facts.factory){title=[name,'工厂直供',p.spec].filter(Boolean).join(' ');body=name+(p.spec?'，规格 '+p.spec:'')+'。\n\n这条重点把货源和产品信息说清楚，不堆形容词。需要确认数量、板面或铺法可以直接沟通。';}
-  else if(id==='logistics'&&p.facts.logistics){title=[name,p.spec,'支持物流'].filter(Boolean).join(' ');body=name+(p.spec?'，规格 '+p.spec:'')+'。\n\n面积和数量确认后再核对运输方式与费用，外地可按实际地址确认物流。';}
-  else{title=[name,p.spec,p.price?p.price+'元/㎡':''].filter(Boolean).join(' ');body=name+(p.spec?'，规格 '+p.spec:'')+(p.price?'，参考价 '+p.price+'元/㎡':'')+'。\n\n商品信息直接写清楚，面积、铺法和现场条件不同，用量会有差异；有实际需求可以直接核对。';}
-  return{title,body,tags:[p.mat,p.mat.includes('地板')?null:p.mat+'地板','实木地板'].filter(Boolean).join(' / '),cover:'首图只围绕本轮变量配合，其他视觉条件尽量保持接近。'};
-}
-function generateXhs(p,signal){
-  const id=signal.id;let title='',body='',cover='';
-  if(id==='scene'){title='同样是'+p.mat+'，铺进家里和单看板完全不一样';body='这次不讲一堆木材形容词，直接看实际空间里的效果。\n\n选'+p.mat+'时，我更建议把采光、柜体颜色、铺法和面积一起看。'+(p.spec?'这款规格是 '+p.spec+'。':'')+'\n\n如果正在装修，可以先从实际空间出发，再决定木种和规格。';cover='真实铺装/空间场景，减少纯产品白底图。';}
-  else if(id==='question'){title=p.mat+'地板到底怎么选？我会先看这3件事';body='看'+p.mat+'，我不会先从“高级不高级”开始。\n\n第一看实际空间和采光，第二看规格与铺法，第三看预算和后期使用。'+(p.spec?'\n这款规格：'+p.spec+'。':'')+'\n\n把选择条件说清楚，比单纯堆卖点更有参考价值。';cover='封面只突出一个问题，不同时塞多个卖点。';}
-  else if(id==='howto'||id==='saveValue'){title='准备铺'+p.mat+'的，可以先把这几点记下来';body='准备铺实木地板时，建议先确认：\n1. 面积和损耗\n2. 铺法和规格\n3. 柜体、门套和收口\n4. 实际板面与色差\n\n'+(p.spec?'当前这款规格是 '+p.spec+'。':'')+'先把这些确定，再看具体产品会更高效。';cover='清单式封面，突出“先确认哪几件事”。';}
-  else if(id==='factory'&&p.facts.factory){title='刚在工厂看到一批'+p.mat+'，顺手拍给你们看';body='刚生产好的'+p.mat+'，先看真实板面，不做过度滤镜。\n\n'+(p.spec?'规格：'+p.spec+'。':'')+'实际家装里还要结合采光、铺法和柜体颜色一起判断。\n\n这类工厂现场内容我会尽量把真实状态拍清楚。';cover='工厂现场/刚下线产品实拍。';}
-  else{title='最近在看'+p.mat+'，有几个细节比颜色更值得先确认';body='如果准备铺'+p.mat+'，建议先确认规格、铺法、面积和现场收口，再看具体颜色。'+(p.spec?'\n规格：'+p.spec+'。':'')+'\n\n实际空间条件不同，最后效果也会不同，先从真实使用场景出发更容易选。';cover='真实产品或空间图，标题只保留一个明确切入点。';}
-  return{title,body,tags:'#'+[p.mat,p.mat.includes('地板')?null:p.mat+'地板','实木地板','装修'].filter(Boolean).join(' #'),cover};
-}
-function saveDraft(r,signal,out,raw){
-  let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}
-  a.push({id:'exp_'+Date.now(),platform:r.platform,product:raw,strategy:signal.label,signalId:signal.id,category:signal.category,evidence:signal.evidence,title:out.title,body:out.body,cover:out.cover,createdAt:nowISO(),status:'draft'});
-  localStorage.setItem(EXPKEY,JSON.stringify(a.slice(-100)));
-}
-function installGenerator(){
-  const btn=$id('generate'),regen=$id('regen');if(!btn||!regen)return;
-  window.v8Seed=0;
-  function run(){
-    const raw=$id('genKeyword').value.trim();if(!raw)return setStatus('请先输入你准备发布的商品信息。','bad');
-    const r=window.__v8Analysis||analyze();if(r.unsupported)return setStatus('当前平台尚未建立独立指标模型，暂不生成内容。','warn');if(r.empty)return setStatus('先完成抓取。','warn');
-    const signal=chooseSignal(r,window.v8Seed);if(!signal)return setStatus('本轮没有“可以复用”或“值得测试”的可靠信号，暂不硬生成。','warn');
-    const p=parseProduct(raw),out=r.platform==='小红书'?generateXhs(p,signal):generateXianyu(p,signal);
-    $id('gConfidence').textContent=signal.category+' · '+signal.evidence;$id('gConfidence').className='confidence '+(signal.category==='可以复用'?'good':'base');
-    $id('gEvidence').textContent='当前平台：'+r.platform+'｜本轮只测试「'+signal.label+'」｜高表现 '+fmtPct(signal.hp)+' / 普通 '+fmtPct(signal.np)+' / 差异 '+(signal.diff>=0?'+':'')+Math.round(signal.diff*100)+'%。';
-    $id('gRelated').textContent=r.high.length+' 高价值 / '+r.normal.length+' 普通';$id('gRelatedSub').textContent='生成策略来自当前平台自己的高价值模型。';
-    $id('gTitlePlan').textContent=signal.label;$id('gTitleSub').textContent='只改变这个主要变量，其他变量尽量保持稳定。';
-    $id('gPricePlan').textContent=p.price?p.price+'元/㎡':'不编造价格';$id('gPriceSub').textContent=p.price?'使用你输入的真实价格。':'未提供价格就不自动补。';
-    $id('gBodyPlan').textContent=r.platform==='小红书'?'按内容价值与互动链设计':'按搜索→浏览→想要/咨询链设计';$id('gBodySub').textContent='平台不同，生成逻辑不同。';
-    $id('gImagePlan').textContent=out.cover;$id('gImageSub').textContent='首图/封面只服务当前测试变量。';
-    $id('gSignalPlan').textContent='本轮主测试：'+signal.label;$id('gSignalSub').textContent='下一轮数据回来后再验证，不把相关性写成因果。';
-    $id('genTitle').textContent=out.title;$id('genBody').textContent=out.body;$id('genTags').textContent=out.tags;
-    lastGenerated='标题：\n'+out.title+'\n\n正文：\n'+out.body+'\n\n标签/搜索词：\n'+out.tags+'\n\n本轮测试变量：'+signal.label;
-    $id('sourceList').innerHTML=r.high.slice(0,3).map(x=>'<a class="source-card" href="'+esc(x.url||'#')+'" target="_blank" rel="noopener"><div class="source-main"><b>'+esc(x.title||'')+'</b><span>'+esc(x.__kind)+' · '+esc(itemReasons(x,r.model).join('；'))+'</span></div><span class="source-open">打开</span></a>').join('');
-    saveDraft(r,signal,out,raw);setStatus('已按 '+r.platform+' 本轮分析生成；只测试「'+signal.label+'」。','oktxt');
-  }
-  btn.onclick=()=>{window.v8Seed=0;run()};regen.onclick=()=>{window.v8Seed++;run()};
-}
-function feedbackFields(platform){
-  if(platform==='闲鱼')return[['exposure','曝光'],['views','浏览'],['wants','想要'],['consults','咨询'],['sales','成交'],['days','发布天数']];
-  if(platform==='小红书')return[['views','浏览'],['likes','点赞'],['favs','收藏'],['comments','评论'],['shares','转发'],['days','发布天数']];
-  return[['views','浏览'],['likes','互动'],['days','发布天数']];
-}
-function renderFeedbackFields(){
-  const p=siteName(),a=feedbackFields(p);$id('v8FeedbackGrid').innerHTML=a.map(([k,l])=>'<label><span class="muted">'+l+'</span><input inputmode="decimal" data-k="'+k+'" placeholder="'+l+'"></label>').join('');
-}
-function saveFeedback(){
-  let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}
-  const draft=[...a].reverse().find(x=>x.platform===siteName()&&x.status==='draft');
-  if(!draft)return setStatus('先生成一条测试内容，再记录结果。','warn');
-  const metrics={};$id('v8FeedbackGrid').querySelectorAll('input').forEach(i=>{const v=n(i.value);if(v!==null)metrics[i.dataset.k]=v});
-  const days=metrics.days||1;let perf=null;
-  if(siteName()==='闲鱼'){perf=(metrics.consults??metrics.wants??metrics.views??0)/Math.max(.25,days)}
-  else if(siteName()==='小红书'){const total=(metrics.likes||0)+(metrics.favs||0)+(metrics.comments||0)+(metrics.shares||0);perf=metrics.views?total/metrics.views:total/Math.max(.25,days)}
-  else perf=(metrics.views||0)/Math.max(.25,days);
-  draft.metrics=metrics;draft.performance=perf;draft.status='measured';draft.measuredAt=nowISO();
-  localStorage.setItem(EXPKEY,JSON.stringify(a.slice(-100)));$id('v8Feedback').classList.remove('show');setStatus('本轮实际结果已记录，后续同平台生成会逐步提高你自己的历史测试权重。','oktxt');
-}
-function runAll(){
-  ensureUI();
-  const r=analyze();window.__v8Analysis=r;renderDecision(r);installGenerator();
-  const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.0.3：不同平台使用独立高价值模型；结论在前、行动其次、关键证据随后、原始数据最后。';
-  const sub=document.querySelector('.top .sub');if(sub)sub.textContent='找到高表现内容 → 解释为什么好 → 提炼下一条最值得测试的变量';
-  const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.0.3';
-  document.title='多平台内容增长决策系统 V8.0.3';
-}
-const oldRender=window.render;
-if(typeof oldRender==='function'){
-  window.render=function(){const v=oldRender.apply(this,arguments);setTimeout(runAll,40);return v};
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(runAll,80));
-else setTimeout(runAll,80);
+function renderFeedback(){const box=$id('g81Feedback');box.innerHTML='<div class="g81-feedback-title">发布后记录结果</div><div class="g81-feedback-grid"><label>浏览<input data-k="views" inputmode="decimal"></label><label>点赞<input data-k="likes" inputmode="decimal"></label><label>收藏<input data-k="favs" inputmode="decimal"></label><label>评论<input data-k="comments" inputmode="decimal"></label><label>转发<input data-k="shares" inputmode="decimal"></label><label>发布天数<input data-k="days" inputmode="decimal"></label></div><button id="g81SaveFeedback" class="g81-primary">保存结果</button>';box.classList.add('show');$id('g81SaveFeedback').onclick=saveFeedback}
+function saveFeedback(){let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}const d=[...a].reverse().find(x=>x.platform===currentPlatform()&&x.status==='draft');if(!d)return setStatus('没有找到待验证的生成记录。','warn');const m={};$id('g81Feedback').querySelectorAll('input').forEach(i=>{const v=num(i.value);if(v!==null)m[i.dataset.k]=v});const total=(m.likes||0)+(m.favs||0)+(m.comments||0)+(m.shares||0),days=m.days||1;d.metrics=m;d.performance=m.views?total/m.views:total/Math.max(.25,days);d.status='measured';d.measuredAt=nowISO();localStorage.setItem(EXPKEY,JSON.stringify(a.slice(-120)));$id('g81Feedback').innerHTML='<div class="g81-saved">✓ 已保存，本轮结果会进入后续同平台验证。</div>';setStatus('发布结果已记录。','oktxt')}
+function runAll(){ensureUI();const r=analyze();window.__g81Analysis=r;renderAnalysis(r);const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const sub=document.querySelector('.top .sub');if(sub)sub.textContent='小红书：高价值分析 → 测试变量 → 内容生成 → 发布验证';const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.1';document.title='多平台内容增长决策系统 V8.1';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.1：结论在前、行动其次、关键证据随后、原始数据最后；生成结果必须通过测试变量执行校验。'}
+const oldRender=window.render;if(typeof oldRender==='function'){window.render=function(){const v=oldRender.apply(this,arguments);setTimeout(runAll,40);return v}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(runAll,90));else setTimeout(runAll,90);
 })();
