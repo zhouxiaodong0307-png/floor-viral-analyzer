@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='8.2.5';
+const VERSION='8.2.6';
 const EXPKEY='floorGrowthExperimentsV81';
 const REPORTKEY='floorGrowthReportsV814';
 const $id=id=>document.getElementById(id);
@@ -87,23 +87,23 @@ const XHS_FEATURES=[
   ['titleLayout','标题出现具体户型',x=>/\d室|\d房|一居|两居|三居|四居|户型/.test(x.title||'')],
   ['titleArea','标题出现具体面积',x=>/\d+(?:\.\d+)?\s*(?:㎡|平米|平方)/.test(x.title||'')],
   ['titleInstall','标题出现具体施工/铺法',x=>/鱼骨|人字|工字|369|自由拼|悬浮|平扣|锁扣|龙骨|直铺/.test(x.title||'')],
-  ['sceneBody','正文从真实使用场景切入',x=>/客厅|卧室|家装|装修|新房|老房|实际空间|铺进家里|现场/.test((x.text||'').slice(0,220))],
-  ['howto','正文采用攻略/清单结构',x=>/攻略|清单|第一|第二|1[.、]|2[.、]|怎么选|避坑/.test(x.text||'')],
-  ['saveValue','正文强调可收藏的信息价值',x=>/清单|记住|收藏|对比|总结|避坑|尺寸|用量/.test(x.text||'')],
-  ['discussion','正文有明确讨论触发',x=>/你们|大家|你会|你觉得|评论|怎么选|哪种|你家/.test(x.text||'')],
-  ['experience','正文使用真实经验/结果表达',x=>/用了|使用|实测|真话|后悔|踩坑|翻车|住了|装完|完工/.test((x.title||'')+' '+(x.text||''))],
-  ['factory','内容直接展示工厂/生产现场',x=>/工厂|车间|生产|仓库|刚下线|刚生产/.test((x.title||'')+' '+(x.text||''))],
-  ['coverScene','封面为真实使用/铺装场景',x=>/实景|场景|铺装|家装|案例/.test(String(x.coverType||x.imageType||''))],
+  ['sceneBody','正文从真实使用场景切入',x=>/客厅|卧室|家装|装修|新房|老房|实际空间|铺进家里|现场/.test((x.text||'').slice(0,220)),x=>!!x.deepFetched],
+  ['howto','正文采用攻略/清单结构',x=>/攻略|清单|第一|第二|1[.、]|2[.、]|怎么选|避坑/.test(x.text||''),x=>!!x.deepFetched],
+  ['saveValue','正文强调可收藏的信息价值',x=>/清单|记住|收藏|对比|总结|避坑|尺寸|用量/.test(x.text||''),x=>!!x.deepFetched],
+  ['discussion','正文有明确讨论触发',x=>/你们|大家|你会|你觉得|评论|怎么选|哪种|你家/.test(x.text||''),x=>!!x.deepFetched],
+  ['experience','正文使用真实经验/结果表达',x=>/用了|使用|实测|真话|后悔|踩坑|翻车|住了|装完|完工/.test((x.title||'')+' '+(x.text||'')),x=>!!x.deepFetched],
+  ['factory','内容直接展示工厂/生产现场',x=>/工厂|车间|生产|仓库|刚下线|刚生产/.test((x.title||'')+' '+(x.text||'')),x=>!!x.deepFetched],
+  ['coverScene','封面为真实使用/铺装场景',x=>x.coverVisualType==='实景/空间',x=>!!x.coverVisualType&&x.coverVisualConfidence!=='低'],
   ['video','内容形式为视频',x=>/视频/.test(String(x.contentType||''))],
   ['shortTitle','标题更精简',x=>{const n=String(x.title||'').replace(/\s+/g,'').length;return n>=8&&n<=22}],
   ['decisionTitle','标题直接解决选购问题',x=>/怎么选|适合|区别|差别|值不值|预算|规格|铺法|损耗|稳定|地暖/.test(x.title||'')],
-  ['directOpen','正文开头快速进入主题',x=>{const s=String(x.text||'').trim().slice(0,120);return /先看|直接|如果|同样|这次|为什么|怎么|铺|装|用|规格|价格|空间/.test(s)}],
-  ['structuredBody','正文结构清晰',x=>{const s=String(x.text||'');return /\n\s*\n/.test(s)||/(?:^|\n)\s*[1-5][.、]/.test(s)}],
-  ['mediumBody','正文长度适中',x=>{const n=String(x.text||'').replace(/\s+/g,'').length;return n>=100&&n<=500}],
-  ['practicalInfo','正文包含可决策的具体信息',x=>/\d{2,4}\s*[x×*]\s*\d{2,4}|\d+(?:\.\d+)?\s*(?:㎡|平米|平方|元)|地暖|损耗|铺法|规格|收口/.test(x.text||'')],
-  ['hasTags','包含话题标签',x=>/#\S+/.test(x.text||'')],
-  ['multiImage','图片数量4张及以上',x=>num(x.imageCount)!==null&&num(x.imageCount)>=4],
-  ['lowAdTone','弱广告表达',x=>!/特价|清仓|最低|秒杀|加微信|私聊报价|全网最低|厂家直销/.test((x.title||'')+' '+(x.text||''))]
+  ['directOpen','正文开头快速进入主题',x=>{const s=String(x.text||'').trim().slice(0,120);return /先看|直接|如果|同样|这次|为什么|怎么|铺|装|用|规格|价格|空间/.test(s)},x=>!!x.deepFetched],
+  ['structuredBody','正文结构清晰',x=>{const s=String(x.text||'');return /\n\s*\n/.test(s)||/(?:^|\n)\s*[1-5][.、]/.test(s)},x=>!!x.deepFetched],
+  ['mediumBody','正文长度适中',x=>{const n=String(x.text||'').replace(/\s+/g,'').length;return n>=100&&n<=500},x=>!!x.deepFetched],
+  ['practicalInfo','正文包含可决策的具体信息',x=>/\d{2,4}\s*[x×*]\s*\d{2,4}|\d+(?:\.\d+)?\s*(?:㎡|平米|平方|元)|地暖|损耗|铺法|规格|收口/.test(x.text||''),x=>!!x.deepFetched],
+  ['hasTags','包含话题标签',x=>/#\S+/.test(x.text||''),x=>!!x.deepFetched],
+  ['multiImage','图片数量4张及以上',x=>num(x.imageCount)!==null&&num(x.imageCount)>=4,x=>!!x.deepFetched&&num(x.imageCount)!==null],
+  ['lowAdTone','弱广告表达',x=>!/特价|清仓|最低|秒杀|加微信|私聊报价|全网最低|厂家直销/.test((x.title||'')+' '+(x.text||'')),x=>!!x.deepFetched]
 ];
 const XY_FEATURES=[
   ['spec','标题带具体规格',x=>/\d{2,4}\s*[x×*]\s*\d{2,4}/i.test(x.title||'')],
