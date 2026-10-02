@@ -1,6 +1,6 @@
 {
   "name": "floor-viral-analyzer-v3",
-  "version": "7.3.1",
+  "version": "7.4.0",
   "private": true,
   "type": "module",
   "scripts": {
