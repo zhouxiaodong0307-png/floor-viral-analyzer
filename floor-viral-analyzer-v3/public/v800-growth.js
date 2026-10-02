@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='8.0.2', FINDKEY='floorGrowthFindingsV8', EXPKEY='floorGrowthExperimentsV8';
+const VERSION='8.0.3', FINDKEY='floorGrowthFindingsV8', EXPKEY='floorGrowthExperimentsV8';
 const $id=id=>document.getElementById(id);
 const n=v=>(v===null||v===undefined||v===''||!Number.isFinite(Number(v)))?null:Number(v);
 const pos=v=>{const x=n(v);return x!==null&&x>0?x:null};
@@ -116,7 +116,10 @@ const PLATFORM={
       ['logistics','物流/交付明确',x=>/物流|发货|自提|送货|到付|运费/.test((x.title||'')+' '+(x.text||''))],
       ['scene','使用场景切入',x=>/客厅|卧室|家装|装修|原木风|奶油风|铺装|实景|效果/.test((x.title||'')+' '+(x.text||''))],
       ['trust','信任信息',x=>/实拍|可看货|看样|寄样|支持验货|售后|工厂/.test((x.title||'')+' '+(x.text||''))],
-      ['cta','咨询行动引导',x=>/私聊|咨询|问我|发面积|发尺寸|联系|沟通/.test((x.title||'')+' '+(x.text||''))]
+      ['cta','咨询行动引导',x=>/私聊|咨询|问我|发面积|发尺寸|联系|沟通/.test((x.title||'')+' '+(x.text||''))],
+      ['materialFront','木种/产品前置',x=>/^(红檀香|缅甸柚木|柚木|橡木|白橡|欧橡|紫檀|菠萝格|龙凤檀|黑胡桃|白蜡木|重蚁木|实木|多层|三层)/.test(String(x.title||'').trim())],
+      ['shortTitle','标题更精简',x=>String(x.title||'').replace(/\s+/g,'').length>0&&String(x.title||'').replace(/\s+/g,'').length<=24],
+      ['numberTitle','标题含具体数字',x=>/\d/.test(x.title||'')]
     ],
     dims(x){
       const exp=pos(x.exposure??x.impressions),views=pos(x.views),wants=n(x.wants),consults=n(x.consults),sales=n(x.sales??x.sold),days=ageDays(x);
@@ -149,7 +152,12 @@ const PLATFORM={
       ['factory','工厂/生产现场',x=>/工厂|车间|生产|仓库|库存/.test((x.title||'')+' '+(x.text||''))],
       ['saveValue','收藏价值表达',x=>/收藏|记住|清单|对比|总结|攻略|避坑/.test((x.title||'')+' '+(x.text||''))],
       ['discussion','讨论/提问引导',x=>/你们|大家|你会|你觉得|评论|怎么选|哪种/.test((x.title||'')+' '+(x.text||''))],
-      ['tags','话题/标签完整',x=>/#\S+/.test(x.text||'')]
+      ['tags','话题/标签完整',x=>/#\S+/.test(x.text||'')],
+      ['materialFront','木种/主题前置',x=>/^(红檀香|缅甸柚木|柚木|橡木|白橡|欧橡|紫檀|菠萝格|龙凤檀|黑胡桃|白蜡木|重蚁木|实木|木地板)/.test(String(x.title||'').trim())],
+      ['shortTitle','标题更精简',x=>String(x.title||'').replace(/\s+/g,'').length>0&&String(x.title||'').replace(/\s+/g,'').length<=22],
+      ['experience','真实经验/结果表达',x=>/用了|使用|实测|真话|后悔|踩坑|翻车|住了|装完|完工/.test((x.title||'')+' '+(x.text||''))],
+      ['contrast','对比/反差表达',x=>/对比|区别|vs|VS|还是|没想到|居然|一砸一个坑|别买|真相/.test((x.title||'')+' '+(x.text||''))],
+      ['numberTitle','标题含具体数字',x=>/\d/.test(x.title||'')]
     ],
     dims(x){
       const views=pos(x.views),likes=n(x.likes),favs=n(x.favs),comments=n(x.comments),shares=n(x.shares),days=ageDays(x);
@@ -313,7 +321,7 @@ function analyze(){
   if(rankOnlyRate>=.5){
     for(const f of findings2){
       f.evidence='探索性信号';
-      f.category=(f.diff>=.15&&high.length>=10&&normal.length>=20)?'值得测试':'暂无价值';
+      f.category=(f.diff>=.10&&high.length>=10&&normal.length>=20)?'值得测试':'暂无价值';
     }
   }
   // restore per-feature cycle counts and cross-platform notes
@@ -542,10 +550,10 @@ function saveFeedback(){
 function runAll(){
   ensureUI();
   const r=analyze();window.__v8Analysis=r;renderDecision(r);installGenerator();
-  const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.0.2：不同平台使用独立高价值模型；结论在前、行动其次、关键证据随后、原始数据最后。';
+  const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.0.3：不同平台使用独立高价值模型；结论在前、行动其次、关键证据随后、原始数据最后。';
   const sub=document.querySelector('.top .sub');if(sub)sub.textContent='找到高表现内容 → 解释为什么好 → 提炼下一条最值得测试的变量';
-  const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.0.2';
-  document.title='多平台内容增长决策系统 V8.0.2';
+  const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.0.3';
+  document.title='多平台内容增长决策系统 V8.0.3';
 }
 const oldRender=window.render;
 if(typeof oldRender==='function'){
