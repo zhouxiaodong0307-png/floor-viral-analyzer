@@ -2,8 +2,9 @@
 if(window.__FLOOR_V721_COLLECTING__)return;
 window.__FLOOR_V721_COLLECTING__=true;
 
-const TARGET=500, MAX_MS=105000, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
-const COLLECTOR_VERSION='8.0.4';
+const TARGET=500, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
+const COLLECTOR_VERSION='8.1.1';
+window.__FLOOR_FORCE_STOP__=false;
 const safeQuery=(root,sel)=>{try{return root&&root.querySelector?root.querySelector(sel):null}catch{return null}};
 const START=Date.now();
 const C=s=>String(s||'').replace(/\s+/g,' ').trim();
@@ -32,11 +33,14 @@ function status(win,msg){
     let b=win.document.getElementById('__floor_v721_status__');
     if(!b){
       b=win.document.createElement('div');b.id='__floor_v721_status__';
-      b.style='position:fixed;right:18px;top:18px;z-index:2147483647;background:#111;color:#fff;padding:12px 15px;border-radius:12px;font:600 13px -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 8px 28px #0004;max-width:440px;line-height:1.45';
-      win.document.documentElement.appendChild(b);
+      b.style='position:fixed;right:18px;top:18px;z-index:2147483647;background:#111;color:#fff;padding:12px 15px;border-radius:12px;font:600 13px -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 8px 28px #0004;max-width:460px;line-height:1.45;display:flex;gap:10px;align-items:center;flex-wrap:wrap';
+      const t=win.document.createElement('span');t.id='__floor_v721_status_text__';t.style='flex:1 1 260px';
+      const stop=win.document.createElement('button');stop.textContent='停止并导入';stop.style='border:0;border-radius:8px;padding:6px 9px;font:700 11px -apple-system,BlinkMacSystemFont,sans-serif;cursor:pointer';
+      stop.onclick=()=>{window.__FLOOR_FORCE_STOP__=true;stop.disabled=true;stop.textContent='正在停止…'};
+      b.append(t,stop);win.document.documentElement.appendChild(b);
     }
-    b.textContent=msg;
-    win.document.title='采集 '+out.size+'/500｜'+(Q||'闲鱼');
+    const t=b.querySelector('#__floor_v721_status_text__');if(t)t.textContent=msg;
+    win.document.title='采集 '+out.size+'/500｜'+(Q||'平台');
   }catch{}
 }
 status(window,'采集器 V'+COLLECTOR_VERSION+'｜准备深度抓取 0/500…');
@@ -161,13 +165,13 @@ async function collectQuery(win,step,index){
   let stale=0,last=out.size;
   try{win.scrollTo(0,0)}catch{}
   await new Promise(r=>setTimeout(r,350));
-  for(let i=0;i<12&&out.size<TARGET&&Date.now()-START<MAX_MS;i++){
+  for(let i=0;out.size<TARGET&&!window.__FLOOR_FORCE_STOP__;i++){
     scan(win,step.q,step.tier);
     const elapsed=Math.round((Date.now()-START)/1000);
     status(win,'深度抓取 '+out.size+'/500｜'+(index+1)+'/'+plan.length+' '+step.tier+'级：'+step.q+'｜'+elapsed+'秒');
     if(out.size===last)stale++;else stale=0;
     last=out.size;
-    if(stale>=4)break;
+    if(stale>=10)break;
     try{
       win.scrollBy(0,Math.max(650,win.innerHeight*.85));
       for(const e of scrollables(win)) e.scrollTop=Math.min(e.scrollHeight,e.scrollTop+Math.max(550,e.clientHeight*.8));
@@ -182,19 +186,28 @@ let worker=null;
 try{worker=window.open(location.href,'floorCollectorV721','width=980,height=760,left=28,top=28')}catch{}
 let win=worker&&!worker.closed?worker:window;
 
-for(let i=0;i<plan.length&&out.size<TARGET&&Date.now()-START<MAX_MS;i++){
-  const step=plan[i],u=new URL(base);
-  if(u.searchParams.has('q')||!u.searchParams.has('keyword'))u.searchParams.set('q',step.q);else u.searchParams.set('keyword',step.q);
-  if(win!==window){
-    try{
-      status(win,'切换关键词 '+(i+1)+'/'+plan.length+'：'+step.q);
-      win.location.href=u.href;
-      if(!await waitLoad(win,step.q)){queryStats.push({query:step.q,tier:step.tier,added:0,total:out.size,error:'load-timeout'});continue}
-    }catch{break}
-  }else if(step.q!==Q){break}
-  await collectQuery(win,step,i)
+let round=0,noGrowthRounds=0;
+while(out.size<TARGET&&!window.__FLOOR_FORCE_STOP__){
+  round++;
+  const roundStart=out.size;
+  for(let i=0;i<plan.length&&out.size<TARGET&&!window.__FLOOR_FORCE_STOP__;i++){
+    const step=plan[i],u=new URL(base);
+    if(u.searchParams.has('q')||!u.searchParams.has('keyword'))u.searchParams.set('q',step.q);else u.searchParams.set('keyword',step.q);
+    u.searchParams.set('__floor_round',String(round));
+    if(win!==window){
+      try{
+        status(win,'第'+round+'轮｜切换关键词 '+(i+1)+'/'+plan.length+'：'+step.q+'｜已采 '+out.size+'/500');
+        win.location.href=u.href;
+        if(!await waitLoad(win,step.q)){queryStats.push({query:step.q,tier:step.tier,added:0,total:out.size,error:'load-timeout',round});continue}
+      }catch{window.__FLOOR_FORCE_STOP__=true;break}
+    }else if(step.q!==Q){window.__FLOOR_FORCE_STOP__=true;break}
+    await collectQuery(win,step,i)
+  }
+  if(out.size>=TARGET||window.__FLOOR_FORCE_STOP__)break;
+  if(out.size===roundStart)noGrowthRounds++;else noGrowthRounds=0;
+  status(win,'第'+round+'轮完成｜'+out.size+'/500｜本轮新增 '+(out.size-roundStart)+'；继续尝试直到500条');
+  await new Promise(r=>setTimeout(r,noGrowthRounds>=2?3500:1200));
 }
-
 if(worker&&!worker.closed)try{worker.close()}catch{}
 window.__FLOOR_V721_COLLECTING__=false;
 
@@ -205,14 +218,14 @@ if(!out.size){
 }
 const tierCounts={A:0,B:0,C:0};
 for(const x of out.values())tierCounts[x.sampleTier]=(tierCounts[x.sampleTier]||0)+1;
-status(window,'抓取完成 '+out.size+'/500｜A '+tierCounts.A+' · B '+tierCounts.B+' · C '+tierCounts.C+'，正在导入…');
+status(window,(out.size>=TARGET?'已达到500条':'手动/异常停止')+'｜当前 '+out.size+'/500｜A '+tierCounts.A+' · B '+tierCounts.B+' · C '+tierCounts.C+'，正在导入…');
 
 const payload={
   source:location.href,keyword:Q,
   meta:{
     target:TARGET,rawCount:rawKeys.size,validCount:out.size,duplicateCount:Math.max(0,rawKeys.size-out.size),
     tierCounts,queryStats,expanded:true,durationSeconds:Math.round((Date.now()-START)/1000),
-    stoppedBy:out.size>=TARGET?'target':(Date.now()-START>=MAX_MS?'time-limit':'queries-exhausted')
+    stoppedBy:out.size>=TARGET?'target':(window.__FLOOR_FORCE_STOP__?'manual-or-fatal':'unknown')
   },
   items:[...out.values()]
 };
