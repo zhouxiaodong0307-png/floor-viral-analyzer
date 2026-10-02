@@ -3,6 +3,7 @@
 const VERSION='8.0.0', FINDKEY='floorGrowthFindingsV8', EXPKEY='floorGrowthExperimentsV8';
 const $id=id=>document.getElementById(id);
 const n=v=>(v===null||v===undefined||v===''||!Number.isFinite(Number(v)))?null:Number(v);
+const pos=v=>{const x=n(v);return x!==null&&x>0?x:null};
 const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
 const med=a=>{if(!a.length)return null;const s=a.slice().sort((x,y)=>x-y),m=(s.length-1)/2,i=Math.floor(m),j=Math.ceil(m);return i===j?s[i]:s[i]+(s[j]-s[i])*(m-i)};
 const quant=(a,p)=>{if(!a.length)return null;const s=a.slice().sort((x,y)=>x-y),i=(s.length-1)*p,l=Math.floor(i),h=Math.ceil(i);return l===h?s[l]:s[l]+(s[h]-s[l])*(i-l)};
@@ -118,7 +119,7 @@ const PLATFORM={
       ['cta','咨询行动引导',x=>/私聊|咨询|问我|发面积|发尺寸|联系|沟通/.test((x.title||'')+' '+(x.text||''))]
     ],
     dims(x){
-      const exp=n(x.exposure??x.impressions),views=n(x.views),wants=n(x.wants),consults=n(x.consults),sales=n(x.sales??x.sold),days=ageDays(x);
+      const exp=pos(x.exposure??x.impressions),views=pos(x.views),wants=n(x.wants),consults=n(x.consults),sales=n(x.sales??x.sold),days=ageDays(x);
       return {
         exposure:exp,views,wants,consults,sales,days,
         clickRate:exp>0&&views!==null?views/exp:null,
@@ -150,7 +151,7 @@ const PLATFORM={
       ['tags','话题/标签完整',x=>/#\S+/.test(x.text||'')]
     ],
     dims(x){
-      const views=n(x.views),likes=n(x.likes),favs=n(x.favs),comments=n(x.comments),shares=n(x.shares),days=ageDays(x);
+      const views=pos(x.views),likes=n(x.likes),favs=n(x.favs),comments=n(x.comments),shares=n(x.shares),days=ageDays(x);
       const total=[likes,favs,comments,shares].filter(v=>v!==null).reduce((s,v)=>s+v,0);
       const any=[likes,favs,comments,shares].some(v=>v!==null);
       return {
@@ -173,7 +174,7 @@ const PLATFORM={
 PLATFORM.default={
   label:'当前平台',
   featureDefs:PLATFORM['小红书'].featureDefs,
-  dims(x){const views=n(x.views),eng=interactions(x,'default'),days=ageDays(x);return{views,eng,days,engRate:views>0&&eng!==null?eng/views:null,speed:days!==null&&eng!==null?eng/Math.max(.25,days):null}},
+  dims(x){const views=pos(x.views),eng=interactions(x,'default'),days=ageDays(x);return{views,eng,days,engRate:views>0&&eng!==null?eng/views:null,speed:days!==null&&eng!==null?eng/Math.max(.25,days):null}},
   weights:{views:.25,engRate:.45,speed:.30},
   kinds:{views:'流量型',engRate:'互动型',speed:'异常爆发型'},
   dimLabels:{views:'浏览',engRate:'互动率',speed:'增长速度'},
@@ -301,7 +302,7 @@ function analyze(){
   const preliminary=defs.map(d=>({id:d[0]}));
   const findings=featureEvidence(high,normal,defs,coverage,stability,1);
   for(const f of findings){f.cycles=cycleCount(platform,f.id)}
-  const findings2=featureEvidence(high,normal,defs,coverage,stability,Math.max(1,...findings.map(f=>f.cycles)));
+  const findings2=featureEvidence(high,normal,defs,coverage,stability,1);
   // restore per-feature cycle counts and cross-platform notes
   for(const f of findings2){f.cycles=cycleCount(platform,f.id);f.cross=crossSignal(f.id,platform)}
   // re-evaluate strong evidence with its own repeated-cycle count
@@ -312,6 +313,20 @@ function analyze(){
   const reusable=findings2.filter(f=>f.category==='可以复用'),testable=findings2.filter(f=>f.category==='值得测试'),none=findings2.filter(f=>f.category==='暂无价值');
   const types={};for(const x of high)types[x.__kind]=(types[x.__kind]||0)+1;
   const dominant=Object.entries(types).sort((a,b)=>b[1]-a[1])[0]?.[0]||'高表现';
+  const typeFindings={};
+  for(const [kind,count] of Object.entries(types)){
+    if(count<5)continue;
+    const subset=high.filter(x=>x.__kind===kind);
+    typeFindings[kind]=featureEvidence(subset,normal,defs,coverage,stability,1).filter(f=>f.diff>=.08).slice(0,3);
+  }
+  const anomalyCases=anomalies.slice(0,6).map(x=>{
+    const cp=x.__cohort||[],prices=cp.map(z=>n(z.price)).filter(v=>v!==null),pm=med(prices),p=n(x.price),d=ageDays(x);
+    let mark='值得研究';
+    if(p!==null&&pm!==null&&p<pm*.55)mark='特殊低价';
+    else if(d!==null&&d>90)mark='上架时间较久';
+    else if(x.__complete<.4)mark='数据异常/覆盖不足';
+    return {title:x.title,url:x.url,mark};
+  });
   let conf='低',confClass='low';
   if(high.length>=50&&normal.length>=100&&coverage>=.55&&stability>=.70){conf='高';confClass='good'}
   else if(high.length>=30&&normal.length>=60&&coverage>=.40){conf='中';confClass='base'}
@@ -319,7 +334,7 @@ function analyze(){
   else conf='探索';
   const strongest=reusable[0]||testable[0]||findings2[0]||null;
   saveFindings(platform,findings2);
-  return{platform,model,batch,rawComparable:comparable0.usable.length,debias:deb,rows:normalPool,high,normal,anomalies,findings:findings2,reusable,testable,none,coverage,stability,confidence:[conf,confClass],strongest,dominant,empty:false};
+  return{platform,model,batch,rawComparable:comparable0.usable.length,debias:deb,rows:normalPool,high,normal,anomalies,anomalyCases,typeFindings,findings:findings2,reusable,testable,none,coverage,stability,confidence:[conf,confClass],strongest,dominant,empty:false};
 }
 
 function ensureUI(){
@@ -331,8 +346,8 @@ function ensureUI(){
   let d=$id('v8Decision');
   if(!d){
     d=document.createElement('section');d.id='v8Decision';d.className='v8-decision';
-    d.innerHTML='<div class="v8-kicker">本轮结果</div><div class="v8-hero"><div class="v8-main"><div class="v8-title" id="v8Conclusion">等待数据</div><div class="v8-why" id="v8Why">完成一次抓取后，这里只保留最重要的结论。</div></div><div class="v8-action"><small>下一条最值得测试</small><b id="v8Action">先完成抓取</b><span id="v8ActionSub">一次只改变一个主要变量。</span></div></div><div class="v8-metrics" id="v8Metrics"></div><div class="v8-section"><div class="v8-section-head"><b>高价值内容为什么表现好</b><span>最多3个关键原因</span></div><div class="v8-reasons" id="v8Reasons"></div></div><div class="v8-section"><div class="v8-section-head"><b>关键证据</b><button class="v8-details-btn" id="v8DetailsBtn">查看分析依据</button></div><div class="v8-details" id="v8Details"><div class="v8-pools" id="v8Pools"></div><div class="v8-evidence" id="v8Evidence"></div><div class="v8-section-head" style="margin-top:10px"><b>高价值参考</b><span id="v8HighLabel"></span></div><div class="v8-high-list" id="v8HighList"></div></div></div>';
-    if(capture)capture.after(d);else document.querySelector('.top')?.after(d);
+    d.innerHTML='<div class="v8-kicker">本轮结果</div><div class="v8-hero"><div class="v8-main"><div class="v8-title" id="v8Conclusion">等待数据</div><div class="v8-why" id="v8Why">完成一次抓取后，这里只保留最重要的结论。</div></div><div class="v8-action"><small>下一条最值得测试</small><b id="v8Action">先完成抓取</b><span id="v8ActionSub">一次只改变一个主要变量。</span></div></div><div class="v8-metrics" id="v8Metrics"></div><div class="v8-section"><div class="v8-section-head"><b>高价值内容为什么表现好</b><span>最多3个关键原因</span></div><div class="v8-reasons" id="v8Reasons"></div></div><div class="v8-section"><div class="v8-section-head"><b>关键证据</b><button class="v8-details-btn" id="v8DetailsBtn">查看分析依据</button></div><div class="v8-details" id="v8Details"><div class="v8-pools" id="v8Pools"></div><div class="v8-evidence" id="v8Evidence"></div><div class="v8-section-head" style="margin-top:10px"><b>高价值参考</b><span id="v8HighLabel"></span></div><div class="v8-high-list" id="v8HighList"></div><div class="v8-section-head" style="margin-top:10px"><b>异常高表现案例</b><span>不参与普通规律计算</span></div><div class="v8-high-list" id="v8AnomalyList"></div></div></div>';
+    document.querySelector('.top')?.after(d);
     $id('v8DetailsBtn').onclick=()=>{$id('v8Details').classList.toggle('show');$id('v8DetailsBtn').textContent=$id('v8Details').classList.contains('show')?'收起分析依据':'查看分析依据'};
   }
   if(genCard&&d.nextElementSibling!==genCard) d.after(genCard);
@@ -384,7 +399,7 @@ function renderDecision(r){
   $id('v8ActionSub').textContent=s&&s.category!=='暂无价值'?'价格、主体产品信息、发布时间等尽量保持接近，用下一轮结果验证这个相关性。':'当前证据不足，不建议同时改多个变量。';
   $id('v8Metrics').innerHTML=metricsFor(r).map(([v,l])=>'<div class="v8-metric"><b>'+esc(v)+'</b><span>'+esc(l)+'</span></div>').join('');
   const reasons=[];
-  if(r.dominant)reasons.push(['主要高价值类型：'+r.dominant,'高价值内容不是一种“好”，当前这一轮主要赢在 '+r.dominant+'。']);
+  if(r.dominant){const tf=(r.typeFindings&&r.typeFindings[r.dominant]||[])[0];reasons.push(['主要高价值类型：'+r.dominant,tf?('这一类型最明显的差异是「'+tf.label+'」，相对普通组 '+(tf.diff>=0?'+':'')+Math.round(tf.diff*100)+'%。'):('高价值内容不是一种“好”，当前这一轮主要赢在 '+r.dominant+'。')]);}
   for(const f of r.reusable.concat(r.testable).slice(0,2))reasons.push([f.label,(f.category==='可以复用'?'去偏后仍较稳定':'存在明显信号，仍需实测')+'；高表现 '+fmtPct(f.hp)+' / 普通 '+fmtPct(f.np)+'。']);
   if(reasons.length<3&&r.anomalies.length)reasons.push(['异常爆发案例单独研究',r.anomalies.length+' 条异常高表现已剥离，不会直接拉动普通规律。']);
   $id('v8Reasons').innerHTML=reasons.slice(0,3).map((x,i)=>'<div class="v8-reason"><strong>'+(i+1)+'. '+esc(x[0])+'</strong><span>'+esc(x[1])+'</span></div>').join('')||'<div class="v8-reason"><strong>暂无足够稳定原因</strong><span>继续补样本，不硬凑结论。</span></div>';
@@ -395,6 +410,7 @@ function renderDecision(r){
     const rr=itemReasons(x,r.model);
     return '<a class="v8-high" href="'+esc(x.url||'#')+'" target="_blank" rel="noopener"><div class="v8-no">'+(i+1)+'</div><div><b>'+esc(x.title||'未命名')+'</b><span>'+esc(x.__kind)+' · '+esc(rr.join('；'))+'</span></div><div class="v8-open">打开</div></a>';
   }).join('');
+  if($id('v8AnomalyList'))$id('v8AnomalyList').innerHTML=r.anomalyCases.length?r.anomalyCases.map((x,i)=>'<a class="v8-high" href="'+esc(x.url||'#')+'" target="_blank" rel="noopener"><div class="v8-no">'+(i+1)+'</div><div><b>'+esc(x.title||'未命名')+'</b><span>'+esc(x.mark)+'</span></div><div class="v8-open">打开</div></a>').join(''):'<div class="v8-reason"><strong>本轮无明显异常爆发案例</strong><span>没有异常值需要单独剥离研究。</span></div>';
 }
 function parseProduct(raw){
   const spec=(raw.match(/\d{2,4}\s*[x×*]\s*\d{2,4}(?:\s*[x×*]\s*\d{1,3})?/i)||[])[0]||'';
