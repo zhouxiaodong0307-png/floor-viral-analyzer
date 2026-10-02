@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='8.0.0', FINDKEY='floorGrowthFindingsV8', EXPKEY='floorGrowthExperimentsV8';
+const VERSION='8.0.1', FINDKEY='floorGrowthFindingsV8', EXPKEY='floorGrowthExperimentsV8';
 const $id=id=>document.getElementById(id);
 const n=v=>(v===null||v===undefined||v===''||!Number.isFinite(Number(v)))?null:Number(v);
 const pos=v=>{const x=n(v);return x!==null&&x>0?x:null};
@@ -527,10 +527,10 @@ function saveFeedback(){
 function runAll(){
   ensureUI();
   const r=analyze();window.__v8Analysis=r;renderDecision(r);installGenerator();
-  const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.0：不同平台使用独立高价值模型；结论在前、行动其次、关键证据随后、原始数据最后。';
+  const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.0.1：不同平台使用独立高价值模型；结论在前、行动其次、关键证据随后、原始数据最后。';
   const sub=document.querySelector('.top .sub');if(sub)sub.textContent='找到高表现内容 → 解释为什么好 → 提炼下一条最值得测试的变量';
-  const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.0';
-  document.title='多平台内容增长决策系统 V8.0';
+  const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.0.1';
+  document.title='多平台内容增长决策系统 V8.0.1';
 }
 const oldRender=window.render;
 if(typeof oldRender==='function'){
