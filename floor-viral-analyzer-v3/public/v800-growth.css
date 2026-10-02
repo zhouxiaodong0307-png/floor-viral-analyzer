@@ -270,3 +270,34 @@
   .g82-best-ref b{-webkit-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;white-space:normal}
   .g82-best-ref small{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 }
+
+
+/* V8.2.3 — light semantic color cues, no extra visual clutter */
+.g823-raw-count{
+  display:inline-flex;align-items:center;justify-content:center;
+  margin-left:8px;padding:4px 7px;border-radius:999px;
+  background:#eef4ff;color:#365f9d;font-size:9px;font-weight:850;white-space:nowrap
+}
+.g823-strategy-tone{
+  position:relative;padding-left:10px!important;border-top:1px solid var(--line)
+}
+.g823-strategy-tone:before{
+  content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:3px
+}
+.g823-tone-0:before{background:#5b8def}.g823-tone-0 span{color:#3f6db2}
+.g823-tone-1:before{background:#39a58c}.g823-tone-1 span{color:#247b69}
+.g823-tone-2:before{background:#8a6fd1}.g823-tone-2 span{color:#684fa8}
+.g823-tone-3:before{background:#d49a32}.g823-tone-3 span{color:#9a6a10}
+
+.g823-field-title>span{color:#3f6db2}
+.g823-field-body>span{color:#684fa8}
+.g823-field-tags>span{color:#247b69}
+.g823-field-cover>span{color:#9a6a10}
+.g823-field-images>span{color:#8b5e3c}
+
+.g823-version-0 .g82-version-head{border-top:3px solid #5b8def;padding-top:8px}
+.g823-version-1 .g82-version-head{border-top:3px solid #8a6fd1;padding-top:8px}
+
+@media(max-width:700px){
+  .g823-raw-count{margin-left:5px;padding:3px 6px}
+}
