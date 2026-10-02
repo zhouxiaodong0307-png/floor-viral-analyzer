@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='8.2.1';
+const VERSION='8.2.2';
 const EXPKEY='floorGrowthExperimentsV81';
 const REPORTKEY='floorGrowthReportsV814';
 const $id=id=>document.getElementById(id);
@@ -76,7 +76,8 @@ function debias(items,p){
 
 const XHS_FEATURES=[
   ['titleSpec','标题加入具体规格数字',x=>/\d{2,4}\s*[x×*]\s*\d{2,4}(?:\s*[x×*]\s*\d{1,3})?/i.test(x.title||'')],
-  ['titleNumber','标题加入具体数字',x=>/\d/.test(x.title||'')],
+  ['titleNumber','标题采用数字清单/数量结构',x=>/(?:^|[^\d])\d{1,2}\s*(?:个|条|点|种|件|步|招|坑|建议|问题|理由|方法|误区|细节)/.test(x.title||'')],
+  ['titleYears','标题出现明确时间/使用年限',x=>/\d+(?:\.\d+)?\s*(?:年|个月|月|天)/.test(x.title||'')],
   ['titlePrice','标题直接出现具体价格',x=>/[¥￥]\s*\d|\d+(?:\.\d+)?\s*元/.test(x.title||'')],
   ['titleMaterial','标题直接出现具体木种',x=>/(红檀香|缅甸柚木|柚木|橡木|白橡|欧橡|紫檀|菠萝格|龙凤檀|黑胡桃|白蜡木|重蚁木)/.test(x.title||'')],
   ['titleScene','标题直接出现使用场景',x=>/客厅|卧室|家装|装修|新房|老房|民宿|办公室|写字楼|地暖/.test(x.title||'')],
@@ -141,7 +142,7 @@ function modelFor(p){
 }
 function ageBand(d){if(d===null)return'时间未知';return d<=7?'近7天':d<=30?'8-30天':'30天以上'}
 function buildComparable(batch,p,model){
-  const base=batch.filter(x=>p==='闲鱼'?floorType(x)!=='exclude':!!String(x.title||'').trim());
+  const base=batch.filter(x=>floorType(x)!=='exclude'&&!!String(x.title||'').trim());
   const rows=base.map(x=>({...x,__dims:model.dims(x),__group:model.group(x)}));
   const keys=p==='小红书'?[x=>[x.__group.type,x.__group.material,ageBand(x.__group.days)].join('|'),x=>[x.__group.type,ageBand(x.__group.days)].join('|'),x=>x.__group.type]:[x=>[x.__group.type,x.__group.condition,x.__group.material,ageBand(x.__group.days)].join('|'),x=>[x.__group.type,x.__group.condition].join('|'),x=>x.__group.type];
   const maps=keys.map(fn=>{const m=new Map();for(const x of rows){const k=fn(x);if(!m.has(k))m.set(k,[]);m.get(k).push(x)}return m});
@@ -232,11 +233,19 @@ function numericMeaning(p){
 function strategyPlan(s,p,variant='A'){
   const n=numericMeaning(p),m=p.mat;
   let action='',angle='',why='';
-  if(s.id==='titleSpec'||s.id==='titleNumber'){
-    action='标题加入完整且有意义的具体信息';
+  if(s.id==='titleSpec'){
+    action='标题加入完整且有意义的规格信息';
     if(n?.type==='规格'){angle=variant==='A'?'用完整规格回答“铺出来是什么感觉”':'用完整规格提出“和其他规格差在哪”';why=n.meaning}
-    else if(n){angle='把'+n.type+'和真实选购问题连接起来';why=n.meaning}
-    else{angle='需要先补充有单位、有含义的真实数字';why='单独的“910”没有语义，不能直接写进标题'}
+    else{angle='需要先补充完整规格';why='规格型信号只有在真实规格存在时才执行'}
+  }else if(s.id==='titleNumber'){
+    action='用数字清单结构组织标题和正文';
+    angle=variant==='A'?'用“4个问题”做选购清单':'用“3个细节”做阅读入口';
+    why='这里的数字是内容结构，不是产品规格；小红书用户更容易快速理解和收藏'
+  }else if(s.id==='titleYears'){
+    title=variant==='A'?m+'用了几年以后，最容易看出什么差别？':m+'别只看刚铺完，时间久了更该看这几点';
+    body='地板是不是适合长期用，不只是看刚铺完那一刻。\n\n更值得关注的是长期使用后的稳定性、表面状态、收口变化和日常打理。没有真实使用年限时，不会编造具体“用了几年”的经历。';
+    cover='如果有真实完工/使用前后素材，用同一空间做时间对比；没有就用细节实拍。';
+    images='当前实拍 → 边角/收口 → 表面细节 → 日常使用场景。';
   }else if(s.id==='titleScene'||s.id==='sceneBody'){action='从真实使用场景切入';angle=variant==='A'?'先说空间，再说产品':'先提家装问题，再给判断';why='让用户先知道这条内容和自己的空间有什么关系'}
   else if(s.id==='titleQuestion'){action='用明确问题做标题入口';angle=variant==='A'?'直接问“怎么选”':'直接问“差别在哪”';why='问题必须对应真实购买决策，而不是空泛提问'}
   else if(s.id==='titleCompare'){action='用对比建立阅读动机';angle=variant==='A'?'单板 VS 铺进空间':'同木种不同规格/铺法的判断差异';why='对比要回答真实选择问题，不做无依据结论'}
@@ -254,7 +263,19 @@ function strategyPlan(s,p,variant='A'){
 function naturalXhsGenerate(p,s,variant='A'){
   const m=p.mat,plan=strategyPlan(s,p,variant),n=plan.numeric,sp=semanticSpec(p);
   let title='',body='',cover='',images='';
-  if((s.id==='titleSpec'||s.id==='titleNumber')&&sp){
+  if(s.id==='titleNumber'){
+    if(variant==='A'){
+      title=m+'怎么选？先看这4个问题';
+      body='如果准备铺'+m+'，我会先把这4个问题确认清楚：\n1. 家里实际是什么空间和采光\n2. 更适合什么规格和铺法\n3. 柜体、门套和收口怎么衔接\n4. 日常使用更在意脚感、稳定还是打理\n\n这4项先想清楚，再去看具体产品会更容易判断。';
+      cover='真实空间或产品现场图，封面只保留「铺'+m+'前先看4个问题」。';
+      images='空间全景 → 板面近景 → 铺法/规格 → 收口细节。';
+    }else{
+      title='准备铺'+m+'，这3个细节很容易被忽略';
+      body='看'+m+'时，很多人第一眼先看颜色，但真正落地以后，我更建议先看这3件事：\n1. 房间尺度和整体采光\n2. 规格、铺法和视觉比例\n3. 柜体、门套、收口能不能顺下来\n\n把这3个细节一起看，比只盯着一块样板更接近最后铺出来的效果。';
+      cover='用真实铺装/样板现场，标题写「3个容易忽略的细节」。';
+      images='真实空间 → 单板 → 拼铺 → 收口。';
+    }
+  }else if(s.id==='titleSpec'&&sp){
     if(variant==='A'){
       title=sp.full+'的'+m+'，铺出来更适合什么空间？';
       body='同样是'+m+'，规格不同，铺出来的比例感会很不一样。\n\n'+sp.full+'这个规格，我会重点看房间尺度、采光和铺法，再决定它适不适合家里。单看一块板很难判断，最好放到真实空间里看整体效果。';
@@ -266,7 +287,7 @@ function naturalXhsGenerate(p,s,variant='A'){
       cover='做“完整规格 + 实际铺装”的对比封面，不写算法词或大段说明。';
       images='1. 两种尺度的铺装对比；2. '+sp.full+'实拍；3. 空间远景；4. 边角/收口。';
     }
-  }else if((s.id==='titleSpec'||s.id==='titleNumber')&&n){
+  }else if(s.id==='titleSpec'&&n){
     title=variant==='A'?n.value+'铺'+m+'，真正要先看什么？':m+'用到'+n.value+'，选的时候别只看表面效果';
     body='有具体条件以后，判断会比只说“好不好看”更有意义。\n\n这次把'+n.type+'放进真实选购场景里看：'+n.meaning+'。再结合现场空间和铺法，结论才有参考价值。';
     cover='封面只保留「'+n.value+' + '+m+'」和真实产品/空间。';
@@ -333,7 +354,7 @@ function naturalXhsGenerate(p,s,variant='A'){
 function validateSignal(s,o,p){
   const t=o.title,b=o.body,c=o.cover;
   if(s.id==='titleSpec')return !!p.spec&&t.includes(p.spec);
-  if(s.id==='titleNumber')return !!numericMeaning(p)&&(/\d/.test(t));
+  if(s.id==='titleNumber')return /\d{1,2}\s*(?:个|条|点|种|件|步|招|坑|问题|细节)/.test(t);
   if(s.id==='titlePrice')return !!p.price&&t.includes(p.price);
   if(s.id==='titleMaterial')return t.includes(p.mat);
   if(s.id==='titleScene')return /家里|客厅|卧室|家装|装修|空间/.test(t);
@@ -358,13 +379,13 @@ function readabilityCheck(o,s,p){
   if(bad)return{ok:false,reason:'出现后台/机械表达：'+bad};
   if(o.title.length<7||o.title.length>34)return{ok:false,reason:'标题长度不自然'};
   if(String(o.body||'').replace(/\s+/g,'').length<45)return{ok:false,reason:'正文过短'};
-  if((s.id==='titleNumber'||s.id==='titleSpec')&&!numericMeaning(p))return{ok:false,reason:'数字没有明确语义'};
-  if(/\b\d{2,4}\b/.test(o.title)&&s.id==='titleNumber'&&!/×|x|㎡|平米|平方|元|年|室|房/.test(o.title))return{ok:false,reason:'标题里的数字缺少单位或含义'};
+  if(s.id==='titleSpec'&&!numericMeaning(p))return{ok:false,reason:'规格信息没有明确语义'};
+  if(s.id==='titleNumber'&&!/\d{1,2}\s*(?:个|条|点|种|件|步|招|坑|问题|细节)/.test(o.title))return{ok:false,reason:'数字清单结构不自然'};
   return{ok:true,reason:''};
 }
 function eligibility(s,p){
   if(!s)return{ok:false,need:'没有可测试信号'};
-  if((s.id==='titleSpec'||s.id==='titleNumber')&&!numericMeaning(p))return{ok:false,need:'有意义的真实数字信息，例如完整规格 910×125×17、面积70㎡或价格530元/㎡'};
+  if(s.id==='titleSpec'&&!p.spec)return{ok:false,need:'真实规格，例如 910×125×17'};
   if(s.id==='titlePrice'&&!p.price)return{ok:false,need:'真实价格，例如 530元/㎡'};
   if(s.id==='titleLayout'&&!p.layout)return{ok:false,need:'真实户型，例如 三房两厅'};
   if(s.id==='titleArea'&&!p.area)return{ok:false,need:'真实面积，例如 70㎡'};
@@ -467,7 +488,7 @@ function humanSummary(r){
     return'本轮'+r.batch.length+'条小红书笔记中，已经出现相对稳定的内容差异：'+names+'更常出现在高表现内容里，可以优先用于下一轮内容。';
   }
   if(s){
-    return'本轮'+r.batch.length+'条小红书笔记中，暂时没有发现足够稳定的强规律；目前最明显的信号是“'+s.label+'”，高表现 '+fmtPct(s.hp)+'、普通 '+fmtPct(s.np)+'、差异 '+(s.diff>=0?'+':'')+Math.round(s.diff*100)+'%，属于'+s.level+'，更适合继续测试而不是直接固化成模板。';
+    return'本轮'+r.batch.length+'条小红书笔记中，暂时没有发现足够稳定的强规律；目前最明显的信号是“'+s.label+'”，高表现 '+fmtPct(s.hp)+'、普通 '+fmtPct(s.np)+'、差异 '+(s.diff>=0?'+':'')+Math.round(s.diff*100)+'%，属于'+s.level+'。这表示它只适合继续验证，不代表已经形成固定模板。';
   }
   return'本轮'+r.batch.length+'条小红书笔记中，没有发现足够稳定的强规律，高表现组和普通组的内容写法整体较接近；这本身也是有效结论，当前更应该补完整互动数据，而不是硬造一个“爆款公式”。';
 }
@@ -475,11 +496,12 @@ function nextAdvice(r){
   const s=r.strongest||r.exploratory;
   if(!s)return{title:'本轮先不固定内容模板',doText:'先看分析报告里的观察信号，同时优先补充点赞、收藏、评论、转发等表现数据。',dont:'不要因为样本接近500条就强行制造规律。',purpose:'下一轮先提高可判断性，再验证内容差异。'};
   let doText=s.label;
-  if(s.id==='titleSpec'||s.id==='titleNumber')doText='标题加入与用户决策有关的完整具体信息，例如完整规格，并围绕空间适配、铺装效果或规格差异设计问题。';
+  if(s.id==='titleSpec')doText='标题加入与用户决策有关的完整规格信息，并围绕空间适配、铺装效果或规格差异设计问题。';
+  else if(s.id==='titleNumber')doText='测试“数字清单型标题”，例如“4个问题 / 3个细节”，数字用于组织内容，不要求你额外提供产品规格。';
   else if(s.id==='titleScene'||s.id==='sceneBody')doText='从真实家装场景切入，先让用户看到“这和我的空间有什么关系”。';
   else if(s.id==='titleCompare')doText='用真实对比回答一个选择问题，不做没有依据的结论。';
   else if(s.id==='titleQuestion')doText='标题直接提出一个具体选购问题，正文必须真正回答。';
-  return{title:s.label,doText,dont:(s.id==='titleSpec'||s.id==='titleNumber')?'不要把“910”这种孤立数字硬塞进标题；数字必须有单位、有意义。':'不要把后台统计标签直接写进正文。',purpose:'本轮只测试这一主变量，正文和图片风格尽量保持接近，用发布结果验证这个信号。'};
+  return{title:s.label,doText,dont:s.id==='titleSpec'?'不要把“910”这种孤立数字硬塞进标题；规格必须完整、有单位、有意义。':s.id==='titleNumber'?'不要把数字当产品参数硬塞；数字只用于自然的清单/数量结构。':'不要把后台统计标签直接写进正文。',purpose:'本轮只测试这一主变量，正文和图片风格尽量保持接近，用发布结果验证这个信号。'};
 }
 
 function bestReference(r){
@@ -512,7 +534,7 @@ function bestReference(r){
 }
 function buildReport(r){
   if(!r||r.empty||r.unsupported)return null;
-  const layers=metricLayers(r),opp=opportunityMap(r),topFindings=(r.reusable.concat(r.testable).length?r.reusable.concat(r.testable):(r.observed||[]).filter(x=>x.diff>0)).slice(0,5);
+  const layers=metricLayers(r),opp=opportunityMap(r),primary=r.reusable.concat(r.testable),seen=new Set(primary.map(x=>x.id)),secondary=(r.observed||[]).filter(x=>x.diff>=.03&&!seen.has(x.id)),topFindings=primary.concat(secondary).slice(0,5);
   const stop=db.lastMeta&&db.lastMeta.stoppedBy,stopMap={target:'达到目标500条',manual:'手动停止',saturated:'平台样本已饱和','safety-time-limit':'达到安全时限'};
   return{id:(db.lastCapturedAt||'latest')+'|'+r.platform,platform:r.platform,createdAt:nowISO(),summary:humanSummary(r),sample:{raw:r.batch.length,valid:r.pool.length,high:r.high.length,normal:r.normal.length},topFindings:topFindings.map(x=>({...x,explain:explainFinding(x)})),layers,profile:contentProfile(r),opportunity:opp,next:nextAdvice(r),reference:bestReference(r),limits:{coverage:r.coverage,stability:r.stability,anomalies:r.anomalies.length,rankOnlyRate:r.rankOnlyRate,stop:stopMap[stop]||''},confidence:r.confidence};
 }
@@ -602,7 +624,7 @@ function generateCurrent(){
 
 function renderFeedback(){const box=$id('g81Feedback');box.innerHTML='<div class="g81-feedback-title">发布后记录结果</div><div class="g81-feedback-grid"><label>浏览<input data-k="views" inputmode="decimal"></label><label>点赞<input data-k="likes" inputmode="decimal"></label><label>收藏<input data-k="favs" inputmode="decimal"></label><label>评论<input data-k="comments" inputmode="decimal"></label><label>转发<input data-k="shares" inputmode="decimal"></label><label>发布天数<input data-k="days" inputmode="decimal"></label></div><button id="g81SaveFeedback" class="g81-primary">保存结果</button>';box.classList.add('show');$id('g81SaveFeedback').onclick=saveFeedback}
 function saveFeedback(){let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}const wanted=window.__g82Versions&&window.__g82Versions[window.__g82RecordIndex||0]?.label;const d=[...a].reverse().find(x=>x.platform===currentPlatform()&&x.status==='draft'&&(!wanted||x.variant===wanted));if(!d)return setStatus('没有找到待验证的生成记录。','warn');const m={};$id('g81Feedback').querySelectorAll('input').forEach(i=>{const v=num(i.value);if(v!==null)m[i.dataset.k]=v});const total=(m.likes||0)+(m.favs||0)+(m.comments||0)+(m.shares||0),days=m.days||1;d.metrics=m;d.performance=m.views?total/m.views:total/Math.max(.25,days);d.status='measured';d.measuredAt=nowISO();localStorage.setItem(EXPKEY,JSON.stringify(a.slice(-120)));$id('g81Feedback').innerHTML='<div class="g81-saved">✓ 已保存，本轮结果会进入后续同平台验证。</div>';setStatus('发布结果已记录。','oktxt')}
-function runAll(){ensureUI();const r=analyze();window.__g81Analysis=r;renderAnalysis(r);const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const sub=document.querySelector('.top .sub');if(sub)sub.textContent='小红书：抓取 → 综合分析 → 测试策略 → 自然内容 → 发布验证';const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.2.1';document.title='多平台内容增长决策系统 V8.2.1';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.2.1：结论在前、行动其次、关键证据随后、原始数据最后；生成结果必须通过测试变量执行校验。'}
+function runAll(){ensureUI();const r=analyze();window.__g81Analysis=r;renderAnalysis(r);const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const sub=document.querySelector('.top .sub');if(sub)sub.textContent='小红书：抓取 → 综合分析 → 测试策略 → 自然内容 → 发布验证';const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.2.2';document.title='多平台内容增长决策系统 V8.2.2';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.2.2：结论在前、行动其次、关键证据随后、原始数据最后；生成结果必须通过测试变量执行校验。'}
 const oldRender=window.render;if(typeof oldRender==='function'){window.render=function(){const v=oldRender.apply(this,arguments);setTimeout(runAll,40);return v}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(runAll,90));else setTimeout(runAll,90);
 })();
