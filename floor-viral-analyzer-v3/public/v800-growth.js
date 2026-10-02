@@ -166,17 +166,21 @@ function outlierRows(rows){
 function evidence(high,normal,features,coverage,stability,rankOnlyRate){
   const rank={可以复用:3,值得测试:2,暂无价值:1};
   const z=(p1,n1,p2,n2)=>{if(!n1||!n2)return 0;const p=(p1*n1+p2*n2)/(n1+n2),se=Math.sqrt(Math.max(1e-9,p*(1-p)*(1/n1+1/n2)));return Math.abs(p1-p2)/se};
-  return features.map(([id,label,fn])=>{
-    const hc=high.filter(fn).length,nc=normal.filter(fn).length,hp=high.length?hc/high.length:0,np=normal.length?nc/normal.length:0,diff=hp-np,zz=z(hp,high.length,np,normal.length);
-    let level='探索性信号';
-    if(rankOnlyRate<.5&&high.length>=50&&normal.length>=100&&diff>=.15&&zz>=2&&coverage>=.55&&stability>=.70)level='强证据';
-    else if(rankOnlyRate<.7&&high.length>=30&&normal.length>=60&&diff>=.10&&zz>=1.8&&coverage>=.35)level='中等证据';
-    else if(high.length>=10&&normal.length>=30&&diff>=.06&&zz>=1.35)level='弱证据';
-    let category='暂无价值';
-    if(level==='强证据'&&diff>=.15)category='可以复用';
-    else if((level==='中等证据'||level==='弱证据')&&diff>=.08)category='值得测试';
-    else if(level==='探索性信号'&&high.length>=50&&normal.length>=100&&diff>=.05&&zz>=1.8)category='值得测试';
-    return{id,label,hc,nc,hp,np,diff,z:zz,level,category,total:high.length+normal.length}
+  return features.map(([id,label,fn,available])=>{
+    const hh=available?high.filter(available):high,nn=available?normal.filter(available):normal;
+    const hc=hh.filter(fn).length,nc=nn.filter(fn).length,hp=hh.length?hc/hh.length:0,np=nn.length?nc/nn.length:0,diff=hp-np,zz=z(hp,hh.length,np,nn.length);
+    const featureCoverage=(high.length+normal.length)?(hh.length+nn.length)/(high.length+normal.length):0;
+    let level='数据不足',category='暂无价值';
+    if(hh.length>=10&&nn.length>=30){
+      level='探索性信号';
+      if(rankOnlyRate<.5&&hh.length>=50&&nn.length>=100&&diff>=.15&&zz>=2&&coverage>=.55&&featureCoverage>=.70&&stability>=.70)level='强证据';
+      else if(rankOnlyRate<.7&&hh.length>=30&&nn.length>=60&&diff>=.10&&zz>=1.8&&coverage>=.35&&featureCoverage>=.45)level='中等证据';
+      else if(hh.length>=10&&nn.length>=30&&diff>=.06&&zz>=1.35&&featureCoverage>=.20)level='弱证据';
+      if(level==='强证据'&&diff>=.15)category='可以复用';
+      else if((level==='中等证据'||level==='弱证据')&&diff>=.08)category='值得测试';
+      else if(level==='探索性信号'&&hh.length>=50&&nn.length>=100&&diff>=.05&&zz>=1.8)category='值得测试';
+    }
+    return{id,label,hc,nc,hp,np,diff,z:zz,level,category,total:hh.length+nn.length,highAvailable:hh.length,normalAvailable:nn.length,featureCoverage};
   }).sort((a,b)=>((rank[b.category]||0)-(rank[a.category]||0))||b.diff-a.diff||b.z-a.z);
 }
 function batchItems(){
@@ -208,7 +212,7 @@ function parseProduct(raw){
   return{raw,spec,area,layout,install,price,mat,otherNum,factory:/工厂|厂家|车间/.test(raw),experience:/用了|使用|实测|装完|铺完|住了|完工|后悔|踩坑/.test(raw)};
 }
 function eligibility(s,p){
-  if(!s)return{ok:false,need:'没有可测试信号'};if(s.id==='titleSpec'&&!p.spec)return{ok:false,need:'真实规格，例如 910×125×18'};if(s.id==='titlePrice'&&!p.price)return{ok:false,need:'真实价格，例如 530元/㎡'};if(s.id==='titleNumber'&&!p.otherNum)return{ok:false,need:'一个真实数字信息，例如规格、面积、价格或使用年限'};if(s.id==='titleLayout'&&!p.layout)return{ok:false,need:'真实户型，例如 三房两厅'};if(s.id==='titleArea'&&!p.area)return{ok:false,need:'真实面积，例如 70㎡'};if(s.id==='titleInstall'&&!p.install)return{ok:false,need:'真实铺法，例如 鱼骨 / 人字 / 工字'};if(s.id==='titleResult'&&!p.experience)return{ok:false,need:'真实使用/完工结果，避免编造体验'};if(s.id==='factory'&&!p.factory)return{ok:false,need:'确认这条内容确实是工厂/生产现场'};return{ok:true,need:''};
+  if(!s)return{ok:false,need:'没有可测试信号'};if(s.id==='titleSpec'&&!p.spec)return{ok:false,need:'真实规格，例如 910×125×18'};if(s.id==='titlePrice'&&!p.price)return{ok:false,need:'真实价格，例如 530元/㎡'};if(s.id==='titleLayout'&&!p.layout)return{ok:false,need:'真实户型，例如 三房两厅'};if(s.id==='titleArea'&&!p.area)return{ok:false,need:'真实面积，例如 70㎡'};if(s.id==='titleInstall'&&!p.install)return{ok:false,need:'真实铺法，例如 鱼骨 / 人字 / 工字'};if(s.id==='titleResult'&&!p.experience)return{ok:false,need:'真实使用/完工结果，避免编造体验'};if(s.id==='factory'&&!p.factory)return{ok:false,need:'确认这条内容确实是工厂/生产现场'};return{ok:true,need:''};
 }
 function signalPool(r){
   const a=r.reusable.concat(r.testable);
