@@ -3,8 +3,9 @@ if(window.__FLOOR_V721_COLLECTING__)return;
 window.__FLOOR_V721_COLLECTING__=true;
 
 const TARGET=500, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
-const COLLECTOR_VERSION='8.1.1';
-window.__FLOOR_FORCE_STOP__=false;
+const COLLECTOR_VERSION='8.1.2';
+window.__FLOOR_MANUAL_STOP__=false;
+let fatalReason='';
 const safeQuery=(root,sel)=>{try{return root&&root.querySelector?root.querySelector(sel):null}catch{return null}};
 const START=Date.now();
 const C=s=>String(s||'').replace(/\s+/g,' ').trim();
@@ -20,6 +21,14 @@ function add(q,tier){q=C(q);if(!q||seenQ.has(q))return;seenQ.add(q);plan.push({q
 add(Q,'A');
 if(Q&&!/地板/.test(Q)){add(Q+'地板','A');add(Q+'实木地板','A')}
 else if(Q){const bare=C(Q.replace(/木?地板/g,''));if(bare&&bare!==Q)add(bare,'A')}
+if(IS_XHS&&Q){
+  const core=C(Q.replace(/木?地板/g,''))||Q;
+  [
+    core+'地板 实景',core+'地板 装修',core+'地板 铺装',core+'地板 怎么选',
+    core+'地板 避坑',core+'地板 价格',core+'地板 对比',core+'地板 工厂',
+    core+'地板 案例',core+'地板 客厅',core+'地板 卧室',core+'实木地板'
+  ].forEach(q=>add(q,'A'));
+}
 const hit=woods.find(w=>Q.includes(w));
 for(const w of woods){
   if(w===hit)continue;
@@ -36,7 +45,7 @@ function status(win,msg){
       b.style='position:fixed;right:18px;top:18px;z-index:2147483647;background:#111;color:#fff;padding:12px 15px;border-radius:12px;font:600 13px -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 8px 28px #0004;max-width:460px;line-height:1.45;display:flex;gap:10px;align-items:center;flex-wrap:wrap';
       const t=win.document.createElement('span');t.id='__floor_v721_status_text__';t.style='flex:1 1 260px';
       const stop=win.document.createElement('button');stop.textContent='停止并导入';stop.style='border:0;border-radius:8px;padding:6px 9px;font:700 11px -apple-system,BlinkMacSystemFont,sans-serif;cursor:pointer';
-      stop.onclick=()=>{window.__FLOOR_FORCE_STOP__=true;stop.disabled=true;stop.textContent='正在停止…'};
+      stop.onclick=()=>{window.__FLOOR_MANUAL_STOP__=true;stop.disabled=true;stop.textContent='正在停止…'};
       b.append(t,stop);win.document.documentElement.appendChild(b);
     }
     const t=b.querySelector('#__floor_v721_status_text__');if(t)t.textContent=msg;
@@ -165,13 +174,13 @@ async function collectQuery(win,step,index){
   let stale=0,last=out.size;
   try{win.scrollTo(0,0)}catch{}
   await new Promise(r=>setTimeout(r,350));
-  for(let i=0;out.size<TARGET&&!window.__FLOOR_FORCE_STOP__;i++){
+  for(let i=0;out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__;i++){
     scan(win,step.q,step.tier);
     const elapsed=Math.round((Date.now()-START)/1000);
     status(win,'深度抓取 '+out.size+'/500｜'+(index+1)+'/'+plan.length+' '+step.tier+'级：'+step.q+'｜'+elapsed+'秒');
     if(out.size===last)stale++;else stale=0;
     last=out.size;
-    if(stale>=10)break;
+    if(stale>=18)break;
     try{
       win.scrollBy(0,Math.max(650,win.innerHeight*.85));
       for(const e of scrollables(win)) e.scrollTop=Math.min(e.scrollHeight,e.scrollTop+Math.max(550,e.clientHeight*.8));
@@ -183,33 +192,51 @@ async function collectQuery(win,step,index){
 }
 
 let worker=null;
-try{worker=window.open(location.href,'floorCollectorV721','width=980,height=760,left=28,top=28')}catch{}
-let win=worker&&!worker.closed?worker:window;
-
+try{worker=window.open('about:blank','floorCollectorV812','width=980,height=760,left=28,top=28')}catch{}
+if(!worker||worker.closed){
+  window.__FLOOR_V721_COLLECTING__=false;
+  document.getElementById('__floor_v721_status__')?.remove();
+  alert('采集器 V'+COLLECTOR_VERSION+'：采集窗口被浏览器拦截。没有导入任何不完整数据。请允许小红书弹窗后重新点击“永久采集器”。');
+  return
+}
+let win=worker;
 let round=0,noGrowthRounds=0;
-while(out.size<TARGET&&!window.__FLOOR_FORCE_STOP__){
+while(out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__){
+  if(!win||win.closed){fatalReason='采集窗口被关闭';break}
   round++;
   const roundStart=out.size;
-  for(let i=0;i<plan.length&&out.size<TARGET&&!window.__FLOOR_FORCE_STOP__;i++){
+  for(let i=0;i<plan.length&&out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__;i++){
+    if(win.closed){fatalReason='采集窗口被关闭';break}
     const step=plan[i],u=new URL(base);
     if(u.searchParams.has('q')||!u.searchParams.has('keyword'))u.searchParams.set('q',step.q);else u.searchParams.set('keyword',step.q);
     u.searchParams.set('__floor_round',String(round));
-    if(win!==window){
+    let loaded=false;
+    for(let attempt=1;attempt<=3&&!loaded&&!window.__FLOOR_MANUAL_STOP__;attempt++){
       try{
-        status(win,'第'+round+'轮｜切换关键词 '+(i+1)+'/'+plan.length+'：'+step.q+'｜已采 '+out.size+'/500');
+        status(window,'第'+round+'轮｜关键词 '+(i+1)+'/'+plan.length+'：'+step.q+'｜已采 '+out.size+'/500');
         win.location.href=u.href;
-        if(!await waitLoad(win,step.q)){queryStats.push({query:step.q,tier:step.tier,added:0,total:out.size,error:'load-timeout',round});continue}
-      }catch{window.__FLOOR_FORCE_STOP__=true;break}
-    }else if(step.q!==Q){window.__FLOOR_FORCE_STOP__=true;break}
+        loaded=await waitLoad(win,step.q);
+      }catch{}
+      if(!loaded)await new Promise(r=>setTimeout(r,1200*attempt));
+    }
+    if(!loaded){
+      queryStats.push({query:step.q,tier:step.tier,added:0,total:out.size,error:'load-failed-after-3-retries',round});
+      continue
+    }
     await collectQuery(win,step,i)
   }
-  if(out.size>=TARGET||window.__FLOOR_FORCE_STOP__)break;
+  if(out.size>=TARGET||window.__FLOOR_MANUAL_STOP__||fatalReason)break;
   if(out.size===roundStart)noGrowthRounds++;else noGrowthRounds=0;
-  status(win,'第'+round+'轮完成｜'+out.size+'/500｜本轮新增 '+(out.size-roundStart)+'；继续尝试直到500条');
-  await new Promise(r=>setTimeout(r,noGrowthRounds>=2?3500:1200));
+  status(window,'第'+round+'轮完成｜'+out.size+'/500｜本轮新增 '+(out.size-roundStart)+'；未到500，继续下一轮');
+  await new Promise(r=>setTimeout(r,noGrowthRounds>=2?3000:1000));
 }
 if(worker&&!worker.closed)try{worker.close()}catch{}
 window.__FLOOR_V721_COLLECTING__=false;
+if(fatalReason&&out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__){
+  status(window,'采集异常中断｜已暂存 '+out.size+'/500｜未导入');
+  alert('采集器 V'+COLLECTOR_VERSION+'：'+fatalReason+'。当前 '+out.size+' 条未导入，避免把不完整数据当成500条结果。请重新点击永久采集器继续测试。');
+  return
+}
 
 if(!out.size){
   document.getElementById('__floor_v721_status__')?.remove();
@@ -218,14 +245,14 @@ if(!out.size){
 }
 const tierCounts={A:0,B:0,C:0};
 for(const x of out.values())tierCounts[x.sampleTier]=(tierCounts[x.sampleTier]||0)+1;
-status(window,(out.size>=TARGET?'已达到500条':'手动/异常停止')+'｜当前 '+out.size+'/500｜A '+tierCounts.A+' · B '+tierCounts.B+' · C '+tierCounts.C+'，正在导入…');
+status(window,(out.size>=TARGET?'已达到500条':'手动停止')+'｜当前 '+out.size+'/500｜A '+tierCounts.A+' · B '+tierCounts.B+' · C '+tierCounts.C+'，正在导入…');
 
 const payload={
   source:location.href,keyword:Q,
   meta:{
     target:TARGET,rawCount:rawKeys.size,validCount:out.size,duplicateCount:Math.max(0,rawKeys.size-out.size),
     tierCounts,queryStats,expanded:true,durationSeconds:Math.round((Date.now()-START)/1000),
-    stoppedBy:out.size>=TARGET?'target':(window.__FLOOR_FORCE_STOP__?'manual-or-fatal':'unknown')
+    stoppedBy:out.size>=TARGET?'target':(window.__FLOOR_MANUAL_STOP__?'manual':'unknown')
   },
   items:[...out.values()]
 };
