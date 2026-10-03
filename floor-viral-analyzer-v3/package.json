@@ -1,6 +1,6 @@
 {
   "name": "floor-viral-analyzer-v3",
-  "version": "8.2.8",
+  "version": "8.2.9",
   "private": true,
   "type": "module",
   "scripts": {

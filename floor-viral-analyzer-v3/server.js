@@ -1,4 +1,4 @@
-// deploy-refresh-v8.2.8
+// deploy-refresh-v8.2.9
 import express from "express";
 import { chromium } from "playwright";
 import dns from "node:dns/promises";
@@ -204,7 +204,7 @@ async function analyzeUrl(url) {
 }
 
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, version: "8.2.8", mode: "decision-system-permanent-collector" });
+  res.json({ ok: true, version: "8.2.9", mode: "decision-system-permanent-collector" });
 });
 
 app.get("/browser-bridge.zip", (req, res) => {
@@ -272,7 +272,7 @@ app.get("/mobile-import", (req, res) => {
   }
   mobileImports.delete(token);
   const safe = JSON.stringify(row.payload).replace(/</g, "\\u003c");
-  res.type("html").send(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>正在导入手机采集数据</title></head><body><script>localStorage.setItem('floorV7Import',JSON.stringify(${safe}));location.replace('/?imported=1&mobile=1&v=828&t='+Date.now());<\/script></body></html>`);
+  res.type("html").send(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>正在导入手机采集数据</title></head><body><script>localStorage.setItem('floorV7Import',JSON.stringify(${safe}));location.replace('/?imported=1&mobile=1&v=829&t='+Date.now());<\/script></body></html>`);
 });
 
 app.post("/import", (req, res) => {
@@ -285,10 +285,10 @@ app.post("/import", (req, res) => {
     const items = normalizeItems(rows, source, site);
     if (!items.length) throw new Error("没有收到有效内容数据");
     const safe = JSON.stringify({ source, site, keyword: clean(payload.keyword,120), meta: payload.meta || {}, capturedAt: new Date().toISOString(), items }).replace(/</g, "\\u003c");
-    res.type("html").send(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>正在导入</title></head><body><script>localStorage.setItem('floorV7Import',JSON.stringify(${safe}));location.replace('/?imported=1&v=828&t='+Date.now());<\/script></body></html>`);
+    res.type("html").send(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>正在导入</title></head><body><script>localStorage.setItem('floorV7Import',JSON.stringify(${safe}));location.replace('/?imported=1&v=829&t='+Date.now());<\/script></body></html>`);
   } catch (err) {
     res.status(400).type("html").send(`<!doctype html><meta charset="utf-8"><body style="font-family:-apple-system;padding:30px"><h2>导入失败</h2><p>${clean(err?.message || "未知错误", 300)}</p></body>`);
   }
 });
 
-app.listen(PORT, "0.0.0.0", () => console.log(`V8.2.8 running on :${PORT}`));
+app.listen(PORT, "0.0.0.0", () => console.log(`V8.2.9 running on :${PORT}`));
