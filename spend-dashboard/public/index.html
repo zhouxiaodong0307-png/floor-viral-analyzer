@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="theme-color" content="#5367e8"/>
+<title>个人消费看板 V1.2</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand"><div class="logo">¥</div><div class="brandText"><div class="brandTitle">个人消费看板</div><div class="brandSub" id="rangeText">读取数据中…</div></div></div>
+    <div class="grow"></div>
+    <div class="privacy"><span class="dot"></span>本地解析 · 加密云同步</div>
+    <div class="headActions"><select id="yearSel" class="select yearSel"></select><button class="btn syncBtn" id="syncBtn"><span class="syncDot" id="syncDot"></span><span class="syncText" id="syncText">云同步</span></button><button class="btn" id="backupBtn">备份</button><button class="btn primary" id="importBtn">导入账单</button></div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="overview">概览</button><button class="tab" data-tab="monthly">月度</button><button class="tab" data-tab="categories">分类</button><button class="tab" data-tab="details">明细</button><button class="tab" data-tab="review">待确认</button><button class="tab" data-tab="rules">规则</button>
+  </div>
+
+  <section class="panel active" id="overview">
+    <div class="grid4">
+      <div class="kpi"><div class="kLabel">确认个人消费</div><div class="kValue" id="kTotal">¥0</div><div class="kSub" id="kTotalSub">不含经营/普通转账/退款</div></div>
+      <div class="kpi"><div class="kLabel">完整月月均</div><div class="kValue" id="kAvg">¥0</div><div class="kSub" id="kAvgSub">按已有完整月份</div></div>
+      <div class="kpi"><div class="kLabel">最近一个月</div><div class="kValue" id="kLatest">¥0</div><div class="kSub" id="kLatestSub">—</div></div>
+      <div class="kpi"><div class="kLabel">待确认支出</div><div class="kValue" id="kPending">¥0</div><div class="kSub" id="kPendingSub">不会计入确认消费</div></div>
+    </div>
+    <div class="mainGrid">
+      <div class="card"><div class="cardHead"><div><div class="cardTitle">月度消费</div><div class="cardHint">只统计确认个人消费</div></div><div class="right cardHint" id="monthPeak"></div></div><div class="monthBars" id="monthBars"></div></div>
+      <div class="card"><div class="cardHead"><div><div class="cardTitle">消费去向</div><div class="cardHint">按分类占比</div></div></div><div class="rows" id="topCats"></div></div>
+    </div>
+    <div class="mainGrid">
+      <div class="card"><div class="cardHead"><div><div class="cardTitle">高频商户</div><div class="cardHint">金额与次数一起看 · 可手动补充</div></div><div class="right"><button class="btn small" id="addMerchantBtn">管理商户</button></div></div><div id="topMerchants"></div></div>
+      <div class="card"><div class="cardHead"><div><div class="cardTitle">数据健康</div><div class="cardHint">避免重复与误算</div></div></div><div class="notice" id="healthBox"></div></div>
+    </div>
+  </section>
+
+  <section class="panel" id="monthly"><div class="card"><div class="cardHead"><div><div class="cardTitle">月度明细</div><div class="cardHint">每月总额、笔数、前三大分类</div></div></div><div class="tableWrap"><table class="txTable"><thead><tr><th>月份</th><th>消费</th><th>笔数</th><th>第一分类</th><th>第二分类</th><th>第三分类</th></tr></thead><tbody id="monthlyBody"></tbody></table></div></div></section>
+
+  <section class="panel" id="categories"><div class="card"><div class="cardHead"><div><div class="cardTitle">分类支出</div><div class="cardHint">点击分类可切到明细筛选</div></div></div><div class="tableWrap"><table class="txTable"><thead><tr><th>分类</th><th>金额</th><th>占比</th><th>笔数</th><th>月均</th></tr></thead><tbody id="catBody"></tbody></table></div></div></section>
+
+  <section class="panel" id="details"><div class="toolbar"><input id="searchInput" class="search" placeholder="搜索商户 / 商品 / 金额"><select id="catFilter" class="select"><option value="">全部分类</option></select><select id="platformFilter" class="select"><option value="">全部平台</option><option>支付宝</option><option>微信</option></select><select id="statusFilter" class="select"><option value="personal">个人消费</option><option value="all">全部状态</option><option value="pending">待确认</option><option value="business">经营排除</option><option value="transfer">转账排除</option></select></div><div class="filterContext" id="filterContext"></div><div class="detailSummary"><div class="sumBox"><div class="sumLabel">筛选金额</div><div class="sumValue" id="detailSum">¥0</div></div><div class="sumBox"><div class="sumLabel">交易笔数</div><div class="sumValue" id="detailCount">0</div></div><div class="sumBox"><div class="sumLabel">平均单笔</div><div class="sumValue" id="detailAvg">¥0</div></div></div><div class="tableWrap"><table class="txTable"><thead><tr><th>时间</th><th>平台</th><th>商户</th><th>说明</th><th>分类</th><th>状态</th><th>金额</th></tr></thead><tbody id="detailBody"></tbody></table></div><div class="footerNote" id="detailFoot"></div></section>
+
+  <section class="panel" id="review"><div class="mainGrid"><div class="card"><div class="cardHead"><div><div class="cardTitle">待确认支出</div><div class="cardHint">确认后会立即更新所有统计</div></div></div><div id="pendingList"></div></div><div class="card"><div class="cardHead"><div><div class="cardTitle">跨平台同额近时交易</div><div class="cardHint">只提示，不自动删</div></div></div><div id="dupeList"></div></div></div></section>
+
+  <section class="panel" id="rules">
+    <div class="settingGrid">
+      <div class="card"><div class="cardHead"><div><div class="cardTitle">经营排除关键词</div><div class="cardHint">命中后不计入个人消费</div></div></div><textarea id="bizWords" class="textarea"></textarea><div style="margin-top:9px"><button class="btn small primary" id="saveRules">保存规则并重算</button></div></div>
+      <div class="card"><div class="cardHead"><div><div class="cardTitle">处理原则</div><div class="cardHint">当前版本固定逻辑</div></div></div><div class="notice"><strong>同一平台重复导入：</strong>按交易单号自动去重。<br><strong>支付宝 vs 微信：</strong>同金额不会自动判重，只提示核对。<br><strong>普通微信转账：</strong>默认不算消费；已识别房租“京寓管家”例外计入住房。<br><strong>退款 / 关闭 / 失败：</strong>不计入消费。<br><strong>经营关键词：</strong>从个人消费中排除。</div></div>
+      <div class="card"><div class="cardHead"><div><div class="cardTitle">商户学习规则</div><div class="cardHint">你在明细里“记住商户”后会出现在这里</div></div></div><div id="merchantRules" class="ruleList"></div></div>
+      <div class="card"><div class="cardHead"><div><div class="cardTitle">数据管理</div><div class="cardHint">本机缓存 + 云端加密同步</div></div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small" id="exportJson">导出备份</button><button class="btn small" id="importJsonBtn">导入备份</button><button class="btn small" id="resetBtn">恢复初始账单</button></div><div class="footerNote">云同步连接后会自动保存跨设备数据；仍建议偶尔导出一份离线备份。</div></div>
+    </div>
+  </section>
+</div>
+<button class="stickyImport" id="stickyImport">＋ 导入账单</button>
+<input id="fileInput" type="file" accept=".csv,.xlsx" multiple hidden><input id="jsonInput" type="file" accept=".json" hidden>
+
+<div class="modalBack" id="importModal"><div class="modal"><div class="modalHead"><div class="modalTitle">导入支付宝 / 微信账单</div><button class="close" data-close="importModal">×</button></div><div class="drop" id="dropZone"><div class="dropTitle">拖入账单文件</div><div class="dropSub">支持 支付宝 CSV、微信 XLSX / XLS；可一次选择多个文件</div><div style="margin-top:14px"><button class="btn primary" id="chooseFiles">选择文件</button></div></div><div class="importLog" id="importLog"></div></div></div>
+
+<div class="modalBack" id="txModal"><div class="modal"><div class="modalHead"><div class="modalTitle">交易详情</div><button class="close" data-close="txModal">×</button></div><div id="txDetail"></div></div></div>
+<div class="modalBack" id="merchantModal"><div class="modal"><div class="modalHead"><div class="modalTitle">管理高频商户</div><button class="close" data-close="merchantModal">×</button></div><div class="cardHint">手动补充的商户在首页与自动高频商户保持同一显示方式；增删只在这里管理。</div><div class="merchantManage" id="merchantManaged"></div><div style="display:flex;gap:8px;margin-top:14px"><input id="merchantInput" class="modalField" placeholder="搜索或输入商户，例如：瑞幸咖啡"><button class="btn primary" id="saveMerchantPin">添加</button></div><div class="merchantSuggest" id="merchantSuggest"></div></div></div>
+<div class="modalBack" id="syncModal"><div class="modal"><div class="modalHead"><div class="modalTitle">云同步</div><button class="close" data-close="syncModal">×</button></div><div class="cloudState"><div class="cloudStateIcon">☁</div><div class="cloudStateText"><div class="cloudStateTitle" id="cloudTitle">尚未连接</div><div class="cloudStateSub" id="cloudSub">设置一个同步密码后，iPhone、iPad、电脑使用同一网址与密码即可同步。</div></div></div><div class="cardHint">同步密码同时用于本地加密。服务器只保存加密后的数据内容，不保存你的明文账单或同步密码。</div><div class="syncCodeRow"><input id="syncCode" class="modalField" type="password" autocomplete="off" placeholder="输入同步密码（建议12位以上）"><button class="btn" id="toggleSyncCode">显示</button></div><div class="cloudActions"><button class="btn" id="generateSyncCode">生成密码</button><button class="btn primary" id="connectSync">连接并同步</button><button class="btn" id="syncNow" style="display:none">立即同步</button><button class="btn" id="disconnectSync" style="display:none">仅断开本机</button></div><div class="cloudNote">首次连接：如果云端为空，会把本机数据建立为云端主数据；其他设备连接同一密码后会自动合并并同步。账单文件本身仍在浏览器本地解析。</div></div></div>
+
+<script src="/app1.js" defer></script><script src="/app2.js" defer></script><script src="/app3.js" defer></script><script src="/app4.js" defer></script>
+</body></html>
