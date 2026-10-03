@@ -18,7 +18,8 @@ const json = (data, status = 200) => new Response(JSON.stringify(data), {
 export default async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204 });
   const url = new URL(req.url);
-  const space = String(url.searchParams.get("space") || "");
+  const pathSpace = decodeURIComponent(url.pathname.split("/").filter(Boolean).pop() || "");
+  const space = String(url.searchParams.get("space") || (SPACE_RE.test(pathSpace) ? pathSpace : ""));
   if (!SPACE_RE.test(space)) return json({ error: "invalid space" }, 400);
 
   const store = getStore({
