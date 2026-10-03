@@ -1,4 +1,4 @@
-// deploy-refresh-v8.2.7
+// deploy-refresh-v8.2.8
 import express from "express";
 import { chromium } from "playwright";
 import dns from "node:dns/promises";
@@ -13,6 +13,36 @@ const MOBILE_IMPORT_TTL = 10 * 60 * 1000;
 function pruneMobileImports() {
   const now = Date.now();
   for (const [token, row] of mobileImports) if (!row || now - row.createdAt > MOBILE_IMPORT_TTL) mobileImports.delete(token);
+}
+
+function extractMultipartField(body, contentType, fieldName) {
+  if (!Buffer.isBuffer(body)) return "";
+  const m = String(contentType || "").match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+  if (!m) return "";
+  const boundary = "--" + String(m[1] || m[2] || "").trim();
+  const text = body.toString("utf8");
+  for (const part of text.split(boundary)) {
+    const sep = /\r?\n\r?\n/.exec(part);
+    if (!sep) continue;
+    const headers = part.slice(0, sep.index);
+    const nameMatch = headers.match(/content-disposition:[^\r\n]*name="([^"]+)"/i);
+    if (!nameMatch || nameMatch[1] !== fieldName) continue;
+    return part.slice(sep.index + sep[0].length).replace(/\r?\n$/, "");
+  }
+  return "";
+}
+
+function mobilePayloadText(req) {
+  if (typeof req.body === "string") return req.body;
+  if (Buffer.isBuffer(req.body)) {
+    const ct = String(req.headers["content-type"] || "");
+    if (/multipart\/form-data/i.test(ct)) return extractMultipartField(req.body, ct, "data");
+    return req.body.toString("utf8");
+  }
+  if (req.body && typeof req.body.data === "string") return req.body.data;
+  if (req.body && typeof req.body === "object" && Array.isArray(req.body.items)) return JSON.stringify(req.body);
+  if (typeof req.query?.data === "string") return req.query.data;
+  return "";
 }
 
 app.use(express.json({ limit: "3mb" }));
@@ -174,7 +204,7 @@ async function analyzeUrl(url) {
 }
 
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, version: "8.2.7", mode: "decision-system-permanent-collector" });
+  res.json({ ok: true, version: "8.2.8", mode: "decision-system-permanent-collector" });
 });
 
 app.get("/browser-bridge.zip", (req, res) => {
@@ -199,30 +229,38 @@ app.post("/api/analyze-url", async (req, res) => {
 });
 
 
-app.post("/api/mobile-shortcut", express.text({ type: ["text/plain", "application/octet-stream"], limit: "3mb" }), (req, res) => {
-  try {
-    pruneMobileImports();
-    let raw = "";
-    if (typeof req.body === "string") raw = req.body;
-    else if (req.body && typeof req.body.data === "string") raw = req.body.data;
-    else if (req.body && typeof req.body === "object") raw = JSON.stringify(req.body);
-    if (!raw && typeof req.query?.data === "string") raw = req.query.data;
-    const payload = JSON.parse(raw || "{}");
-    if (payload?.ok === false) throw new Error(payload.error || "手机采集失败");
-    const source = clean(payload.source, 2200);
-    const site = siteFromUrl(source);
-    const rows = Array.isArray(payload.items) ? payload.items : [];
-    const items = normalizeItems(rows, source, site);
-    if (!items.length) throw new Error("没有收到有效手机采集数据");
-    const token = randomUUID();
-    mobileImports.set(token, {
-      createdAt: Date.now(),
-      payload: { source, site, keyword: clean(payload.keyword, 120), meta: payload.meta || {}, capturedAt: new Date().toISOString(), items }
-    });
-    res.type("text/plain").send("https://floor-viral-analyzer.onrender.com/mobile-import?token=" + encodeURIComponent(token));
-  } catch (err) {
-    res.status(400).type("text/plain").send("https://floor-viral-analyzer.onrender.com/?mobileError=" + encodeURIComponent(clean(err?.message || "手机导入失败", 220)));
+app.post("/api/mobile-shortcut",
+  express.raw({ type: ["multipart/form-data", "text/plain", "application/octet-stream"], limit: "3mb" }),
+  (req, res) => {
+    try {
+      pruneMobileImports();
+      const raw = mobilePayloadText(req);
+      if (!raw) throw new Error("没有收到快捷指令的 JavaScript 结果");
+      const payload = JSON.parse(raw);
+      if (payload?.ok === false) throw new Error(payload.error || "手机采集失败");
+      const source = clean(payload.source, 2200);
+      const site = siteFromUrl(source);
+      const rows = Array.isArray(payload.items) ? payload.items : [];
+      const items = normalizeItems(rows, source, site);
+      if (!items.length) throw new Error("没有收到有效手机采集数据");
+      const token = randomUUID();
+      mobileImports.set(token, {
+        createdAt: Date.now(),
+        payload: { source, site, keyword: clean(payload.keyword, 120), meta: payload.meta || {}, capturedAt: new Date().toISOString(), items }
+      });
+      console.log("[mobile-shortcut] ok", { site, items: items.length, contentType: req.headers["content-type"] || "" });
+      res.type("text/plain").send("https://floor-viral-analyzer.onrender.com/mobile-import?token=" + encodeURIComponent(token));
+    } catch (err) {
+      const msg = clean(err?.message || "手机导入失败", 220);
+      console.error("[mobile-shortcut] failed", { error: msg, contentType: req.headers["content-type"] || "" });
+      res.status(400).type("text/plain").send("https://floor-viral-analyzer.onrender.com/mobile-error?message=" + encodeURIComponent(msg));
+    }
   }
+);
+
+app.get("/mobile-error", (req, res) => {
+  const msg = clean(req.query?.message || "手机采集数据没有成功送达", 300);
+  res.status(400).type("html").send(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>手机采集未完成</title></head><body style="font-family:-apple-system;padding:24px;line-height:1.6"><h2>手机采集未完成</h2><p>${msg.replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))}</p><p>返回闲鱼 / 小红书搜索结果页后重新运行一次快捷指令即可。</p></body></html>`);
 });
 
 app.get("/mobile-import", (req, res) => {
@@ -234,7 +272,7 @@ app.get("/mobile-import", (req, res) => {
   }
   mobileImports.delete(token);
   const safe = JSON.stringify(row.payload).replace(/</g, "\\u003c");
-  res.type("html").send(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>正在导入手机采集数据</title></head><body><script>localStorage.setItem('floorV7Import',JSON.stringify(${safe}));location.replace('/?imported=1&mobile=1&v=827&t='+Date.now());<\/script></body></html>`);
+  res.type("html").send(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>正在导入手机采集数据</title></head><body><script>localStorage.setItem('floorV7Import',JSON.stringify(${safe}));location.replace('/?imported=1&mobile=1&v=828&t='+Date.now());<\/script></body></html>`);
 });
 
 app.post("/import", (req, res) => {
@@ -247,10 +285,10 @@ app.post("/import", (req, res) => {
     const items = normalizeItems(rows, source, site);
     if (!items.length) throw new Error("没有收到有效内容数据");
     const safe = JSON.stringify({ source, site, keyword: clean(payload.keyword,120), meta: payload.meta || {}, capturedAt: new Date().toISOString(), items }).replace(/</g, "\\u003c");
-    res.type("html").send(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>正在导入</title></head><body><script>localStorage.setItem('floorV7Import',JSON.stringify(${safe}));location.replace('/?imported=1&v=827&t='+Date.now());<\/script></body></html>`);
+    res.type("html").send(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>正在导入</title></head><body><script>localStorage.setItem('floorV7Import',JSON.stringify(${safe}));location.replace('/?imported=1&v=828&t='+Date.now());<\/script></body></html>`);
   } catch (err) {
     res.status(400).type("html").send(`<!doctype html><meta charset="utf-8"><body style="font-family:-apple-system;padding:30px"><h2>导入失败</h2><p>${clean(err?.message || "未知错误", 300)}</p></body>`);
   }
 });
 
-app.listen(PORT, "0.0.0.0", () => console.log(`V8.2.7 running on :${PORT}`));
+app.listen(PORT, "0.0.0.0", () => console.log(`V8.2.8 running on :${PORT}`));

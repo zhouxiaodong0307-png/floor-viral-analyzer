@@ -6,7 +6,7 @@
   const out=new Map(),start=Date.now();
   let tip=document.getElementById('__floor_mobile_tip__');
   if(!tip){tip=document.createElement('div');tip.id='__floor_mobile_tip__';tip.style.cssText='position:fixed;z-index:2147483647;left:14px;right:14px;top:14px;padding:12px 14px;border-radius:12px;background:#111;color:#fff;font:600 14px -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 8px 28px #0004';document.documentElement.appendChild(tip)}
-  tip.textContent='手机采集器 V8.2.7｜正在采集…';
+  tip.textContent='手机采集器 V8.2.8｜正在采集…';
   const idOf=u=>{const m=String(u||'').match(/[?&](?:id|itemId|goodsId|noteId)=([^&#]+)/i)||String(u||'').match(/\/(?:item|detail|goods|note|explore|search_result)\/([A-Za-z0-9_-]{6,})/i);return m?m[1]:''};
   const titleOf=(lines,q='')=>{const rows=lines.filter(x=>x.length>=5&&x.length<=220&&!/^[¥￥]?\s*[\d,.]+(?:元|人想要|想要|浏览|点赞|收藏|评论)?$/i.test(x)&&!/^(包邮|可自提|全新|二手|刚刚|今天|昨天|\d+分钟前|\d+小时前|\d+天前)$/.test(x));rows.sort((a,b)=>((q&&b.includes(q)?40:0)+Math.min(b.length,70))-((q&&a.includes(q)?40:0)+Math.min(a.length,70)));return rows[0]||''};
   function visualMeta(card,img){
@@ -59,7 +59,7 @@
     let stale=0,last=-1,rounds=0;
     while(out.size<TARGET&&Date.now()-start<MAX_MS&&rounds<28){
       isXhs?scanXhs():scanGeneric();
-      tip.textContent='手机采集器 V8.2.7｜已采 '+out.size+'/500';
+      tip.textContent='手机采集器 V8.2.8｜已采 '+out.size+'/500';
       if(out.size===last)stale++;else stale=0;
       last=out.size;rounds++;
       if(stale>=6)break;
@@ -68,7 +68,7 @@
     }
     isXhs?scanXhs():scanGeneric();
     if(!out.size)throw Error('没有识别到有效内容，请确认当前是搜索结果页并已加载出商品/笔记');
-    const payload={source:location.href,keyword:decodeURIComponent(base.searchParams.get('q')||base.searchParams.get('keyword')||''),meta:{target:TARGET,validCount:out.size,mobile:true,mobileCollectorVersion:'8.2.7',transport:'shortcut-native',stoppedBy:out.size>=TARGET?'target':'mobile-time-window',durationSeconds:Math.round((Date.now()-start)/1000)},items:[...out.values()]};
+    const payload={source:location.href,keyword:decodeURIComponent(base.searchParams.get('q')||base.searchParams.get('keyword')||''),meta:{target:TARGET,validCount:out.size,mobile:true,mobileCollectorVersion:'8.2.8',transport:'shortcut-native',stoppedBy:out.size>=TARGET?'target':'mobile-time-window',durationSeconds:Math.round((Date.now()-start)/1000)},items:[...out.values()]};
     tip.textContent='采集完成 '+out.size+' 条｜正在交给快捷指令…';
     if(typeof completion==='function'){
       completion(JSON.stringify(payload));
