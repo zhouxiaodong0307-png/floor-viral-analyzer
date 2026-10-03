@@ -1,0 +1,36 @@
+name: Spend Dashboard Netlify Check
+on:
+  push:
+    branches:
+      - spend-dashboard-netlify
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: spend-dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - name: Syntax check browser scripts
+        run: |
+          node --check public/app1.js
+          node --check public/app2.js
+          node --check public/app3a.js
+          node --check public/app3b.js
+          node --check public/app4a.js
+          node --check public/app4b.js
+          node --check public/app4c.js
+      - name: Syntax check Netlify functions
+        run: |
+          node --check netlify/functions/sync.mjs
+          node --check netlify/functions/health.mjs
+      - name: Verify referenced assets
+        run: |
+          for f in styles.css app1.js app2.js app3a.js app3b.js app4a.js app4b.js app4c.js; do
+            test -f "public/$f"
+            grep -q "$f" public/index.html
+          done
