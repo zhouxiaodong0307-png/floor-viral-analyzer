@@ -1,5 +1,5 @@
 (()=>{
-  const MAX_ITEMS=24;
+  const MAX_ITEMS=18;
   const C=s=>String(s||'').replace(/\s+/g,' ').trim();
   const N=s=>{const m=String(s||'').replace(/,/g,'').match(/([\d.]+)\s*(万|w|W|k|K|千)?/i);if(!m)return null;let v=+m[1],u=m[2]||'';if(/万|w/i.test(u))v*=1e4;if(/k|千/i.test(u))v*=1e3;return Math.round(v)};
   const host=location.hostname.toLowerCase(),isXhs=host.includes('xiaohongshu.com');
@@ -25,8 +25,8 @@
       const img=card.querySelector('img'),r=img?.getBoundingClientRect(),w=img?.naturalWidth||r?.width||0,h=img?.naturalHeight||r?.height||0,ratio=h?Math.round(w/h*100)/100:null;
       const seller=C(card.querySelector('[class*="author"],[class*="user"],[class*="name"]')?.innerText||'').slice(0,60);
       const row=[
-        title.slice(0,180),
-        href.slice(0,700),
+        title.slice(0,100),
+        href.slice(0,360),
         pm?Number(pm[1].replace(/,/g,'')):null,
         metric('想要|人想要'),
         metric('点赞|赞'),
@@ -36,19 +36,17 @@
         tm?tm[1]:'',
         ratio,
         card.querySelector('video,[class*="video"],[class*="play"]')?'视频':'图片',
-        seller
+        seller.slice(0,36)
       ];
       push(row,(href.match(/[A-Za-z0-9_-]{8,}/)||[])[0]||title.slice(0,80));
       if(out.length>=MAX_ITEMS)break;
     }
-    const pack={v:'8.2.11',s:location.href,k:new URL(location.href).searchParams.get('q')||new URL(location.href).searchParams.get('keyword')||'',i:out};
+    const pack={v:'8.2.12',s:location.href,k:new URL(location.href).searchParams.get('q')||new URL(location.href).searchParams.get('keyword')||'',i:out};
     const json=JSON.stringify(pack);
     const b64=btoa(unescape(encodeURIComponent(json)));
     const target='https://floor-viral-analyzer.onrender.com/#mobile='+encodeURIComponent(b64);
-    location.href=target;
-    completion('ok');
+    completion(target);
   }catch(e){
-    location.href='https://floor-viral-analyzer.onrender.com/#mobileError='+encodeURIComponent(String(e?.message||e));
-    completion('error');
+    completion('https://floor-viral-analyzer.onrender.com/#mobileError='+encodeURIComponent(String(e?.message||e)));
   }
 })();
