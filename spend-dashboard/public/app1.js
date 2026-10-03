@@ -5,15 +5,16 @@ const DEFAULT_BIZ=['闲鱼','木地板','地板配件','建新建材','木业','
 const CATS=['餐饮食品','住房','交通出行','购物','通讯缴费','健身运动','娱乐','旅行住宿','服饰','汽车养护','医疗保险','个人护理','公共服务','生活服务','家居家装','人情社交','教育','数码电器','其他'];
 const rawMap={'餐饮美食':'餐饮食品','交通出行':'交通出行','充值缴费':'通讯缴费','日用百货':'购物','服饰装扮':'服饰','文化休闲':'娱乐','酒店旅游':'旅行住宿','美容美发':'个人护理','医疗健康':'医疗保险','运动户外':'健身运动','爱车养车':'汽车养护','保险':'医疗保险','教育培训':'教育','公共服务':'公共服务','生活服务':'生活服务','数码电器':'数码电器','家居家装':'家居家装','亲友代付':'人情社交','其他':'其他','商业服务':'生活服务'};
 let db, allTx=[], viewTx=[], currentYear=null;
+function normalizeKey(v){let s=String(v||'').toLowerCase().replace(/\s+/g,'');for(const ch of ['·','•','（','）','(',')','-','_','/','\\','.',',','，','。',':','：',';','；',"'",'"','“','”','‘','’','[',']','【','】'])s=s.split(ch).join('');return s}
 let settings=loadSettings();
 let syncTimer=null,syncBusy=false,syncPass=localStorage.getItem('spend_sync_pass_v1')||'',syncSpace='',syncLast='';
-function normalizeSettingsState(s={}){const keyNorm=v=>String(v||'').toLowerCase().replace(/[\\s·•（）()\\-_/\\\\.,，。:：;；'\"“”‘’\\[\\]【】]/g,'');const base=Number(s.updatedAt||0),manual={},manualDeleted={...(s.manualDeleted||{})};Object.entries(s.manual||{}).forEach(([id,v])=>manual[id]={...v,updatedAt:Number(v?.updatedAt||base)});const merchantRules=(s.merchantRules||[]).map(r=>({...r,updatedAt:Number(r.updatedAt||base)})),merchantRuleTombstones={...(s.merchantRuleTombstones||{})};const pinnedState={...(s.pinnedState||{})};if(!Object.keys(pinnedState).length)(s.pinnedMerchants||[]).forEach(name=>{pinnedState[keyNorm(name)]={name,active:true,updatedAt:base}});const pinnedMerchants=Object.values(pinnedState).filter(x=>x&&x.active).sort((a,b)=>Number(a.updatedAt||0)-Number(b.updatedAt||0)).map(x=>x.name);return {bizWords:s.bizWords||DEFAULT_BIZ,bizWordsUpdatedAt:Number(s.bizWordsUpdatedAt||base),merchantRules,merchantRuleTombstones,manual,manualDeleted,distinctPairs:s.distinctPairs||['ali:2026082423001445301420199749|wx:4200003158202608242100731414'],pinnedState,pinnedMerchants,updatedAt:base}}
+function normalizeSettingsState(s={}){const base=Number(s.updatedAt||0),manual={},manualDeleted={...(s.manualDeleted||{})};Object.entries(s.manual||{}).forEach(([id,v])=>manual[id]={...v,updatedAt:Number(v?.updatedAt||base)});const merchantRules=(s.merchantRules||[]).map(r=>({...r,updatedAt:Number(r.updatedAt||base)})),merchantRuleTombstones={...(s.merchantRuleTombstones||{})};const pinnedState={...(s.pinnedState||{})};if(!Object.keys(pinnedState).length)(s.pinnedMerchants||[]).forEach(name=>{pinnedState[normalizeKey(name)]={name,active:true,updatedAt:base}});const pinnedMerchants=Object.values(pinnedState).filter(x=>x&&x.active).sort((a,b)=>Number(a.updatedAt||0)-Number(b.updatedAt||0)).map(x=>x.name);return {bizWords:s.bizWords||DEFAULT_BIZ,bizWordsUpdatedAt:Number(s.bizWordsUpdatedAt||base),merchantRules,merchantRuleTombstones,manual,manualDeleted,distinctPairs:s.distinctPairs||['ali:2026082423001445301420199749|wx:4200003158202608242100731414'],pinnedState,pinnedMerchants,updatedAt:base}}
 function loadSettings(){try{return normalizeSettingsState(JSON.parse(localStorage.getItem('spend_settings_v1')||'{}'))}catch(e){return normalizeSettingsState({})}}
 function syncPinnedFromState(){settings.pinnedMerchants=Object.values(settings.pinnedState||{}).filter(x=>x&&x.active).sort((a,b)=>Number(a.updatedAt||0)-Number(b.updatedAt||0)).map(x=>x.name)}
 function saveSettings(sync=true){settings.updatedAt=Date.now();syncPinnedFromState();localStorage.setItem('spend_settings_v1',JSON.stringify(settings));if(sync){if(syncPass)setSyncStatus('busy','待同步');queueCloudSync()}}
 const money=n=>'¥'+Number(n||0).toLocaleString('zh-CN',{minimumFractionDigits:0,maximumFractionDigits:2});
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-const norm=s=>String(s||'').toLowerCase().replace(/[\\s·•（）()\\-_/\\\\.,，。:：;；'\"“”‘’\\[\\]【】]/g,'');；'"“”‘’[]【】]/g,'');
+const norm=normalizeKey;
 function pairKey(a,b){return [a.id,b.id].sort().join('|')}
 function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains(STORE))d.createObjectStore(STORE,{keyPath:'id'})};r.onsuccess=()=>{db=r.result;res(db)};r.onerror=()=>rej(r.error)})}
 function dbAll(){return new Promise((res,rej)=>{const r=db.transaction(STORE,'readonly').objectStore(STORE).getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error)})}
@@ -51,7 +52,7 @@ function sameYear(tx,y){return String(tx.time).startsWith(String(y)+'-')}
 function maxDataDate(){return allTx.map(x=>x.time).filter(Boolean).sort().at(-1)||''}
 function parseDate(s){const d=new Date(String(s).replace(' ','T')+'+08:00');return isNaN(d)?null:d}
 function monthOf(tx){return String(tx.time).slice(0,7)}
-function getYears(){return [...new Set(allTx.map(x=>String(x.time).slice(0,4)).filter(x=>/^\\d{4}$/.test(x)))].sort((a,b)=>b-a)}
+function getYears(){return [...new Set(allTx.map(x=>String(x.time).slice(0,4)).filter(x=>x.length===4&&[...x].every(ch=>ch>='0'&&ch<='9')))].sort((a,b)=>Number(b)-Number(a))}
 function refreshYears(){const ys=getYears(), sel=document.getElementById('yearSel'); const old=currentYear||sel.value; sel.innerHTML=ys.map(y=>`<option>${y}</option>`).join(''); currentYear=ys.includes(String(old))?String(old):(ys[0]||String(new Date().getFullYear())); sel.value=currentYear}
 function summarize(){
  viewTx=allTx.filter(t=>sameYear(t,currentYear)).map(withEval);
