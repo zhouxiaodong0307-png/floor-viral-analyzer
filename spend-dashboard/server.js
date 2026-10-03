@@ -5,14 +5,9 @@ const { Pool } = require('pg');
 const app = express();
 const port = process.env.PORT || 10000;
 const dbUrl = process.env.DATABASE_URL;
-if (!dbUrl) throw new Error('DATABASE_URL is required');
+const memoryStore = new Map();
 
-const pool = new Pool({
-  connectionString: dbUrl,
-  ssl: dbUrl.includes('localhost') ? false : { rejectUnauthorized: false },
-  max: 5,
-  idleTimeoutMillis: 30000,
-});
+const pool = dbUrl ? new Pool({\n  connectionString: dbUrl,\n  ssl: dbUrl.includes('localhost') ? false : { rejectUnauthorized: false },\n  max: 5,\n  idleTimeoutMillis: 30000,\n}) : null;
 
 app.use(express.json({ limit: '12mb' }));
 app.disable('x-powered-by');
@@ -29,8 +24,7 @@ app.use((req,res,next)=>{
   next();
 });
 
-async function ensureTable(){
-  await pool.query(`CREATE TABLE IF NOT EXISTS spend_sync (
+async function ensureTable(){\n  if(!pool) return;\n  await pool.query(`CREATE TABLE IF NOT EXISTS spend_sync (
     space_id TEXT PRIMARY KEY,
     blob TEXT NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -38,18 +32,13 @@ async function ensureTable(){
 }
 
 app.get('/api/health', async (_req,res)=>{
-  try { await pool.query('SELECT 1'); res.json({ok:true,version:'1.2.0'}); }
-  catch(e){ res.status(503).json({ok:false}); }
+  try { if(pool) await pool.query('SELECT 1'); res.json({ok:true,version:'1.2.0',storage:pool?'postgres':'memory'}); }\n  catch(e){ res.status(503).json({ok:false}); }
 });
 
 app.get('/api/sync/:space', async (req,res)=>{
   const space = String(req.params.space||'');
   if(!/^[a-f0-9]{64}$/i.test(space)) return res.status(400).json({error:'invalid space'});
-  try{
-    const q = await pool.query('SELECT blob, updated_at FROM spend_sync WHERE space_id=$1',[space]);
-    if(!q.rowCount) return res.status(404).json({error:'not found'});
-    res.json({blob:q.rows[0].blob,updatedAt:q.rows[0].updated_at});
-  }catch(e){ res.status(500).json({error:'read failed'}); }
+  try{\n    if(!pool){const v=memoryStore.get(space);if(!v)return res.status(404).json({error:'not found'});return res.json(v)}\n    const q = await pool.query('SELECT blob, updated_at FROM spend_sync WHERE space_id=$1',[space]);\n    if(!q.rowCount) return res.status(404).json({error:'not found'});\n    res.json({blob:q.rows[0].blob,updatedAt:q.rows[0].updated_at});\n  }catch(e){ res.status(500).json({error:'read failed'}); }
 });
 
 app.put('/api/sync/:space', async (req,res)=>{
@@ -57,8 +46,7 @@ app.put('/api/sync/:space', async (req,res)=>{
   const blob = req.body && req.body.blob;
   if(!/^[a-f0-9]{64}$/i.test(space)) return res.status(400).json({error:'invalid space'});
   if(typeof blob !== 'string' || blob.length < 16 || blob.length > 11_000_000) return res.status(400).json({error:'invalid blob'});
-  try{
-    const q = await pool.query(`INSERT INTO spend_sync(space_id,blob,updated_at) VALUES($1,$2,NOW())
+  try{\n    if(!pool){const v={blob,updatedAt:new Date().toISOString()};memoryStore.set(space,v);return res.json({ok:true,updatedAt:v.updatedAt})}\n    const q = await pool.query(`INSERT INTO spend_sync(space_id,blob,updated_at) VALUES($1,$2,NOW())
       ON CONFLICT(space_id) DO UPDATE SET blob=EXCLUDED.blob,updated_at=NOW()
       RETURNING updated_at`,[space,blob]);
     res.json({ok:true,updatedAt:q.rows[0].updated_at});
