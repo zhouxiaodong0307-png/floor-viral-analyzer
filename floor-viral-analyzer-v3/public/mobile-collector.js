@@ -7,7 +7,7 @@
   let finished=false;
   let tip=document.getElementById('__floor_mobile_tip__');
   if(!tip){tip=document.createElement('div');tip.id='__floor_mobile_tip__';tip.style.cssText='position:fixed;z-index:2147483647;left:14px;right:14px;top:14px;padding:12px 14px;border-radius:12px;background:#111;color:#fff;font:600 14px -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 8px 28px #0004';document.documentElement.appendChild(tip)}
-  tip.textContent='手机采集器 V8.2.9｜正在快速读取当前页面…';
+  tip.textContent='手机采集器 V8.2.10｜正在快速读取当前页面…';
   const idOf=u=>{const m=String(u||'').match(/[?&](?:id|itemId|goodsId|noteId)=([^&#]+)/i)||String(u||'').match(/\/(?:item|detail|goods|note|explore|search_result)\/([A-Za-z0-9_-]{6,})/i);return m?m[1]:''};
   const titleOf=lines=>lines.find(x=>x.length>=5&&x.length<=180&&!/^[¥￥]?\s*[\d,.]+(?:元|人想要|想要|浏览|点赞|收藏|评论)?$/i.test(x)&&!/^(包邮|可自提|全新|二手|刚刚|今天|昨天|\d+分钟前|\d+小时前|\d+天前)$/.test(x))||'';
   function scanXhs(){
@@ -57,7 +57,7 @@
     const payload=items.length?{
       source:location.href,
       keyword:decodeURIComponent(base.searchParams.get('q')||base.searchParams.get('keyword')||''),
-      meta:{target:HARD_TARGET,validCount:items.length,mobile:true,mobileFastBatch:true,batchTarget:BATCH_MAX,mobileCollectorVersion:'8.2.9',transport:'shortcut-fast'},
+      meta:{target:HARD_TARGET,validCount:items.length,mobile:true,mobileFastBatch:true,mobileSync:true,batchTarget:BATCH_MAX,mobileCollectorVersion:'8.2.10',transport:'shortcut-sync'},
       items
     }:{ok:false,error:'没有识别到有效内容，请确认当前是闲鱼 / 小红书搜索结果页并已加载出内容'};
     tip.textContent=items.length?'已读取 '+items.length+' 条，正在导入…':'没有识别到有效内容';
@@ -65,12 +65,7 @@
   }
   try{
     scan();
-    if(out.size<BATCH_MAX){
-      window.scrollBy(0,Math.max(380,Math.floor(innerHeight*.55)));
-      window.setTimeout(finish,450);
-    }else{
-      finish();
-    }
+    finish();
   }catch(e){
     completion(JSON.stringify({ok:false,error:String(e?.message||e)}));
   }
