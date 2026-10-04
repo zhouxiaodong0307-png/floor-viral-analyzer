@@ -23,7 +23,7 @@ const woods=['红檀香','缅甸柚木','柚木','橡木','白橡','欧橡','龙
 const plan=[],seenQ=new Set();
 function add(q,tier){q=C(q);if(!q||seenQ.has(q))return;seenQ.add(q);plan.push({q,tier,current:false})}
 add(Q,'A');
-if(!Q&&!IS_XHS&&!IS_XY)plan.push({q:'',tier:'A',current:true});
+if(!Q)plan.push({q:'',tier:'A',current:true});
 if(IS_XHS&&Q){
   const core=FLOOR_TOPIC?(C(Q.replace(/地板$/,''))||Q):Q;
   const suffixes=FLOOR_TOPIC?
