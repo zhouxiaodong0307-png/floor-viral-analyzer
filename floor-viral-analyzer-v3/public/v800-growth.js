@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='8.2.6';
+const VERSION='8.3.0';
 const EXPKEY='floorGrowthExperimentsV81';
 const REPORTKEY='floorGrowthReportsV814';
 const $id=id=>document.getElementById(id);
@@ -103,7 +103,15 @@ const XHS_FEATURES=[
   ['practicalInfo','正文包含可决策的具体信息',x=>/\d{2,4}\s*[x×*]\s*\d{2,4}|\d+(?:\.\d+)?\s*(?:㎡|平米|平方|元)|地暖|损耗|铺法|规格|收口/.test(x.text||''),x=>!!x.deepFetched],
   ['hasTags','包含话题标签',x=>/#\S+/.test(x.text||''),x=>!!x.deepFetched],
   ['multiImage','图片数量4张及以上',x=>num(x.imageCount)!==null&&num(x.imageCount)>=4,x=>!!x.deepFetched&&num(x.imageCount)!==null],
-  ['lowAdTone','弱广告表达',x=>!/特价|清仓|最低|秒杀|加微信|私聊报价|全网最低|厂家直销/.test((x.title||'')+' '+(x.text||'')),x=>!!x.deepFetched]
+  ['lowAdTone','弱广告表达',x=>!/特价|清仓|最低|秒杀|加微信|私聊报价|全网最低|厂家直销/.test((x.title||'')+' '+(x.text||'')),x=>!!x.deepFetched],
+  ['decisionAngle','明确解决选购决策',x=>/怎么选|如何选|适合谁|适不适合|值不值|区别|差别|选哪|选择/.test((x.title||'')+' '+(x.text||''))],
+  ['painAngle','避坑/问题切入',x=>/避坑|踩坑|翻车|后悔|问题|别买|注意|容易|千万别/.test((x.title||'')+' '+(x.text||''))],
+  ['compareAngle','对比/二选一切入',x=>/对比|区别|差别|vs|VS|还是|二选一|哪个好|哪个更/.test((x.title||'')+' '+(x.text||''))],
+  ['realCaseAngle','真实案例/现场切入',x=>/业主|客户|我家|家里|现场|完工|实景|这次|今天|刚铺|刚装/.test((x.title||'')+' '+(x.text||''))],
+  ['performanceAngle','材质性能切入',x=>/稳定|硬度|耐磨|耐用|防潮|地暖|变形|开裂|含水率|密度|脚感/.test((x.title||'')+' '+(x.text||''))],
+  ['installDetailAngle','安装/落地细节切入',x=>/安装|铺装|铺法|收口|门套|柜体|踢脚线|龙骨|悬浮|平扣|锁扣|鱼骨|人字/.test((x.title||'')+' '+(x.text||''))],
+  ['budgetAngle','价格/预算决策切入',x=>/价格|预算|多少钱|单价|成本|贵不贵|性价比|元\/㎡|元每平/.test((x.title||'')+' '+(x.text||''))],
+  ['sourceProofAngle','工厂/货源证据切入',x=>/工厂|车间|生产|仓库|库存|下线|原料|坯料|厂家/.test((x.title||'')+' '+(x.text||''))]
 ];
 const XY_FEATURES=[
   ['spec','标题带具体规格',x=>/\d{2,4}\s*[x×*]\s*\d{2,4}/i.test(x.title||'')],
@@ -173,16 +181,88 @@ function evidence(high,normal,features,coverage,stability,rankOnlyRate){
     let level='数据不足',category='暂无价值';
     if(hh.length>=10&&nn.length>=30){
       level='探索性信号';
-      if(rankOnlyRate<.5&&hh.length>=50&&nn.length>=100&&diff>=.15&&zz>=2&&coverage>=.55&&featureCoverage>=.70&&stability>=.70)level='强证据';
-      else if(rankOnlyRate<.7&&hh.length>=30&&nn.length>=60&&diff>=.10&&zz>=1.8&&coverage>=.35&&featureCoverage>=.45)level='中等证据';
-      else if(hh.length>=10&&nn.length>=30&&diff>=.06&&zz>=1.35&&featureCoverage>=.20)level='弱证据';
-      if(level==='强证据'&&diff>=.15)category='可以复用';
-      else if((level==='中等证据'||level==='弱证据')&&diff>=.08)category='值得测试';
-      else if(level==='探索性信号'&&hh.length>=50&&nn.length>=100&&diff>=.05&&zz>=1.8)category='值得测试';
+      if(rankOnlyRate<.8&&hh.length>=25&&nn.length>=60&&diff>=.12&&zz>=2&&coverage>=.30&&featureCoverage>=.45&&stability>=.55)level='强证据';
+      else if(rankOnlyRate<.9&&hh.length>=15&&nn.length>=35&&diff>=.085&&zz>=1.5&&featureCoverage>=.30)level='中等证据';
+      else if(hh.length>=8&&nn.length>=20&&diff>=.055&&zz>=1.1&&featureCoverage>=.18)level='弱证据';
+      if(level==='强证据')category='可以复用';
+      else if(level==='中等证据'||level==='弱证据')category='值得测试';
+      else if(level==='探索性信号'&&hh.length>=8&&nn.length>=20&&diff>=.05&&zz>=1.05)category='值得测试';
     }
     return{id,label,hc,nc,hp,np,diff,z:zz,level,category,total:hh.length+nn.length,highAvailable:hh.length,normalAvailable:nn.length,featureCoverage};
   }).sort((a,b)=>((rank[b.category]||0)-(rank[a.category]||0))||b.diff-a.diff||b.z-a.z);
 }
+
+function evidenceRank(x){
+  const r={可以复用:4,值得测试:3,探索性测试:2,'暂无价值':1};
+  return (r[x.category]||0)*100+(x.z||0)*10+Math.max(0,x.diff||0)*100+(x.kind==='combo'?4:x.kind==='phrase'?3:0);
+}
+function comboEvidence(high,normal,features,coverage,stability,rankOnlyRate){
+  if(!high.length||!normal.length)return[];
+  const candidates=features.filter(x=>!x[3]||((high.concat(normal)).filter(x[3]).length/(high.length+normal.length)>=.25)).slice(0,34);
+  const z=(p1,n1,p2,n2)=>{if(!n1||!n2)return 0;const p=(p1*n1+p2*n2)/(n1+n2),se=Math.sqrt(Math.max(1e-9,p*(1-p)*(1/n1+1/n2)));return Math.abs(p1-p2)/se};
+  const out=[];
+  for(let i=0;i<candidates.length;i++)for(let j=i+1;j<candidates.length;j++){
+    const [id1,l1,f1,a1]=candidates[i],[id2,l2,f2,a2]=candidates[j];
+    const ah=a1?high.filter(a1):high,an=a1?normal.filter(a1):normal;
+    const hh=a2?ah.filter(a2):ah,nn=a2?an.filter(a2):an;
+    if(hh.length<8||nn.length<20)continue;
+    const hc=hh.filter(x=>f1(x)&&f2(x)).length,nc=nn.filter(x=>f1(x)&&f2(x)).length;
+    if(hc<4)continue;
+    const hp=hc/hh.length,np=nc/nn.length,diff=hp-np,zz=z(hp,hh.length,np,nn.length);
+    if(diff<.045||zz<1.05)continue;
+    let level='探索性信号',category='探索性测试';
+    if(hh.length>=25&&nn.length>=60&&hc>=8&&diff>=.12&&zz>=2&&coverage>=.30&&stability>=.55&&rankOnlyRate<.8){level='强证据';category='可以复用'}
+    else if(hh.length>=15&&nn.length>=35&&hc>=6&&diff>=.085&&zz>=1.5){level='中等证据';category='值得测试'}
+    else if(hh.length>=8&&nn.length>=20&&hc>=4&&diff>=.06&&zz>=1.15){level='弱证据';category='值得测试'}
+    out.push({id:'combo:'+id1+'+'+id2,label:'组合：'+l1+' + '+l2,kind:'combo',parts:[id1,id2],partLabels:[l1,l2],hc,nc,hp,np,diff,z:zz,level,category,total:hh.length+nn.length,highAvailable:hh.length,normalAvailable:nn.length,featureCoverage:(hh.length+nn.length)/(high.length+normal.length)});
+  }
+  return out.sort((a,b)=>evidenceRank(b)-evidenceRank(a)).slice(0,10)
+}
+function titlePhraseSet(title){
+  const raw=String(title||'').replace(/[#【】\[\]（）()“”"'‘’·|｜,:：，。！!？?、]/g,'').replace(/\s+/g,'');
+  const out=new Set(),lex=['怎么选','如何选','为什么','别只看','别买','避坑','踩坑','后悔','实景','完工','现场','入住','装修','客厅','卧室','地暖','鱼骨','人字','工字','平扣','锁扣','收口','安装','铺装','规格','价格','预算','对比','区别','差别','稳定','耐磨','防潮','工厂','车间','库存','木纹','颜色','原木风','奶油风','真实','建议','问题','真话','效果','选购'];
+  for(const w of lex)if(raw.includes(w))out.add(w);
+  const blocked=['地板','实木','木地','木板','小红','红书','装修','这个','一种','可以','真的','就是','什么','一个','我们','你家','我家','看看','一下','不要','不是','木材','三层','多层','橡木','柚木','白橡','欧橡','紫檀','菠萝格','龙凤檀','黑胡桃','白蜡木','红檀香','缅甸'];
+  const stop2=new Set(['这个','一种','可以','真的','就是','什么','一个','我们','你们','自己','还是','因为','所以','如果','时候','地板','实木','装修']);
+  for(let n=3;n<=5;n++)for(let i=0;i+n<=raw.length;i++){
+    const g=raw.slice(i,i+n);
+    if(!/^[\u4e00-\u9fa5]+$/.test(g))continue;
+    if(blocked.some(w=>g===w||g.includes(w)&&g.length<=w.length+1))continue;
+    if(n===3&&stop2.has(g))continue;
+    if(/(.)\1\1/.test(g))continue;
+    out.add(g)
+  }
+  return out
+}
+function phraseEvidence(high,normal){
+  if(high.length<8||normal.length<20)return[];
+  const hc=new Map(),nc=new Map();
+  for(const x of high)for(const p of titlePhraseSet(x.title))hc.set(p,(hc.get(p)||0)+1);
+  for(const x of normal)for(const p of titlePhraseSet(x.title))nc.set(p,(nc.get(p)||0)+1);
+  const z=(p1,n1,p2,n2)=>{const p=(p1*n1+p2*n2)/(n1+n2),se=Math.sqrt(Math.max(1e-9,p*(1-p)*(1/n1+1/n2)));return Math.abs(p1-p2)/se};
+  const out=[];
+  for(const [p,h] of hc){
+    if(h<4)continue;
+    const n=nc.get(p)||0,hp=h/high.length,np=n/normal.length,diff=hp-np,zz=z(hp,high.length,np,normal.length);
+    if(diff<.055||zz<1.05)continue;
+    let level='探索性信号',category='探索性测试';
+    if(h>=8&&diff>=.13&&zz>=2){level='强证据';category='可以复用'}
+    else if(h>=6&&diff>=.09&&zz>=1.5){level='中等证据';category='值得测试'}
+    else if(diff>=.065&&zz>=1.15){level='弱证据';category='值得测试'}
+    out.push({id:'phrase:'+p,label:'标题高频切入「'+p+'」',kind:'phrase',phrase:p,hc:h,nc:n,hp,np,diff,z:zz,level,category,total:high.length+normal.length,highAvailable:high.length,normalAvailable:normal.length,featureCoverage:1})
+  }
+  return out.sort((a,b)=>evidenceRank(b)-evidenceRank(a)).slice(0,10)
+}
+function signalMatcher(signal,model){
+  if(!signal)return null;
+  if(signal.kind==='phrase')return x=>String(x.title||'').includes(signal.phrase);
+  if(signal.kind==='combo'){
+    const fns=(signal.parts||[]).map(id=>model.features.find(z=>z[0]===id)?.[2]).filter(Boolean);
+    return fns.length?x=>fns.every(fn=>fn(x)):null;
+  }
+  return model.features.find(z=>z[0]===signal.id)?.[2]||null
+}
+
 function batchItems(){
   const p=currentPlatform(),all=db.items.filter(x=>x.site===p).map(enrich),stamp=db.lastCapturedAt,expected=Number(db.lastValidCount||(db.lastMeta&&db.lastMeta.validCount)||0);
   let batch=stamp?all.filter(x=>x._capturedAt===stamp):[];if(batch.length<Math.min(20,expected||20)&&expected>0)batch=all.slice().sort((a,b)=>new Date(b._capturedAt||0)-new Date(a._capturedAt||0)).slice(0,Math.min(expected,all.length));
@@ -196,14 +276,17 @@ function analyze(){
   const platform=currentPlatform(),model=modelFor(platform),batch=batchItems();if(!model)return{platform,batch,unsupported:true};if(!batch.length)return{platform,batch,empty:true};
   const comp=buildComparable(batch,platform,model),deb=debias(comp.usable,platform),scored=outlierRows(scoreRows(deb.items,model)),anomalies=scored.filter(x=>x.__outlier),pool=scored.filter(x=>!x.__outlier).sort((a,b)=>b.__score-a.__score),highN=pool.length?Math.max(1,Math.ceil(pool.length*.20)):0,high=pool.slice(0,highN),normal=pool.slice(highN);
   const coreCount=pool[0]?model.core(pool[0].__dims).length:1,covered=pool.reduce((s,x)=>s+model.core(x.__dims).filter(v=>v!==null&&v!==undefined).length,0),coverage=pool.length?covered/(pool.length*coreCount):0,stability=comp.usable.length?deb.items.length/comp.usable.length:0,rankOnlyRate=pool.length?pool.filter(x=>x.__mode==='搜索排序/时效参考').length/pool.length:0;
-  const findings=evidence(high,normal,model.features,coverage,stability,rankOnlyRate),reusable=findings.filter(x=>x.category==='可以复用'),testable=findings.filter(x=>x.category==='值得测试'),none=findings.filter(x=>x.category==='暂无价值');
-  const observed=findings.filter(x=>x.diff>0).sort((a,b)=>b.diff-a.diff||b.z-a.z);
+  const baseFindings=evidence(high,normal,model.features,coverage,stability,rankOnlyRate),combos=platform==='小红书'?comboEvidence(high,normal,model.features,coverage,stability,rankOnlyRate):[],phrases=platform==='小红书'?phraseEvidence(high,normal):[];
+  const merged=baseFindings.concat(combos,phrases).sort((a,b)=>evidenceRank(b)-evidenceRank(a)),seenSignal=new Set(),findings=[];
+  for(const x of merged){const key=x.label;if(seenSignal.has(key))continue;seenSignal.add(key);findings.push(x)}
+  const reusable=findings.filter(x=>x.category==='可以复用'),testable=findings.filter(x=>x.category==='值得测试'),none=findings.filter(x=>x.category==='暂无价值');
+  const observed=findings.filter(x=>x.diff>0).sort((a,b)=>evidenceRank(b)-evidenceRank(a));
   const strongest=reusable[0]||testable[0]||null;
-  const expBase=!strongest?observed.find(x=>high.length>=30&&normal.length>=60&&x.diff>=.04&&x.z>=1.25):null;
+  const expBase=!strongest?observed.find(x=>x.diff>=.04&&x.z>=1.0):null;
   const exploratory=expBase?{...expBase,category:'探索性测试',level:'探索性信号'}:null;
-  let conf='探索',confClass='low';if(high.length>=50&&normal.length>=100&&coverage>=.55&&rankOnlyRate<.5){conf='高';confClass='good'}else if(high.length>=30&&normal.length>=60&&coverage>=.4&&rankOnlyRate<.7){conf='中';confClass='base'}else if(high.length>=10){conf='低';confClass='low'}
+  let conf='探索',confClass='low';if(high.length>=25&&normal.length>=60&&coverage>=.30&&rankOnlyRate<.8){conf='高';confClass='good'}else if(high.length>=15&&normal.length>=35&&coverage>=.22){conf='中';confClass='base'}else if(high.length>=8){conf='低';confClass='low'}
   const kinds={};for(const x of high)kinds[x.__kind]=(kinds[x.__kind]||0)+1;const dominant=Object.entries(kinds).sort((a,b)=>b[1]-a[1])[0]?.[0]||'潜在高表现';
-  return{platform,model,batch,comp,deb,pool,high,normal,anomalies,findings,reusable,testable,none,strongest,exploratory,observed,coverage,stability,rankOnlyRate,confidence:[conf,confClass],dominant,empty:false};
+  return{platform,model,batch,comp,deb,pool,high,normal,anomalies,findings,baseFindings,combos,phrases,reusable,testable,none,strongest,exploratory,observed,coverage,stability,rankOnlyRate,confidence:[conf,confClass],dominant,empty:false};
 }
 
 function parseProduct(raw){
