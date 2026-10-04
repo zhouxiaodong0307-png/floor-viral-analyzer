@@ -197,7 +197,8 @@ function modelFor(p,batch=[]){
   };
   const commerceCoverage=batch.length?batch.filter(x=>num(x.price)!==null||num(x.wants)!==null||num(x.consults)!==null||num(x.sales??x.sold)!==null).length/batch.length:0;
   const socialCoverage=batch.length?batch.filter(x=>num(x.likes)!==null||num(x.favs)!==null||num(x.comments)!==null||num(x.shares)!==null).length/batch.length:0;
-  if(socialCoverage>commerceCoverage)return{
+  const forceContent=['抖音','B站','微博','知乎'].includes(p),forceCommerce=['淘宝/天猫','京东'].includes(p);
+  if(forceContent||(!forceCommerce&&socialCoverage>commerceCoverage))return{
     adapterKey:'generic-content',groupMode:'content',features:GENERIC_FEATURES,
     dims(x){const views=pos(x.views),likes=num(x.likes),favs=num(x.favs),comments=num(x.comments),shares=num(x.shares),days=ageDays(x),total=[likes,favs,comments,shares].filter(v=>v!==null).reduce((a,b)=>a+b,0);return{views,likes,favs,comments,shares,days,total,speed:days!==null?((views??(total||null))!==null?(views??total)/Math.max(.25,days):null):null}},
     weights:{views:.15,likes:.18,favs:.24,comments:.22,shares:.24,speed:.18},fallback:{likes:.24,favs:.30,comments:.24,shares:.22},
