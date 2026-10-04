@@ -809,20 +809,51 @@ function opportunityMap(r){
   return{reuse,test,noRef};
 }
 function humanSummary(r){
-  const sig=r.reusable.concat(r.testable),s=r.strongest||r.exploratory,depth=db.lastMeta&&db.lastMeta.depth,deepN=Number(depth&&depth.enriched)||0;
-  const gap=deepN===0?'；但本轮详情补全为 0/120，所以正文、封面、收藏/评论等深层结论暂不冒充已验证，只先使用标题与当前可见互动数据。':'；详情补全 '+deepN+'/'+(depth?.target||120)+'，深层字段会按实际覆盖参与判断。';
+  const sig=r.reusable.concat(r.testable),s=r.strongest||r.exploratory,platform=r.platform||currentPlatform(),noun=platform==='小红书'?'笔记':platform==='闲鱼'?'商品':'内容';
+  const depth=db.lastMeta&&db.lastMeta.depth,deepN=Number(depth&&depth.enriched)||0;
+  const gap=platform==='小红书'?(deepN===0?'；本轮详情补全为 0/120，所以正文、封面、收藏/评论等深层结论暂不冒充已验证，只使用当前真正拿到的字段。':'；详情补全 '+deepN+'/'+(depth?.target||120)+'，深层字段按实际覆盖参与判断。'):'';
   if(sig.length){
     const names=sig.slice(0,3).map(x=>'“'+x.label+'”').join('、');
     const combos=(r.combos||[]).filter(x=>x.category!=='探索性测试').length,phrases=(r.phrases||[]).filter(x=>x.category!=='探索性测试').length;
-    return'本轮'+r.batch.length+'条小红书笔记、'+r.high.length+'条高表现样本中，已经识别出 '+sig.length+' 个可执行信号。当前优先看 '+names+(combos||phrases?'；其中包含'+(combos?combos+'个组合模式':'')+(combos&&phrases?'、':'')+(phrases?phrases+'个高价值标题切入口':''):'')+gap;
+    const extra=platform==='小红书'&&(combos||phrases)?('；其中包含'+(combos?combos+'个组合模式':'')+(combos&&phrases?'、':'')+(phrases?phrases+'个高价值标题切入口':'')):'';
+    return'本轮'+r.batch.length+'条'+platform+noun+'、'+r.high.length+'条高表现样本中，已经识别出 '+sig.length+' 个可执行信号。当前优先看 '+names+extra+gap;
   }
   if(s){
-    return'本轮'+r.batch.length+'条笔记暂未达到“可直接复用”级别，但并非没有信息。当前最明显的是“'+s.label+'”：高表现 '+fmtPct(s.hp)+'、普通 '+fmtPct(s.np)+'、差异 '+(s.diff>=0?'+':'')+Math.round(s.diff*100)+'%，下一轮应针对它做验证'+gap;
+    return'本轮'+r.batch.length+'条'+platform+noun+'暂未达到“可直接复用”级别，但并非没有信息。当前最明显的是“'+s.label+'”：高表现 '+fmtPct(s.hp)+'、普通 '+fmtPct(s.np)+'、差异 '+(s.diff>=0?'+':'')+Math.round(s.diff*100)+'%，下一轮应针对它做验证'+gap;
   }
-  const themes=(r.themes||[]).slice(0,2).filter(x=>x.hp>0),themeText=themes.length?(' 当前高价值内容主要集中在 '+themes.map(x=>'“'+x.name+'” '+Math.round(x.hp*100)+'%').join('、')+'。'):'';
-  return'本轮没有发现足以单独定型的内容因子，但不等于没有方向。'+themeText+' 系统会从高价值样本的主题集中度、组合模式和标题短语中选择下一轮测试方向'+gap;
+  const themes=(r.themes||[]).slice(0,2).filter(x=>x.hp>0),themeText=themes.length?(' 当前高价值样本主要集中在 '+themes.map(x=>'“'+x.name+'” '+Math.round(x.hp*100)+'%').join('、')+'。'):'';
+  return'本轮'+platform+'没有发现足以单独定型的单一因子，但不等于没有方向。'+themeText+' 系统会从当前平台实际可见的数据和高价值样本结构里选择下一轮测试方向'+gap;
+}
+function xyNextAdvice(r){
+  const s=r.strongest||r.exploratory;
+  if(!s){
+    const top=(r.themes||[])[0]||{name:'标准商品',hp:0};
+    const actions={'二手/闲置':'把成色、使用情况、瑕疵和可看货/自提条件写清楚，先提升买家判断效率。','全新商品':'把规格、状态、库存和交付条件前置，减少无效咨询。','库存/货源':'把真实库存、规格范围、是否可拆零/批量和发货方式写清楚。','厂家/商家':'用真实货源、板面、库存或生产现场建立可信度，不只写“厂家直销”。','交付/物流':'把发货地、物流/自提、运费规则和交期写清楚。','场景/案例':'商品图里加入真实铺装/使用场景，但标题仍以交易信息为主。','价格型':'测试清晰价格 + 规格/成色条件，不做脱离条件的低价标题。','标准商品':'优先把品类、规格、状态、价格和交付条件写完整。'};
+    return{title:'下一轮优化「'+top.name+'」商品表达',doText:(actions[top.name]||actions['标准商品'])+(top.hp?(' 本轮高价值样本中该类型约占 '+Math.round(top.hp*100)+'%。'):''),dont:'不要套小红书的“故事/种草”写法，也不要为了点击把价格、规格或成色写得模糊。',purpose:'提高闲鱼搜索点击后的有效咨询与成交判断效率。'};
+  }
+  const map={
+    spec:['规格前置','标题写完整规格，并在描述里补充对应面积/数量/状态，让搜索用户一眼判断是否匹配。'],
+    priceTitle:['真实价格前置','把真实价格和适用条件一起写清楚，避免只用低价数字吸引无效点击。'],
+    materialTitle:['品类/材质前置','标题先写清楚具体品类或材质，再补规格、状态或核心交易条件。'],
+    condition:['新旧/成色写清楚','把全新、二手、翻新、拆旧等状态明确写出，并说明真实瑕疵或使用情况。'],
+    stock:['库存/数量写清楚','把现货、库存数量、可拆零/批量等信息前置，减少反复询问。'],
+    factory:['用真实货源证据','展示真实工厂、仓库、库存或生产信息，但重点写买家能据此判断的规格和交付能力。'],
+    logistics:['交付条件前置','把发货、自提、物流、运费或同城配送条件写清楚。'],
+    sellerProof:['加强交易可信度','增加实拍、原图、可看货/自提等可验证信息，降低买家不确定性。'],
+    scene:['场景图辅助成交','保留交易信息为主，图片中加入真实使用/铺装效果帮助买家判断。'],
+    service:['服务范围写清楚','把安装、配送、测量或售后范围写明，避免买家误判包含项目。']
+  };
+  const v=map[s.id]||['优化当前最强商品信号','围绕“'+s.label+'”做一次单变量商品测试，其他价格、图片数量和发布时间尽量不变。'];
+  return{title:v[0],doText:v[1],dont:'不要把闲鱼商品写成小红书笔记；闲鱼优先解决搜索匹配、价格判断、可信度和交付问题。',purpose:'验证这个商品信息变量是否能提升想要、咨询或成交，而不是只追求浏览量。'};
+}
+function genericNextAdvice(r){
+  const s=r.strongest||r.exploratory,top=(r.themes||[])[0]||{name:'当前主流内容',hp:0};
+  if(!s)return{title:'下一轮测试「'+top.name+'」方向',doText:'沿用本轮高价值样本最集中的方向，只改变一个可观察变量，再用该平台实际提供的互动/交易指标验证。',dont:'未知平台不会套用小红书或闲鱼的固定公式；没有字段就不编指标。',purpose:'先建立这个网站自己的可验证规则。'};
+  return{title:'下一轮测试：'+s.label,doText:'围绕“'+s.label+'”做单变量测试，并以当前网站实际能采到的表现指标作为结果，不借用其他平台指标。',dont:'不要跨平台照搬标题、互动权重或转化逻辑。',purpose:'逐步建立该网站自己的高表现规则。'};
 }
 function nextAdvice(r){
+  if(r.platform==='闲鱼')return xyNextAdvice(r);
+  if(r.platform!=='小红书')return genericNextAdvice(r);
   const s=r.strongest||r.exploratory;
   if(!s){
     const top=(r.themes||[])[0]||{name:'真实案例/选购问题',hp:0};
