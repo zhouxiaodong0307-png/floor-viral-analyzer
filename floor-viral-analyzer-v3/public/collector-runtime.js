@@ -3,7 +3,7 @@ if(window.__FLOOR_V721_COLLECTING__)return;
 window.__FLOOR_V721_COLLECTING__=true;
 
 const TARGET=500, DEPTH_TARGET=120, DEPTH_MAX_MS=150000, MAX_TOTAL_MS=6*60*1000, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
-const COLLECTOR_VERSION='8.4.0';
+const COLLECTOR_VERSION='8.4.1';
 window.__FLOOR_MANUAL_STOP__=false;
 let fatalReason='',stopReason='';
 const safeQuery=(root,sel)=>{try{return root&&root.querySelector?root.querySelector(sel):null}catch{return null}};
@@ -16,7 +16,7 @@ const PLATFORM=IS_XHS?'小红书':IS_XY?'闲鱼':HOST.replace(/^www\./,'')||'未
 const QUERY_KEYS=['q','keyword','kw','query','search_query','search_keyword','wd','key'],QUERY_KEY=QUERY_KEYS.find(k=>base.searchParams.has(k))||((IS_XHS||IS_XY)?'q':'');
 const Q=decodeURIComponent((QUERY_KEY&&base.searchParams.get(QUERY_KEY))||'').trim();
 const FLOOR_TOPIC=/地板|实木|多层|三层|强化|spc|wpc|橡木|柚木|红檀香|龙凤檀|菠萝格|黑胡桃|白蜡木|重蚁木|紫檀/i.test(Q);
-const BREADTH_MAX_MS=IS_XHS?180000:IS_XY?180000:90000, QUERY_MAX_MS=IS_XHS?9000:IS_XY?7500:6500, QUERY_MAX_STEPS=IS_XHS?20:IS_XY?18:14, STALE_SCANS=3;
+const BREADTH_MAX_MS=IS_XHS?180000:IS_XY?240000:90000, QUERY_MAX_MS=IS_XHS?9000:6500, QUERY_MAX_STEPS=IS_XHS?20:14, STALE_SCANS=3;
 
 const out=new Map(), rawKeys=new Set(), queryStats=[];
 const woods=['红檀香','缅甸柚木','柚木','橡木','白橡','欧橡','龙凤檀','菠萝格','黑胡桃','白蜡木','重蚁木','紫檀'];
@@ -30,24 +30,21 @@ if(IS_XHS&&Q){
     ['实景','装修','铺装','怎么选','避坑','价格','对比','工厂','案例','客厅','卧室','完工','实拍','地暖','规格','选购','预算','安装','人字','鱼骨','收口']:
     ['攻略','怎么选','避坑','对比','价格','实拍','体验','推荐','测评','案例','使用感受','新手'];
   suffixes.forEach(x=>add((FLOOR_TOPIC?core+'地板 ':core+' ')+x,'A'));
-}
-if(IS_XY&&Q){
-  const core=FLOOR_TOPIC?(C(Q.replace(/地板$/,''))||Q):Q;
-  const suffixes=FLOOR_TOPIC?
-    ['现货','库存','全新','二手','翻新','工厂','厂家','清仓','特价','规格','价格','包邮','自提','发货','实拍','工程','家装','安装','大板','小板','人字','鱼骨','锁扣','平扣']:
-    ['全新','二手','现货','库存','包邮','自提','发货','同城','低价','清仓','实拍','正品','个人闲置','商家','批发','型号','规格','价格','成色','配件'];
-  suffixes.forEach(x=>add(core+' '+x,'A'));
-}
-if((IS_XHS||IS_XY)&&FLOOR_TOPIC){
-  if(Q&&!/地板/.test(Q)){add(Q+'地板','A');add(Q+'实木地板','A')}
-  else if(Q){const bare=C(Q.replace(/地板$/,''));if(bare&&bare!==Q)add(bare,'A')}
-  const hit=woods.find(w=>Q.includes(w));
-  for(const w of woods){
-    if(w===hit)continue;
-    add(w+'地板','B');
-    if(plan.filter(x=>x.tier==='B').length>=8)break;
+  if(FLOOR_TOPIC){
+    if(Q&&!/地板/.test(Q)){add(Q+'地板','A');add(Q+'实木地板','A')}
+    else if(Q){const bare=C(Q.replace(/地板$/,''));if(bare&&bare!==Q)add(bare,'A')}
+    const hit=woods.find(w=>Q.includes(w));
+    for(const w of woods){
+      if(w===hit)continue;
+      add(w+'地板','B');
+      if(plan.filter(x=>x.tier==='B').length>=8)break;
+    }
+    ['实木地板','多层实木地板','三层实木地板'].forEach(q=>add(q,'C'));
   }
-  ['实木地板','多层实木地板','三层实木地板','二手实木地板','地板库存'].forEach(q=>add(q,'C'));
+}
+// 闲鱼使用原搜索词 + 平台分页，不再通过扩展“库存/清仓/厂家”等关键词凑500条。
+if(IS_XY&&Q){
+  plan.length=0;seenQ.clear();add(Q,'A');
 }
 
 function status(win,msg){
@@ -90,7 +87,8 @@ function putItem(key,obj){
   const hits=[...(old.keywordHits||[]),obj.sourceKeyword].filter((x,i,a)=>x&&a.indexOf(x)===i);
   const prev=old.sampleTier||obj.sampleTier,finalTier=(prev==='A'||obj.sampleTier==='A')?'A':(prev==='B'||obj.sampleTier==='B')?'B':'C';
   out.set(key,{...old,...obj,keywordHits:hits,sampleTier:finalTier,
-    wants:obj.wants??old.wants??null,views:obj.views??old.views??null,likes:obj.likes??old.likes??null,
+    wants:obj.wants??old.wants??null,views:obj.views??old.views??null,exposure:obj.exposure??old.exposure??null,
+    consults:obj.consults??old.consults??null,sales:obj.sales??old.sales??null,likes:obj.likes??old.likes??null,
     favs:obj.favs??old.favs??null,comments:obj.comments??old.comments??null,shares:obj.shares??old.shares??null,
     price:obj.price??old.price??null,ageText:obj.ageText||old.ageText||'',seller:obj.seller||old.seller||'',coverRatio:obj.coverRatio??old.coverRatio??null,coverRatioType:obj.coverRatioType||old.coverRatioType||'',coverHasTextOverlay:obj.coverHasTextOverlay??old.coverHasTextOverlay??null,coverVisualType:obj.coverVisualType||old.coverVisualType||'',coverVisualConfidence:obj.coverVisualConfidence||old.coverVisualConfidence||'',coverOverlayText:obj.coverOverlayText||old.coverOverlayText||'',carouselCount:obj.carouselCount??old.carouselCount??null,visibleImageCount:obj.visibleImageCount??old.visibleImageCount??null,mediaType:obj.mediaType||old.mediaType||''
   });
@@ -194,12 +192,27 @@ function scanXhs(win,q,tier){
   }
   return out.size-before
 }
+function xyRelevant(text,q){
+  if(!IS_XY||!q)return true;
+  const t=C(text).toLowerCase(),qq=C(q).toLowerCase();
+  if(t.includes(qq))return true;
+  const known=['木地板','地板','实木','多层','三层','强化','spc','wpc','橡木','柚木','红檀香','龙凤檀','菠萝格','黑胡桃','白蜡木','重蚁木','紫檀'];
+  const hits=known.filter(k=>qq.includes(k.toLowerCase()));
+  if(hits.length){
+    if(qq.includes('地板'))return /地板|实木|多层|三层|强化|spc|wpc/i.test(t);
+    return hits.some(k=>t.includes(k.toLowerCase()));
+  }
+  const terms=qq.split(/[\s,+，、/]+/).map(x=>x.trim()).filter(x=>x.length>=2);
+  if(terms.length)return terms.some(x=>t.includes(x));
+  return true
+}
+
 function scanGeneric(win,q,tier){
   const before=out.size,doc=win.document;
   for(const a of doc.querySelectorAll('a[href]')){
     const card=getCard(doc,a);if(!card)continue;
     const baseText=C(card.innerText),attrs=[...card.querySelectorAll('[aria-label],[title]')].map(el=>C(el.getAttribute('aria-label')||el.getAttribute('title'))).filter(Boolean).join(' '),t=C(baseText+' '+attrs),lines=(card.innerText||'').split(/\n+/).map(C).filter(Boolean),title=titleOf(lines,q);
-    if(!title)continue;
+    if(!title||!xyRelevant(title+' '+t,q))continue;
     const pm=t.match(/[¥￥]\s*([\d,.]+)/),price=pm?+pm[1].replace(/,/g,''):null,link=a.href||win.location.href,pid=idOf(link);
     const cleanTitle=title.replace(/\s+/g,'').replace(/[^\u4e00-\u9fa5a-z0-9]/gi,'').slice(0,150),key=pid||cleanTitle+'|'+(price??'');
     rawKeys.add(key);
@@ -223,6 +236,72 @@ function scanGeneric(win,q,tier){
   return out.size-before
 }
 function scan(win,q,tier){return IS_XHS?scanXhs(win,q,tier):scanGeneric(win,q,tier)}
+function xyPageState(win){
+  try{
+    const els=[...win.document.querySelectorAll('span,div,p')];
+    let best=null;
+    for(const el of els){
+      const tx=C(el.innerText);
+      const m=tx.match(/^(\d{1,3})\s*\/\s*(\d{1,3})$/);
+      if(!m)continue;
+      const r=el.getBoundingClientRect();
+      if(r.width<=140&&r.height<=80&&r.top>=0&&r.top<win.innerHeight*.7){
+        best={el,current:+m[1],total:+m[2],rect:r};break
+      }
+    }
+    return best
+  }catch{return null}
+}
+function xyPageFingerprint(win){
+  try{
+    const st=xyPageState(win),parts=[];
+    for(const a of [...win.document.querySelectorAll('a[href]')].slice(0,300)){
+      const card=getCard(win.document,a);if(!card)continue;
+      const tx=C(card.innerText);if(!xyRelevant(tx,Q))continue;
+      const id=idOf(a.href);if(id)parts.push(id);
+      if(parts.length>=4)break
+    }
+    return (st?st.current+'/'+st.total:'?')+'|'+parts.join(',')
+  }catch{return''}
+}
+function xyNextButton(win,st){
+  try{
+    const doc=win.document,all=[...doc.querySelectorAll('button,[role="button"],a')].filter(el=>{
+      try{
+        const r=el.getBoundingClientRect(),tx=C((el.innerText||'')+' '+(el.getAttribute('aria-label')||'')+' '+(el.getAttribute('title')||''));
+        if(el.disabled||el.getAttribute('aria-disabled')==='true'||r.width<16||r.height<16)return false;
+        if(/下一页|下一页|next|后页|下页/i.test(tx))return true;
+        if(st&&Math.abs((r.top+r.bottom)/2-(st.rect.top+st.rect.bottom)/2)<70&&r.left>=st.rect.right-10&&r.left<st.rect.right+180)return true;
+      }catch{}
+      return false
+    });
+    if(!all.length)return null;
+    all.sort((a,b)=>{
+      const ta=C((a.innerText||'')+' '+(a.getAttribute('aria-label')||'')+' '+(a.getAttribute('title')||'')),
+            tb=C((b.innerText||'')+' '+(b.getAttribute('aria-label')||'')+' '+(b.getAttribute('title')||''));
+      const sa=/下一页|next|后页|下页/i.test(ta)?100:0,sb=/下一页|next|后页|下页/i.test(tb)?100:0;
+      return sb-sa
+    });
+    return all[0]
+  }catch{return null}
+}
+async function xyGoNext(win){
+  const st=xyPageState(win);if(st&&st.current>=st.total)return{ok:false,reason:'last-page',state:st};
+  const before=xyPageFingerprint(win),btn=xyNextButton(win,st);
+  if(!btn)return{ok:false,reason:'next-button-not-found',state:st};
+  try{btn.click()}catch{return{ok:false,reason:'next-click-failed',state:st}}
+  for(let i=0;i<30;i++){
+    await new Promise(r=>setTimeout(r,160));
+    const now=xyPageFingerprint(win),ns=xyPageState(win);
+    if(now&&now!==before&&(ns?.current!==st?.current||now.split('|')[1]!==before.split('|')[1])){
+      try{win.scrollTo(0,0)}catch{}
+      await new Promise(r=>setTimeout(r,220));
+      return{ok:true,state:ns}
+    }
+  }
+  return{ok:false,reason:'page-did-not-change',state:xyPageState(win)}
+}
+
 function primaryScroller(win){
   let best=null,bestRoom=0;
   for(const e of win.document.querySelectorAll('main,[role="main"],section,div')){
@@ -271,6 +350,31 @@ async function waitLoad(win,expectedQ){
 }
 async function collectQuery(win,step,index){
   const started=out.size,queryStart=Date.now();
+  if(IS_XY){
+    let pages=0,reason='limit',lastPage=0;
+    try{win.scrollTo(0,0)}catch{}
+    await new Promise(r=>setTimeout(r,350));
+    while(out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__){
+      if(Date.now()-START>=BREADTH_MAX_MS){reason='breadth-time-limit';break}
+      scan(win,step.q,step.tier);
+      // 闲鱼每页约30条；页面本身是分页，不用“小红书式无限滚动”。
+      try{win.scrollTo(0,win.document.documentElement.scrollHeight)}catch{}
+      await new Promise(r=>setTimeout(r,180));
+      scan(win,step.q,step.tier);
+      const st=xyPageState(win),pageNo=st?.current||pages+1,total=st?.total||'?';
+      pages=Math.max(pages,pageNo);
+      status(win,'闲鱼采集 '+out.size+'/500｜第 '+pageNo+'/'+total+' 页｜搜索：'+step.q+'｜'+Math.round((Date.now()-START)/1000)+'秒');
+      if(out.size>=TARGET){reason='target';break}
+      if(st&&st.current>=st.total){reason='last-page';break}
+      if(pageNo===lastPage&&pages>1){reason='page-stalled';break}
+      lastPage=pageNo;
+      const next=await xyGoNext(win);
+      if(!next.ok){reason=next.reason||'next-failed';break}
+    }
+    scan(win,step.q,step.tier);
+    queryStats.push({query:step.q,tier:step.tier,added:out.size-started,total:out.size,pages,durationMs:Date.now()-queryStart,stoppedBy:reason});
+    return
+  }
   let stale=0,last=out.size,steps=0,stuck=0,reason='limit';
   try{win.scrollTo(0,0)}catch{}
   await new Promise(r=>setTimeout(r,220));
@@ -431,7 +535,7 @@ async function enrichDepth(win){
   return{target:DEPTH_TARGET,selected:sample.length,attempted,enriched,failed,durationSeconds:Math.round((Date.now()-start)/1000),fieldCounts,platform:PLATFORM}
 }
 let worker=null;
-try{worker=window.open('about:blank','floorCollectorV8400','width=980,height=760,left=28,top=28')}catch{}
+try{worker=window.open('about:blank','floorCollectorV8410','width=980,height=760,left=28,top=28')}catch{}
 if(!worker||worker.closed){
   window.__FLOOR_V721_COLLECTING__=false;
   document.getElementById('__floor_v721_status__')?.remove();
