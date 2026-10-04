@@ -408,15 +408,6 @@ function eligibility(s,p){
   if(has('service')&&!p.service)return{ok:false,need:'真实服务信息，例如 包安装 / 配送 / 测量'};
   return{ok:true,need:''};
 }
-function signalPool(r){
-  const a=r.reusable.concat(r.testable);
-  if(!a.length&&r.exploratory)a.push(r.exploratory);
-  if(!a.length&&r.themes&&r.themes[0]){
-    const t=r.themes[0];a.push({id:'themeDirection',label:'主题方向：'+t.name,category:'探索性测试',level:'高价值主题集中',hp:t.hp,np:t.np,diff:t.diff,z:0,kind:'theme'})
-  }
-  return a;
-}
-
 function semanticSpec(p){
   if(!p.spec)return null;
   const m=p.spec.match(/(\d{2,4})\s*[x×*]\s*(\d{2,4})(?:\s*[x×*]\s*(\d{1,3}))?/i);
@@ -1101,7 +1092,7 @@ function reportText(rep){
   const reuse=rep.opportunity.reuse.length?rep.opportunity.reuse.map(x=>x.label).join('、'):'暂无';
   const test=rep.opportunity.test.length?rep.opportunity.test.map(x=>x.label).join('、'):'暂无';
   const noRef=rep.opportunity.noRef.length?rep.opportunity.noRef.map(x=>x.label).join('、'):'暂无明确项目';
-  const img=rep.images,imgs=img&&rep.platform==='小红书'?['','【图片 / 封面规律】',img.summary,...img.findings.map((x,i)=>(i+1)+'. '+x.label+'｜高表现 '+fmtPct(x.hp)+'｜普通 '+fmtPct(x.np)+'｜'+(x.diff>=0?'+':'')+Math.round(x.diff*100)+'%｜'+x.level)]:[];
+  const img=rep.images,imgs=img&&img.summary?['',rep.platform==='闲鱼'?'【主图 / 商品图规律】':'【图片 / 封面规律】',img.summary,...img.findings.map((x,i)=>(i+1)+'. '+x.label+'｜高表现 '+fmtPct(x.hp)+'｜普通 '+fmtPct(x.np)+'｜'+(x.diff>=0?'+':'')+Math.round(x.diff*100)+'%｜'+x.level)]:[];
   const ref=rep.reference?['','【最值得查看的1条高价值'+noun+'】',rep.reference.title,rep.reference.reasons.join('；'),rep.reference.url]:[];
   return ['【'+rep.platform+' · 本轮综合分析】',rep.summary,'','【样本】','抓取 '+rep.sample.raw+'｜进入分析 '+rep.sample.valid+'｜高价值 '+rep.sample.high+'｜普通 '+rep.sample.normal,'','【本轮发现】',f||'没有达到展示门槛的正向差异。','','【高表现主要赢在哪里】',layer||'当前平台可用表现字段不足，暂不做跨平台替代。','','【高价值'+noun+'画像】',rep.profile.length?rep.profile.join('、'):'暂无足够差异支持稳定画像',...imgs,'','【机会地图】','可以直接复用：'+reuse,'值得测试：'+test,'暂时不要参考：'+noRef,...ref,'','【下一轮建议】',rep.next.title,rep.next.doText,'不要：'+rep.next.dont,'目的：'+rep.next.purpose,'','【可信度限制】','核心数据覆盖 '+Math.round(rep.limits.coverage*100)+'%｜去偏保留 '+Math.round(rep.limits.stability*100)+'%｜异常案例 '+rep.limits.anomalies+'｜排序参考 '+Math.round(rep.limits.rankOnlyRate*100)+'%'+(rep.limits.stop?'｜采集结束：'+rep.limits.stop:'')].join('\n');
 }
