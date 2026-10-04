@@ -436,6 +436,14 @@ function comboNatural(s,p,variant){
   if(ids.has('titleResult')&&!/装完|铺完|完工|结果/.test(title))title='装完'+m+'以后，'+hook;
   if(ids.has('titleCompare')&&!/差|对比|怎么选/.test(title))title=m+'差在哪？'+lead;
   if(ids.has('titleQuestion')&&!/[？?]|怎么|为什么|差在哪/.test(title))title+='？';
+  if(ids.has('titleSpec')&&p.spec&&!title.includes(p.spec))title=p.spec+' '+title;
+  if(ids.has('titlePrice')&&p.price&&!title.includes(p.price))title=p.price+'元/㎡ '+title;
+  if(ids.has('titleArea')&&p.area&&!title.includes(p.area))title=p.area+' '+title;
+  if(ids.has('titleLayout')&&p.layout&&!title.includes(p.layout))title=p.layout+' '+title;
+  if(ids.has('titleInstall')&&p.install&&!title.includes(p.install))title=p.install+' '+title;
+  if(ids.has('titleNumber')&&!/\d{1,2}\s*(?:个|条|点|种|件|步|招|坑|问题|细节)/.test(title))title='3个问题：'+title;
+  if(ids.has('titleCompare')&&!/对比|差在哪|区别|差别|怎么选/.test(title))title+='，差别在哪？';
+  if(ids.has('titleScene')&&!/客厅|卧室|家装|装修|新房|老房|民宿|办公室|写字楼|地暖/.test(title))title='客厅 '+title;
   const points=[];
   if(ids.has('sceneBody')||ids.has('titleScene'))points.push('真实空间和采光');
   if(ids.has('howto')||ids.has('saveValue')||ids.has('practicalInfo'))points.push('规格、铺法和收口');
