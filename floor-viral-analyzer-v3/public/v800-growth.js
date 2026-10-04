@@ -459,7 +459,16 @@ function strategyPlan(s,p,variant='A'){
   else if(s.id==='discussion'){action='用真实选择题触发讨论';angle=variant==='A'?'两种铺法怎么选':'效果和耐用更看重哪个';why='讨论点要建立在真实取舍上'}
   else if(s.id==='factory'){action='用真实工厂/生产现场建立内容可信度';angle=variant==='A'?'先看真实板面':'先看生产/库存现场';why='现场信息必须真实存在'}
   else if(s.id==='titleMaterial'){action='木种前置但不做泛泛卖点';angle=variant==='A'?'木种 + 选购问题':'木种 + 落地场景';why='木种只是入口，正文要解决选择问题'}
-  else {action=s.label;angle=variant==='A'?'从真实装修问题切入':'从具体选择差异切入';why='测试变量要转成用户能理解的内容角度'}
+  else if(s.id==='spec'){action='闲鱼标题前置完整规格';angle='品类/材质 + 规格 + 状态';why='闲鱼先解决搜索匹配和买家是否适配，不做种草式铺垫'}
+  else if(s.id==='priceTitle'){action='闲鱼标题前置真实价格';angle='价格 + 对应规格/状态条件';why='价格要帮助筛选有效买家，而不是做低价钩子'}
+  else if(s.id==='materialTitle'){action='闲鱼标题明确品类/材质';angle='材质/品类 + 核心交易条件';why='提升搜索匹配和快速判断'}
+  else if(s.id==='condition'){action='明确新旧/成色状态';angle='状态 + 瑕疵/使用情况';why='减少无效咨询和交易预期差'}
+  else if(s.id==='stock'){action='明确库存/数量';angle='现货/库存 + 数量/可拆零';why='让有明确需求的买家快速判断供货能力'}
+  else if(s.id==='logistics'){action='明确交付方式';angle='发货/自提/物流/运费';why='闲鱼成交前交付条件是关键筛选信息'}
+  else if(s.id==='sellerProof'){action='增加可验证信息';angle='实拍/原图/可看货/自提';why='降低陌生交易的不确定性'}
+  else if(s.id==='scene'){action='用场景图辅助交易判断';angle='交易信息为主 + 真实落地效果';why='场景只负责帮助判断，不把闲鱼写成小红书笔记'}
+  else if(s.id==='service'){action='明确服务范围';angle='安装/配送/测量/售后';why='避免买家误判价格包含的项目'}
+  else {action=s.label;angle=variant==='A'?'从当前平台最强交易/内容信号切入':'保持同一变量换一种表达';why='不跨平台照搬固定公式'}
   return{action,angle,why,numeric:n};
 }
 
@@ -725,8 +734,51 @@ function eligibility(s,p){
   if(s.id==='factory'&&!p.factory)return{ok:false,need:'确认这条内容确实是工厂/生产现场'};
   return{ok:true,need:''};
 }
+
+function naturalXyGenerate(p,s,variant='A'){
+  const m=p.mat||'商品',id=s.id;let title='',body='',cover='',images='',tags='';
+  const baseFacts=[p.spec,p.condition,p.quantity,p.price?('¥'+p.price):'',p.logistics?'交付方式见描述':''].filter(Boolean);
+  if(id==='spec'&&p.spec)title=variant==='A'?m+' '+p.spec+' '+(p.condition||'实拍现货'):p.spec+' '+m+' '+(p.condition||'实物拍摄');
+  else if(id==='priceTitle'&&p.price)title=variant==='A'?m+' ¥'+p.price+' '+(p.spec||p.condition||'实拍'):('¥'+p.price+' '+m+' '+(p.spec||p.condition||'详情见图'));
+  else if(id==='materialTitle')title=variant==='A'?m+' '+(p.spec||p.condition||'实拍现货'):m+' '+(p.condition||'实物图')+' '+(p.spec||'规格见描述');
+  else if(id==='condition'&&p.condition)title=variant==='A'?p.condition+' '+m+' '+(p.spec||'实拍'):m+' '+p.condition+' '+(p.spec||'状态如图');
+  else if(id==='stock')title=variant==='A'?m+' '+(p.quantity||'现货')+' '+(p.spec||'库存实拍'):m+' 现货库存 '+(p.quantity||p.spec||'可咨询数量');
+  else if(id==='factory')title=variant==='A'?m+' 工厂/库存实拍 '+(p.spec||'规格可选'):m+' 厂家现货 '+(p.spec||p.quantity||'实物拍摄');
+  else if(id==='logistics')title=variant==='A'?m+' '+(p.spec||'实拍')+' 支持发货/自提':m+' '+(p.logistics?'交付方式明确':'发货信息见描述')+' '+(p.spec||'');
+  else if(id==='sellerProof')title=variant==='A'?m+' 实物实拍 '+(p.spec||p.condition||''):m+' 可看货/实拍 '+(p.spec||p.condition||'');
+  else if(id==='scene')title=variant==='A'?m+' 实拍 '+(p.spec||'')+' 看实际铺装效果':m+' '+(p.spec||'实物')+' 场景效果参考';
+  else if(id==='service')title=variant==='A'?m+' '+(p.spec||'')+' '+(p.service?'安装/配送信息见描述':'服务信息见描述'):m+' '+(p.spec||'')+' 服务范围写清楚';
+  else title=variant==='A'?m+' '+baseFacts.slice(0,3).join(' '):baseFacts.slice(0,2).join(' ')+' '+m;
+  title=title.replace(/\s+/g,' ').trim().slice(0,34);
+  const lines=[];
+  lines.push('商品：'+m);
+  if(p.spec)lines.push('规格：'+p.spec);
+  if(p.condition)lines.push('状态：'+p.condition);
+  if(p.quantity)lines.push('数量：'+p.quantity);
+  if(p.price)lines.push('价格：'+p.price+'元'+(/㎡|平方/.test(p.raw)?'/㎡':''));
+  if(p.stock)lines.push('库存：以当前实际库存为准');
+  if(p.factory)lines.push('货源：真实工厂/仓库/生产现场信息');
+  if(p.logistics)lines.push('交付：'+(p.raw.match(/包邮|发货|自提|送货|物流|运费|到付|同城/g)||[]).join(' / '));
+  if(p.service)lines.push('服务：'+(p.raw.match(/安装|包安装|售后|测量|上门|配送/g)||[]).join(' / '));
+  if(p.proof)lines.push('图片：实物/现场实拍，可按真实情况核对');
+  if(!lines.slice(1).length)lines.push('具体规格、状态、价格和交付条件请按真实商品信息补充后再发布。');
+  body=lines.join('\n');
+  tags=[m,p.spec,p.condition].filter(Boolean).join(' / ');
+  cover='闲鱼首图优先真实商品主体，'+(p.spec?'规格清楚可见；':'')+'避免做小红书式大字海报。';
+  images='商品整体 → 关键细节/瑕疵 → 规格/包装 → 库存或交付证明。';
+  return{title,body,tags,cover,images,plan:strategyPlan(s,p,variant)};
+}
+function naturalGenericGenerate(p,s,variant='A'){
+  const platform=currentPlatform(),subject=p.mat||p.raw||'内容',label=s?.label||'当前最强信号';
+  const title=variant==='A'?(subject+'｜'+label):(label+'：'+subject);
+  const body='平台：'+platform+'\n主题：'+p.raw+'\n\n本轮只验证“'+label+'”这个变量，其余信息尽量保持一致。不会套用小红书点赞/收藏公式，也不会套用闲鱼想要/咨询公式；只使用这个网站实际能采到的指标判断结果。';
+  return{title:title.slice(0,34),body,tags:subject,cover:'使用该平台常见且真实的主图/封面形式。',images:'保持素材一致，只改变当前测试变量。',plan:strategyPlan(s,p,variant)};
+}
 function makeTwoVersions(p,s){
-  const a=applyImageAdvice(naturalXhsGenerate(p,s,'A')),b=applyImageAdvice(naturalXhsGenerate(p,s,'B'));
+  const platform=(window.__g81Analysis&&window.__g81Analysis.platform)||currentPlatform();
+  const gen=platform==='小红书'?naturalXhsGenerate:platform==='闲鱼'?naturalXyGenerate:naturalGenericGenerate;
+  const rawA=gen(p,s,'A'),rawB=gen(p,s,'B');
+  const a=platform==='小红书'?applyImageAdvice(rawA):rawA,b=platform==='小红书'?applyImageAdvice(rawB):rawB;
   const ca=readabilityCheck(a,s,p),cb=readabilityCheck(b,s,p);
   return[{...a,label:'方案A',mode:'严格测试当前变量',check:ca},{...b,label:'方案B',mode:'同一变量的另一种表达',check:cb}];
 }
