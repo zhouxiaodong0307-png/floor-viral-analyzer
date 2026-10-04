@@ -414,7 +414,7 @@ function eligibility(s,p){
   if(has('sellerProof')&&!p.proof)return{ok:false,need:'真实可信信息，例如 实拍 / 原图 / 可看货 / 支持自提'};
   if(has('scene')&&!p.scene)return{ok:false,need:'真实使用/铺装场景，例如 客厅实景 / 工程现场'};
   if(has('service')&&!p.service)return{ok:false,need:'真实服务信息，例如 包安装 / 配送 / 测量'};
-  if(currentPlatform()==='闲鱼'&&s.id==='themeDirection'&&![p.spec,p.condition,p.quantity,p.price,p.stockText,p.logisticsText,p.proofText,p.sceneText].some(Boolean))return{ok:false,need:'至少补充一个真实交易条件：规格 / 状态 / 价格 / 数量 / 交付 / 实拍 / 场景'};
+  if(currentPlatform()==='闲鱼'){const facts=[p.spec,p.condition,p.quantity,p.price,p.stockText,p.logisticsText,p.proofText,p.sceneText,p.serviceText].filter(Boolean).length;if(facts<2)return{ok:false,need:'闲鱼至少补充2个真实交易条件，例如：规格 + 价格，或状态 + 数量，或库存 + 交付方式'}}
   return{ok:true,need:''};
 }
 function semanticSpec(p){
