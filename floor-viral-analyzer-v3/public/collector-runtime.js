@@ -199,7 +199,7 @@ function xyRelevant(text,q){
   const known=['木地板','地板','实木','多层','三层','强化','spc','wpc','橡木','柚木','红檀香','龙凤檀','菠萝格','黑胡桃','白蜡木','重蚁木','紫檀'];
   const hits=known.filter(k=>qq.includes(k.toLowerCase()));
   if(hits.length){
-    if(qq.includes('地板'))return /地板|实木|多层|三层|强化|spc|wpc/i.test(t);
+    if(qq.includes('地板'))return /地板/i.test(t);
     return hits.some(k=>t.includes(k.toLowerCase()));
   }
   const terms=qq.split(/[\s,+，、/]+/).map(x=>x.trim()).filter(x=>x.length>=2);
@@ -266,23 +266,37 @@ function xyPageFingerprint(win){
 }
 function xyNextButton(win,st){
   try{
-    const doc=win.document,all=[...doc.querySelectorAll('button,[role="button"],a')].filter(el=>{
+    const doc=win.document,candidates=[];
+    if(st){
+      let p=st.el;
+      for(let depth=0;depth<5&&p;depth++,p=p.parentElement){
+        for(const el of p.querySelectorAll('button,[role="button"],a')){
+          try{
+            const r=el.getBoundingClientRect();
+            if(el.disabled||el.getAttribute('aria-disabled')==='true'||r.width<16||r.height<16)continue;
+            if(r.left>=st.rect.right-12&&Math.abs((r.top+r.bottom)/2-(st.rect.top+st.rect.bottom)/2)<90)candidates.push(el)
+          }catch{}
+        }
+        if(candidates.length)break
+      }
+    }
+    for(const el of doc.querySelectorAll('button,[role="button"],a')){
       try{
-        const r=el.getBoundingClientRect(),tx=C((el.innerText||'')+' '+(el.getAttribute('aria-label')||'')+' '+(el.getAttribute('title')||''));
-        if(el.disabled||el.getAttribute('aria-disabled')==='true'||r.width<16||r.height<16)return false;
-        if(/下一页|下一页|next|后页|下页/i.test(tx))return true;
-        if(st&&Math.abs((r.top+r.bottom)/2-(st.rect.top+st.rect.bottom)/2)<70&&r.left>=st.rect.right-10&&r.left<st.rect.right+180)return true;
+        const tx=C((el.innerText||'')+' '+(el.getAttribute('aria-label')||'')+' '+(el.getAttribute('title')||''));
+        if(/下一页|next|后页|下页/i.test(tx)&&!el.disabled&&el.getAttribute('aria-disabled')!=='true')candidates.unshift(el)
       }catch{}
-      return false
-    });
-    if(!all.length)return null;
-    all.sort((a,b)=>{
+    }
+    const unique=[...new Set(candidates)];
+    if(!unique.length)return null;
+    unique.sort((a,b)=>{
       const ta=C((a.innerText||'')+' '+(a.getAttribute('aria-label')||'')+' '+(a.getAttribute('title')||'')),
             tb=C((b.innerText||'')+' '+(b.getAttribute('aria-label')||'')+' '+(b.getAttribute('title')||''));
       const sa=/下一页|next|后页|下页/i.test(ta)?100:0,sb=/下一页|next|后页|下页/i.test(tb)?100:0;
-      return sb-sa
+      if(sa!==sb)return sb-sa;
+      const ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();
+      return ra.left-rb.left
     });
-    return all[0]
+    return unique[0]
   }catch{return null}
 }
 async function xyGoNext(win){
@@ -375,7 +389,7 @@ async function collectQuery(win,step,index){
     }
     scan(win,step.q,step.tier);
     queryStats.push({query:step.q,tier:step.tier,added:out.size-started,total:out.size,pages,durationMs:Date.now()-queryStart,stoppedBy:reason});
-    return
+    return reason
   }
   let stale=0,last=out.size,steps=0,stuck=0,reason='limit';
   try{win.scrollTo(0,0)}catch{}
@@ -396,6 +410,7 @@ async function collectQuery(win,step,index){
   }
   scan(win,step.q,step.tier);
   queryStats.push({query:step.q,tier:step.tier,added:out.size-started,total:out.size,steps,durationMs:Date.now()-queryStart,stoppedBy:reason});
+  return reason
 }
 
 
@@ -564,8 +579,9 @@ for(let i=0;i<plan.length&&out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__;i++){
     queryStats.push({query:step.q,tier:step.tier,added:0,total:out.size,error:'load-failed-after-2-retries'});
     continue
   }
-  await collectQuery(win,step,i);
+  const queryStop=await collectQuery(win,step,i);
   processedQueries++;
+  if(IS_XY&&out.size<TARGET&&queryStop)stopReason=queryStop;
 }
 if(out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__&&!fatalReason&&!stopReason)stopReason='unique-sample-exhausted';
 let depthMeta={target:DEPTH_TARGET,selected:0,attempted:0,enriched:0,failed:0,durationSeconds:0,fieldCounts:{}};
