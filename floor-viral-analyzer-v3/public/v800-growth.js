@@ -411,6 +411,9 @@ function eligibility(s,p){
 function signalPool(r){
   const a=r.reusable.concat(r.testable);
   if(!a.length&&r.exploratory)a.push(r.exploratory);
+  if(!a.length&&r.themes&&r.themes[0]){
+    const t=r.themes[0];a.push({id:'themeDirection',label:'主题方向：'+t.name,category:'探索性测试',level:'高价值主题集中',hp:t.hp,np:t.np,diff:t.diff,z:0,kind:'theme'})
+  }
   return a;
 }
 
@@ -1102,7 +1105,7 @@ function renderHigh(r){
   if(!r||!r.high){$id('g81High').innerHTML='';return}const arr=window.__g81ShowAll?r.high:r.high.slice(0,3);
   $id('g81High').innerHTML=arr.map((x,i)=>'<a class="g81-high" href="'+esc(x.url||'#')+'" target="_blank" rel="noopener"><span class="g81-no">'+(i+1)+'</span><div><b>'+esc(x.title||'未命名')+'</b><small>'+esc(x.__kind)+' · '+esc(itemReasons(x,r.model).join('；'))+'</small></div><span class="g81-open">打开</span></a>').join('')||'<div class="g81-muted">暂无足够高价值样本。</div>';$id('g81ShowHigh').style.display=r.high.length>3?'inline-flex':'none';
 }
-function signalPool(r){const a=r.reusable.concat(r.testable);if(!a.length&&r.exploratory)a.push(r.exploratory);return a}
+function signalPool(r){const a=r.reusable.concat(r.testable);if(!a.length&&r.exploratory)a.push(r.exploratory);if(!a.length&&r.themes&&r.themes[0]){const t=r.themes[0];a.push({id:'themeDirection',label:'主题方向：'+t.name,category:'探索性测试',level:'高价值主题集中',hp:t.hp,np:t.np,diff:t.diff,z:0,kind:'theme'})}return a}
 function metrics(r){const s=r.strongest,signal=s?((s.diff>=0?'+':'')+Math.round(s.diff*100)+'%'):'—';return[[r.pool.length,'有效样本'],[r.high.length,'高价值样本'],[Math.round(r.coverage*100)+'%','核心数据覆盖'],[signal,'本轮最强信号'],[r.confidence[0],'综合可信度']]}
 
 function renderAnalysis(r){
@@ -1140,7 +1143,7 @@ function saveDraft(r,s,p,versions){
   localStorage.setItem(EXPKEY,JSON.stringify(a.slice(-120)));
 }
 function generateCurrent(){
-  const r=window.__g81Analysis||analyze(),s=window.__g81ActiveSignal||r.strongest||r.exploratory,raw=$id('g81Product')?.value.trim();
+  const r=window.__g81Analysis||analyze(),s=window.__g81ActiveSignal||r.strongest||r.exploratory||signalPool(r)[0],raw=$id('g81Product')?.value.trim();
   if(!raw)return setStatus('先输入你准备发布的真实商品信息。','bad');
   if(!s)return setStatus('本轮没有达到最低测试门槛的变量。先看综合报告里的观察信号和数据缺口。','warn');
   const p=parseProduct(raw),elig=eligibility(s,p);
@@ -1156,8 +1159,26 @@ function generateCurrent(){
   setStatus('已生成两个自然版本，并通过“测试变量执行 + 可读性”双重检查。','oktxt');
 }
 
-function renderFeedback(){const box=$id('g81Feedback');box.innerHTML='<div class="g81-feedback-title">发布后记录结果</div><div class="g81-feedback-grid"><label>浏览<input data-k="views" inputmode="decimal"></label><label>点赞<input data-k="likes" inputmode="decimal"></label><label>收藏<input data-k="favs" inputmode="decimal"></label><label>评论<input data-k="comments" inputmode="decimal"></label><label>转发<input data-k="shares" inputmode="decimal"></label><label>发布天数<input data-k="days" inputmode="decimal"></label></div><button id="g81SaveFeedback" class="g81-primary">保存结果</button>';box.classList.add('show');$id('g81SaveFeedback').onclick=saveFeedback}
-function saveFeedback(){let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}const wanted=window.__g82Versions&&window.__g82Versions[window.__g82RecordIndex||0]?.label;const d=[...a].reverse().find(x=>x.platform===currentPlatform()&&x.status==='draft'&&(!wanted||x.variant===wanted));if(!d)return setStatus('没有找到待验证的生成记录。','warn');const m={};$id('g81Feedback').querySelectorAll('input').forEach(i=>{const v=num(i.value);if(v!==null)m[i.dataset.k]=v});const total=(m.likes||0)+(m.favs||0)+(m.comments||0)+(m.shares||0),days=m.days||1;d.metrics=m;d.performance=m.views?total/m.views:total/Math.max(.25,days);d.status='measured';d.measuredAt=nowISO();localStorage.setItem(EXPKEY,JSON.stringify(a.slice(-120)));$id('g81Feedback').innerHTML='<div class="g81-saved">✓ 已保存，本轮结果会进入后续同平台验证。</div>';setStatus('发布结果已记录。','oktxt')}
+function renderFeedback(){
+  const box=$id('g81Feedback'),p=currentPlatform();
+  let fields=p==='小红书'?[['views','浏览'],['likes','点赞'],['favs','收藏'],['comments','评论'],['shares','转发'],['days','发布天数']]:
+    p==='闲鱼'?[['exposure','曝光'],['views','浏览'],['wants','想要'],['consults','咨询'],['sales','成交'],['days','发布天数']]:
+    [['views','浏览/访问'],['likes','点赞/认可'],['comments','评论/互动'],['wants','意向'],['sales','成交/转化'],['days','发布天数']];
+  box.innerHTML='<div class="g81-feedback-title">'+esc(p)+' · 发布后记录结果</div><div class="g81-feedback-grid">'+fields.map(([k,l])=>'<label>'+esc(l)+'<input data-k="'+k+'" inputmode="decimal"></label>').join('')+'</div><button id="g81SaveFeedback" class="g81-primary">保存结果</button>';
+  box.classList.add('show');$id('g81SaveFeedback').onclick=saveFeedback
+}
+function saveFeedback(){
+  let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}
+  const platform=currentPlatform(),wanted=window.__g82Versions&&window.__g82Versions[window.__g82RecordIndex||0]?.label;
+  const d=[...a].reverse().find(x=>x.platform===platform&&x.status==='draft'&&(!wanted||x.variant===wanted));if(!d)return setStatus('没有找到待验证的生成记录。','warn');
+  const m={};$id('g81Feedback').querySelectorAll('input').forEach(i=>{const v=num(i.value);if(v!==null)m[i.dataset.k]=v});
+  const days=m.days||1;let performance=0;
+  if(platform==='小红书'){const total=(m.likes||0)+(m.favs||0)+(m.comments||0)+(m.shares||0);performance=m.views?total/m.views:total/Math.max(.25,days)}
+  else if(platform==='闲鱼'){const intent=(m.wants||0)+(m.consults||0)*3+(m.sales||0)*8;performance=m.views?intent/Math.max(1,m.views):intent/Math.max(.25,days)}
+  else{const total=Object.entries(m).filter(([k])=>k!=='days').reduce((z,[,v])=>z+(v||0),0);performance=total/Math.max(.25,days)}
+  d.metrics=m;d.performance=performance;d.status='measured';d.measuredAt=nowISO();
+  localStorage.setItem(EXPKEY,JSON.stringify(a.slice(-120)));$id('g81Feedback').innerHTML='<div class="g81-saved">✓ 已保存，本轮结果会进入后续同平台验证。</div>';setStatus('发布结果已记录。','oktxt')
+}
 function runAll(){ensureUI();const r=analyze();window.__g81Analysis=r;renderAnalysis(r);const p=r&&r.platform?r.platform:currentPlatform();const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const sub=document.querySelector('.top .sub');if(sub)sub.textContent='自动识别：'+p+' → 抓取 → 平台专属分析 → 测试策略 → 发布验证';const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.4.0';document.title='多平台内容增长决策系统 V8.4.0';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.4.0：平台自动识别；小红书、闲鱼使用独立指标与策略；其他网站按实际可见字段建立自己的规则。'}
 const oldRender=window.render;if(typeof oldRender==='function'){window.render=function(){const v=oldRender.apply(this,arguments);setTimeout(runAll,40);return v}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(runAll,90));else setTimeout(runAll,90);
