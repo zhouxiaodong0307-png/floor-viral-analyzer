@@ -330,7 +330,15 @@ function numericMeaning(p){
 function strategyPlan(s,p,variant='A'){
   const n=numericMeaning(p),m=p.mat;
   let action='',angle='',why='';
-  if(s.id==='titleSpec'){
+  if(s.kind==='combo'){
+    action='同时执行两个已在高表现样本中共现的因素';
+    angle=(s.partLabels||[]).join(' × ');
+    why='组合模式只有在两个因素同时出现时才显示优势，本轮必须一起执行但不再叠加第三个变量';
+  }else if(s.kind==='phrase'){
+    action='复用高价值标题中的真实切入口';
+    angle='围绕「'+s.phrase+'」建立用户问题或场景';
+    why='保留的是切入意图，不复制原笔记句子';
+  }else if(s.id==='titleSpec'){
     action='标题加入完整且有意义的规格信息';
     if(n?.type==='规格'){angle=variant==='A'?'用完整规格回答“铺出来是什么感觉”':'用完整规格提出“和其他规格差在哪”';why=n.meaning}
     else{angle='需要先补充完整规格';why='规格型信号只有在真实规格存在时才执行'}
@@ -356,10 +364,103 @@ function strategyPlan(s,p,variant='A'){
   else {action=s.label;angle=variant==='A'?'从真实装修问题切入':'从具体选择差异切入';why='测试变量要转成用户能理解的内容角度'}
   return{action,angle,why,numeric:n};
 }
+
+function semanticNatural(s,p,variant){
+  const m=p.mat,id=s.id;
+  if(id==='decisionAngle')return{
+    title:variant==='A'?m+'怎么选？先看真正影响落地的几个条件':m+'适不适合你家，别只看第一眼颜色',
+    body:'选'+m+'时，我会先看空间、规格、铺法和收口，再判断它适不适合。真正有用的不是一句“好不好”，而是把这些条件放到自己家里逐项确认。',
+    cover:'真实空间或板材实拍，封面只保留一个选购问题。',images:'空间 → 板面 → 规格/铺法 → 收口。'};
+  if(id==='painAngle')return{
+    title:variant==='A'?'准备铺'+m+'，这几个坑最好提前避开':m+'别急着下单，落地前先确认这几件事',
+    body:'地板真正容易出问题的地方，往往不是样板本身，而是空间条件、规格、铺法和收口没有一起确认。提前把门套、柜体、地面条件和损耗问清楚，后面会省很多返工。',
+    cover:'真实现场细节图，不用夸张警告式海报。',images:'地面条件 → 板材 → 门套/柜体 → 收口。'};
+  if(id==='compareAngle')return{
+    title:variant==='A'?'同样是'+m+'，真正的差别到底在哪？':m+'怎么选？把这几个差别放一起看',
+    body:'对比地板时，不建议只比颜色。规格、结构、铺法和实际空间一起看，才更接近最后落地的差别。能放到同一个真实场景里比较，判断会更直观。',
+    cover:'同场景A/B对比或同木种不同规格对比。',images:'A/B整体 → 各自近景 → 规格 → 收口。'};
+  if(id==='realCaseAngle')return{
+    title:variant==='A'?'这次实际现场铺'+m+'，先看落地效果':m+'装完以后，现场最值得看的是这些细节',
+    body:p.raw+'\n\n这条只讲真实现场已经发生的情况：空间、板面、铺法和收口分别是什么效果，再说明哪些条件会影响最终判断，不额外编造业主反馈。',
+    cover:'真实完工/现场图。',images:'整体现场 → 板面 → 拼接 → 收口。'};
+  if(id==='performanceAngle')return{
+    title:variant==='A'?m+'别只看颜色，性能更该看哪些？':m+'适不适合长期用，先看这几个性能条件',
+    body:'判断'+m+'，稳定性、耐磨、防潮和地暖适配这些问题都要结合材质、结构和使用环境看。这里不做绝对承诺，只把购买前需要确认的条件讲清楚。',
+    cover:'真实板面近景或结构细节。',images:'板面 → 结构/侧面 → 使用环境 → 铺装细节。'};
+  if(id==='installDetailAngle')return{
+    title:variant==='A'?'铺'+m+'，安装和收口其实比想象中更重要':m+'落地前，铺法、门套和收口先确认',
+    body:'真正落地时，安装方式、铺法、门套、柜体和收口会直接影响完成效果。选板之前把这些位置先看清楚，再决定规格和铺法，会比最后现场补救更稳。',
+    cover:'安装/收口真实现场。',images:'铺装过程 → 门套 → 柜体 → 收口完成。'};
+  if(id==='budgetAngle')return{
+    title:variant==='A'?p.price+'元/㎡的'+m+'，预算不能只算单价':m+'预算怎么定？'+p.price+'元/㎡只是第一步',
+    body:'这次真实单价是'+p.price+'元/㎡。完整预算还要把规格、损耗、铺法、安装和收口一起算进去。只比较一平方米的价格，很容易低估最后落地成本。',
+    cover:'真实产品图，小字标注真实单价。',images:'产品 → 规格 → 铺法 → 安装/收口。'};
+  if(id==='sourceProofAngle')return{
+    title:variant==='A'?'工厂里看'+m+'，我会先看这些真实细节':'同样是'+m+'，生产现场能看出什么？',
+    body:'这次内容来自真实工厂/生产现场。与其只说“厂家货源”，更有用的是把板面、规格、选材、生产和库存状态拍清楚，让用户知道这些信息和实际选择有什么关系。',
+    cover:'工厂/车间真实现场。',images:'生产 → 板面 → 规格 → 包装/库存。'};
+  return null
+}
+function phraseNatural(s,p,variant){
+  const m=p.mat,ph=String(s.phrase||'').slice(0,8);let title='',body='';
+  if(/怎么选|如何选|选购/.test(ph))title=variant==='A'?m+'怎么选？先把这几个条件看清楚':m+'怎么选更合适？别只看样板';
+  else if(/避坑|踩坑|后悔|别买/.test(ph))title=variant==='A'?'准备铺'+m+'，先把这些'+ph+'点看明白':m+'落地前先说说'+ph+'这件事';
+  else if(/客厅|卧室|实景|现场|完工|入住/.test(ph))title=variant==='A'?ph+'里看'+m+'，比单看样板更直观':m+'放进'+ph+'以后，最该看什么？';
+  else if(/价格|预算/.test(ph))title=variant==='A'?m+'的'+ph+'到底该怎么看？':m+'别只看单价，'+ph+'要一起算';
+  else if(/安装|铺装|收口|鱼骨|人字|工字/.test(ph))title=variant==='A'?m+'做'+ph+'，落地前先确认这些':ph+'和'+m+'怎么配，先看空间条件';
+  else if(/对比|区别|差别/.test(ph))title=variant==='A'?m+ph+'到底在哪？':m+'怎么选？先把'+ph+'看清楚';
+  else title=variant==='A'?m+'里反复提到「'+ph+'」，到底在看什么？':'看'+m+'时，「'+ph+'」为什么值得注意？';
+  body='本轮高价值标题里，“'+ph+'”出现得明显更多。这里不照抄原文，只保留它背后的切入方式：把用户真正关心的问题放到前面，再用真实产品、空间、规格、铺法或现场信息给出判断。';
+  return{title,body,cover:'用与“'+ph+'”直接相关的真实图片，不做统计海报。',images:'主题对应的真实场景 → 产品近景 → 关键细节 → 落地结果。'}
+}
+function comboNatural(s,p,variant){
+  const ids=new Set(s.parts||[]),m=p.mat;
+  let hook='怎么选？先看真正影响落地的条件';
+  if(ids.has('painAngle'))hook='这几个坑最好提前避开';
+  else if(ids.has('titleCompare')||ids.has('compareAngle'))hook='真正的差别到底在哪？';
+  else if(ids.has('titleResult')||ids.has('experience')||ids.has('realCaseAngle'))hook='装完以后最值得看什么？';
+  else if(ids.has('titleQuestion')||ids.has('decisionAngle')||ids.has('decisionTitle'))hook='怎么选才更合适？';
+  else if(ids.has('titleScene')||ids.has('sceneBody'))hook='铺进客厅以后最该看什么？';
+  let facts=[];
+  if(ids.has('titleSpec')&&p.spec)facts.push(p.spec);
+  if((ids.has('titlePrice')||ids.has('budgetAngle'))&&p.price)facts.push(p.price+'元/㎡');
+  if(ids.has('titleArea')&&p.area)facts.push(p.area);
+  if(ids.has('titleLayout')&&p.layout)facts.push(p.layout);
+  if(ids.has('titleInstall')&&p.install)facts.push(p.install);
+  let lead=facts.length?facts.join(' · ')+' ':'';
+  let title=lead+m+'，'+hook;
+  if(ids.has('titleNumber'))title='3个问题：'+lead+m+' '+hook;
+  if(ids.has('titleMaterial')&&!title.includes(m))title=m+' '+title;
+  if(ids.has('titleScene')&&!/客厅|卧室|家装|装修|空间/.test(title))title='客厅铺'+m+'，'+hook;
+  if(ids.has('titleResult')&&!/装完|铺完|完工|结果/.test(title))title='装完'+m+'以后，'+hook;
+  if(ids.has('titleCompare')&&!/差|对比|怎么选/.test(title))title=m+'差在哪？'+lead;
+  if(ids.has('titleQuestion')&&!/[？?]|怎么|为什么|差在哪/.test(title))title+='？';
+  const points=[];
+  if(ids.has('sceneBody')||ids.has('titleScene'))points.push('真实空间和采光');
+  if(ids.has('howto')||ids.has('saveValue')||ids.has('practicalInfo'))points.push('规格、铺法和收口');
+  if(ids.has('performanceAngle'))points.push('稳定性、耐磨、防潮或地暖条件');
+  if(ids.has('installDetailAngle'))points.push('安装、门套、柜体和收口');
+  if(ids.has('factory')||ids.has('sourceProofAngle'))points.push('工厂生产、板面和库存实况');
+  if(ids.has('budgetAngle')||ids.has('titlePrice'))points.push('单价、损耗和完整落地预算');
+  if(ids.has('realCaseAngle')||ids.has('experience')||ids.has('titleResult'))points.push('这次真实现场/完工结果');
+  if(!points.length)points.push('空间、规格、铺法和真实板面');
+  let body='这轮数据里，这两个因素同时出现在高表现内容中的比例更高。实际发内容时不需要提“组合模式”，只要自然地把它们放在同一条里。\n\n';
+  if(ids.has('factory')||ids.has('sourceProofAngle'))body+='这次直接看真实工厂/生产现场。\n';
+  if(ids.has('realCaseAngle')||ids.has('experience')||ids.has('titleResult'))body+=p.raw+'\n';
+  if(ids.has('howto')||ids.has('saveValue')||ids.has('titleNumber'))body+='1. '+points[0]+'\n2. '+(points[1]||'真实产品细节')+'\n3. '+(points[2]||'最终落地判断')+'\n';
+  else body+='重点看：'+points.join('、')+'。';
+  if(ids.has('discussion'))body+='\n\n如果是你家，你会先看哪一个条件？';
+  if(ids.has('painAngle'))body+='\n\n真正要避开的，是只看样板却忽略现场条件。';
+  if(ids.has('compareAngle')||ids.has('titleCompare'))body+='\n\n对比时尽量放在同一空间和同一条件下看，不做脱离条件的结论。';
+  return{title,body,cover:'使用与这两个因素直接相关的真实图，不额外叠加第三种封面实验。',images:'整体场景 → 产品近景 → 关键变量 → 落地/收口。'}
+}
+
 function naturalXhsGenerate(p,s,variant='A'){
   const m=p.mat,plan=strategyPlan(s,p,variant),n=plan.numeric,sp=semanticSpec(p);
   let title='',body='',cover='',images='';
-  if(s.id==='titleNumber'){
+  const mined=s.kind==='combo'?comboNatural(s,p,variant):s.kind==='phrase'?phraseNatural(s,p,variant):semanticNatural(s,p,variant);
+  if(mined){title=mined.title;body=mined.body;cover=mined.cover;images=mined.images}
+  else if(s.id==='titleNumber'){
     if(variant==='A'){
       title=m+'怎么选？先看这4个问题';
       body='如果准备铺'+m+'，我会先把这4个问题确认清楚：\n1. 家里实际是什么空间和采光\n2. 更适合什么规格和铺法\n3. 柜体、门套和收口怎么衔接\n4. 日常使用更在意脚感、稳定还是打理\n\n这4项先想清楚，再去看具体产品会更容易判断。';
