@@ -1,4 +1,4 @@
-// deploy-refresh-v8.3.0
+// deploy-refresh-v8.4.0
 import express from "express";
 import { chromium } from "playwright";
 import dns from "node:dns/promises";
@@ -43,8 +43,14 @@ async function validatePublicUrl(raw) {
 function siteFromUrl(raw) {
   try {
     const h = new URL(raw).hostname.toLowerCase();
-    if (h.includes("goofish.com")) return "闲鱼";
-    if (h.includes("xiaohongshu.com")) return "小红书";
+    if (h.includes("goofish.com") || h === "2.taobao.com" || h.endsWith(".2.taobao.com")) return "闲鱼";
+    if (h.includes("xiaohongshu.com") || h.includes("xhslink.com")) return "小红书";
+    if (h.includes("douyin.com")) return "抖音";
+    if (h.includes("bilibili.com")) return "B站";
+    if (h.includes("weibo.com")) return "微博";
+    if (h.includes("zhihu.com")) return "知乎";
+    if (h.includes("taobao.com") || h.includes("tmall.com")) return "淘宝/天猫";
+    if (h.includes("jd.com")) return "京东";
     return h.replace(/^www\./, "");
   } catch { return "未知网站"; }
 }
@@ -89,6 +95,18 @@ function normalizeItems(rows, source, site) {
     publishedAt: clean(x.publishedAt, 80),
     contentType: clean(x.contentType, 80),
     coverType: clean(x.coverType, 80),
+    mediaType: clean(x.mediaType, 80),
+    coverRatio: nullableNumber(x.coverRatio),
+    coverRatioType: clean(x.coverRatioType, 80),
+    coverHasTextOverlay: typeof x.coverHasTextOverlay === "boolean" ? x.coverHasTextOverlay : null,
+    coverVisualType: clean(x.coverVisualType, 100),
+    coverVisualConfidence: clean(x.coverVisualConfidence, 40),
+    coverOverlayText: clean(x.coverOverlayText, 240),
+    carouselCount: nullableNumber(x.carouselCount),
+    visibleImageCount: nullableNumber(x.visibleImageCount),
+    deepFetched: x.deepFetched === true,
+    deepBodyFetched: x.deepBodyFetched === true,
+    deepUsefulFields: nullableNumber(x.deepUsefulFields),
     site
   })).filter(x => x.title);
 }
@@ -157,7 +175,7 @@ async function analyzeUrl(url) {
 }
 
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, version: "8.3.0", mode: "decision-system-permanent-collector" });
+  res.json({ ok: true, version: "8.4.0", mode: "decision-system-permanent-collector" });
 });
 
 app.get("/browser-bridge.zip", (req, res) => {
@@ -186,15 +204,20 @@ app.post("/import", (req, res) => {
     const raw = typeof req.body?.data === "string" ? req.body.data : "";
     const payload = JSON.parse(raw || "{}");
     const source = clean(payload.source, 2200);
-    const site = siteFromUrl(source);
+    const detectedSite = siteFromUrl(source);
+    const claimedSite = clean(payload.platform, 120);
+    const site = detectedSite !== "未知网站" ? detectedSite : (claimedSite || detectedSite);
     const rows = Array.isArray(payload.items) ? payload.items : [];
     const items = normalizeItems(rows, source, site);
     if (!items.length) throw new Error("没有收到有效内容数据");
-    const safe = JSON.stringify({ source, site, keyword: clean(payload.keyword,120), meta: payload.meta || {}, capturedAt: new Date().toISOString(), items }).replace(/</g, "\\u003c");
-    res.type("html").send(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>正在导入</title></head><body><script>localStorage.setItem('floorV7Import',JSON.stringify(${safe}));location.replace('/?imported=1&v=8300&t='+Date.now());<\/script></body></html>`);
+    let host = "";
+    try { host = new URL(source).hostname.toLowerCase(); } catch {}
+    const meta = { ...(payload.meta || {}), platform: site, sourceHost: host };
+    const safe = JSON.stringify({ source, site, keyword: clean(payload.keyword,120), meta, capturedAt: new Date().toISOString(), items }).replace(/</g, "\\u003c");
+    res.type("html").send(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>正在导入</title></head><body><script>localStorage.setItem('floorV7Import',JSON.stringify(${safe}));location.replace('/?imported=1&v=8400&t='+Date.now());<\/script></body></html>`);
   } catch (err) {
     res.status(400).type("html").send(`<!doctype html><meta charset="utf-8"><body style="font-family:-apple-system;padding:30px"><h2>导入失败</h2><p>${clean(err?.message || "未知错误", 300)}</p></body>`);
   }
 });
 
-app.listen(PORT, "0.0.0.0", () => console.log(`V8.3.0 running on :${PORT}`));
+app.listen(PORT, "0.0.0.0", () => console.log(`V8.4.0 running on :${PORT}`));
