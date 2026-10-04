@@ -698,7 +698,7 @@ function validateSignal(s,o,p){
   if(s.id==='performanceAngle')return /稳定|耐磨|防潮|地暖|变形|开裂|密度|脚感/.test(t+' '+b);
   if(s.id==='installDetailAngle')return /安装|铺装|铺法|收口|门套|柜体|踢脚线|龙骨|鱼骨|人字/.test(t+' '+b);
   if(s.id==='budgetAngle')return !!p.price&&(t+' '+b).includes(p.price);
-  if(s.id==='sourceProofAngle')return /工厂|车间|生产|仓库|库存/.test(t+' '+b);
+  if(s.id==='sourceProofAngle')return /工厂|厂家|车间|生产|仓库|库存|货源/.test(t+' '+b);
   if(s.id==='titleSpec')return !!p.spec&&t.includes(p.spec);
   if(s.id==='titleNumber')return /\d{1,2}\s*(?:个|条|点|种|件|步|招|坑|问题|细节)/.test(t);
   if(s.id==='titleYears')return !!p.years&&(t+' '+b).includes(p.years);
@@ -715,7 +715,7 @@ function validateSignal(s,o,p){
   if(s.id==='howto'||s.id==='saveValue'||s.id==='practicalInfo')return /1[.、]|4点|问题|确认/.test(b);
   if(s.id==='discussion')return /你会|你更在意|怎么选|[？?]/.test(t+' '+b);
   if(s.id==='experience')return /用过|装完|实际|结果|完工/.test(t+' '+b);
-  if(s.id==='factory')return /工厂|车间|生产/.test(t+' '+b);
+  if(s.id==='factory')return /工厂|厂家|车间|生产|仓库|库存|货源/.test(t+' '+b);
   if(s.id==='coverScene')return /真实|铺装|场景|空间/.test(c);
   return true;
 }
