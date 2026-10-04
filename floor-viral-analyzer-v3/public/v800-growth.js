@@ -561,9 +561,10 @@ function metricLayers(r){
 }
 function explainFinding(f){
   if(!f)return'';
-  if(f.category==='可以复用')return'这个特征在高表现内容中明显更常见，而且当前证据相对稳定，可以继续使用。';
-  if(f.category==='值得测试')return'高表现内容中出现得更多，但还不能证明是稳定规律，更适合放进下一轮做单变量测试。';
-  if(f.diff>0)return'高表现内容中略多一些，但差异还不足以支撑固定做法，目前只作为观察信号。';
+  const what=f.kind==='combo'?'这不是单一技巧，而是两个内容因素同时出现时的组合优势。':f.kind==='phrase'?'这是从高价值标题里自动挖出的重复切入口，不是预设模板。':'';
+  if(f.category==='可以复用')return(what?what+' ':'')+'它在高表现内容中明显更常见，当前可作为优先策略继续使用。';
+  if(f.category==='值得测试')return(what?what+' ':'')+'它在高表现内容中出现得更多，下一轮值得单独验证。';
+  if(f.diff>0)return(what?what+' ':'')+'高表现内容中略多一些，目前只作为观察信号。';
   return'高低表现组差异很小，本轮不建议参考。';
 }
 function contentProfile(r){return r.reusable.concat(r.testable).filter(x=>x.diff>0).slice(0,5).map(x=>x.label)}
@@ -574,26 +575,47 @@ function opportunityMap(r){
   return{reuse,test,noRef};
 }
 function humanSummary(r){
-  const s=r.strongest||r.exploratory;
-  if(r.reusable.length){
-    const names=r.reusable.slice(0,3).map(x=>'“'+x.label+'”').join('、');
-    return'本轮'+r.batch.length+'条小红书笔记中，已经出现相对稳定的内容差异：'+names+'更常出现在高表现内容里，可以优先用于下一轮内容。';
+  const sig=r.reusable.concat(r.testable),s=r.strongest||r.exploratory,depth=db.lastMeta&&db.lastMeta.depth,deepN=Number(depth&&depth.enriched)||0;
+  const gap=deepN===0?'；但本轮详情补全为 0/120，所以正文、封面、收藏/评论等深层结论暂不冒充已验证，只先使用标题与当前可见互动数据。':'；详情补全 '+deepN+'/'+(depth?.target||120)+'，深层字段会按实际覆盖参与判断。';
+  if(sig.length){
+    const names=sig.slice(0,3).map(x=>'“'+x.label+'”').join('、');
+    const combos=(r.combos||[]).filter(x=>x.category!=='探索性测试').length,phrases=(r.phrases||[]).filter(x=>x.category!=='探索性测试').length;
+    return'本轮'+r.batch.length+'条小红书笔记、'+r.high.length+'条高表现样本中，已经识别出 '+sig.length+' 个可执行信号。当前优先看 '+names+(combos||phrases?'；其中包含'+(combos?combos+'个组合模式':'')+(combos&&phrases?'、':'')+(phrases?phrases+'个高价值标题切入口':''):'')+gap;
   }
   if(s){
-    return'本轮'+r.batch.length+'条小红书笔记中，暂时没有发现足够稳定的强规律；目前最明显的信号是“'+s.label+'”，高表现 '+fmtPct(s.hp)+'、普通 '+fmtPct(s.np)+'、差异 '+(s.diff>=0?'+':'')+Math.round(s.diff*100)+'%，属于'+s.level+'。这表示它只适合继续验证，不代表已经形成固定模板。';
+    return'本轮'+r.batch.length+'条笔记暂未达到“可直接复用”级别，但并非没有信息。当前最明显的是“'+s.label+'”：高表现 '+fmtPct(s.hp)+'、普通 '+fmtPct(s.np)+'、差异 '+(s.diff>=0?'+':'')+Math.round(s.diff*100)+'%，下一轮应针对它做验证'+gap;
   }
-  return'本轮'+r.batch.length+'条小红书笔记中，没有发现足够稳定的强规律，高表现组和普通组的内容写法整体较接近；这本身也是有效结论，当前更应该补完整互动数据，而不是硬造一个“爆款公式”。';
+  return'本轮没有发现足以单独定型的内容因子。系统不会把这解释成“什么都研究不出来”，而是转为从高价值样本的主题集中度、组合模式和标题短语中选择下一轮测试方向'+gap;
 }
 function nextAdvice(r){
   const s=r.strongest||r.exploratory;
-  if(!s)return{title:'本轮先不固定内容模板',doText:'先看分析报告里的观察信号，同时优先补充点赞、收藏、评论、转发等表现数据。',dont:'不要因为样本接近500条就强行制造规律。',purpose:'下一轮先提高可判断性，再验证内容差异。'};
-  let doText=s.label;
-  if(s.id==='titleSpec')doText='标题加入与用户决策有关的完整规格信息，并围绕空间适配、铺装效果或规格差异设计问题。';
-  else if(s.id==='titleNumber')doText='测试“数字清单型标题”，例如“4个问题 / 3个细节”，数字用于组织内容，不要求你额外提供产品规格。';
+  if(!s){
+    const types=new Map();for(const x of r.high||[]){const t=xhsType(x);types.set(t,(types.get(t)||0)+1)}
+    const top=[...types.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0]||'真实案例/选购问题';
+    return{title:'下一轮测试「'+top+'」切入',doText:'从本轮高价值样本最集中的内容类型出发：先提出一个真实用户问题，再用实际产品/现场信息给判断，结尾只留一个可验证的选择点。',dont:'不要复制固定文案，也不要同时改标题、封面、正文结构三个变量。',purpose:'即使没有单一强因子，也必须从高价值样本中形成一个明确可验证的下一步，而不是给空建议。'};
+  }
+  let doText=s.label,title=s.label,dont='不要把后台统计标签直接写进正文。';
+  if(s.kind==='combo'){
+    title='下一轮测试：'+(s.partLabels||[]).join(' × ');
+    doText='把这两个高表现因素放在同一条内容里执行：先用“'+(s.partLabels?.[0]||'主切入')+'”建立阅读入口，再用“'+(s.partLabels?.[1]||'第二因素')+'”把内容落到真实判断；其余标题长度、图片数量和发布时段尽量保持接近。';
+    dont='不要再叠加第三个新变量，否则发布后无法判断到底是哪一个因素起作用。';
+  }else if(s.kind==='phrase'){
+    title='下一轮围绕「'+s.phrase+'」做入口测试';
+    doText='不要照抄高价值笔记原句，而是保留“'+s.phrase+'”背后的用户意图：标题直接建立这个问题/场景，正文用你自己的真实产品、案例或现场信息回答。';
+    dont='不要只把“'+s.phrase+'”塞进标题却不给真实答案。';
+  }else if(s.id==='titleSpec'){doText='标题加入与用户决策有关的完整规格信息，并围绕空间适配、铺装效果或规格差异设计问题。';dont='不要把“910”这种孤立数字硬塞进标题；规格必须完整、有单位、有意义。'}
+  else if(s.id==='titleNumber'){doText='测试“数字清单型标题”，例如“4个问题 / 3个细节”，数字用于组织内容。';dont='不要把数字当产品参数硬塞；数字只用于自然的内容结构。'}
+  else if(s.id==='titleScene'||s.id==='sceneBody'||s.id==='realCaseAngle'){doText='从真实家装场景/业主现场切入，先让用户看到“这和我的空间有什么关系”，再讲产品判断。'}
+  else if(s.id==='titleCompare'||s.id==='compareAngle'){doText='用真实对比回答一个具体选择问题：差别在哪里、适合谁、什么条件下选哪一个。'}
+  else if(s.id==='titleQuestion'||s.id==='decisionAngle'){doText='标题直接提出一个购买决策问题，正文必须给出可执行判断，而不是泛泛科普。'}
+  else if(s.id==='painAngle'){doText='用一个真实容易踩坑的问题切入，正文说明出现问题的条件和避免方法，不制造焦虑。'}
+  else if(s.id==='performanceAngle'){doText='围绕用户真正关心的材质性能做判断，例如稳定性、地暖、耐磨或防潮，并明确适用条件。'}
+  else if(s.id==='installDetailAngle'){doText='把安装/收口/铺法变成购买前就该确认的问题，用现场细节说明为什么。'}
+  else if(s.id==='budgetAngle'||s.id==='titlePrice'){doText='把价格放进完整决策条件里：材质、规格、结构、铺法和落地成本一起讲，不做单纯低价钩子。'}
+  else if(s.id==='sourceProofAngle'||s.id==='factory'){doText='用真实工厂、库存或生产现场作为证据，重点展示用户能据此做什么判断。'}
   else if(s.id==='titleScene'||s.id==='sceneBody')doText='从真实家装场景切入，先让用户看到“这和我的空间有什么关系”。';
-  else if(s.id==='titleCompare')doText='用真实对比回答一个选择问题，不做没有依据的结论。';
   else if(s.id==='titleQuestion')doText='标题直接提出一个具体选购问题，正文必须真正回答。';
-  return{title:s.label,doText,dont:s.id==='titleSpec'?'不要把“910”这种孤立数字硬塞进标题；规格必须完整、有单位、有意义。':s.id==='titleNumber'?'不要把数字当产品参数硬塞；数字只用于自然的清单/数量结构。':'不要把后台统计标签直接写进正文。',purpose:'本轮只测试这一主变量，正文和图片风格尽量保持接近，用发布结果验证这个信号。'};
+  return{title,doText,dont,purpose:'下一轮只验证这个最强可执行模式；发布后把真实表现回写，系统再判断它应该升级、保留还是淘汰。'};
 }
 
 function bestReference(r){
@@ -603,7 +625,7 @@ function bestReference(r){
   const candidates=r.high.filter(validUrl);
   if(!candidates.length)return null;
   const maxScore=Math.max(...candidates.map(x=>Number(x.__score)||0),1);
-  const featureFn=signal?r.model.features.find(z=>z[0]===signal.id)?.[2]:null;
+  const featureFn=signalMatcher(signal,r.model);
   const ranked=candidates.map(x=>{
     const perf=(Number(x.__score)||0)/maxScore;
     const complete=Number(x.__complete)||0;
@@ -691,7 +713,7 @@ function applyImageAdvice(v){
 function buildReport(r){
   if(!r||r.empty||r.unsupported)return null;
   const layers=metricLayers(r),opp=opportunityMap(r),primary=r.reusable.concat(r.testable),seen=new Set(primary.map(x=>x.id)),secondary=(r.observed||[]).filter(x=>x.diff>=.03&&!seen.has(x.id)),topFindings=primary.concat(secondary).slice(0,5);
-  const stop=db.lastMeta&&db.lastMeta.stoppedBy,stopMap={target:'达到目标500条',manual:'手动停止',saturated:'平台样本已饱和','safety-time-limit':'达到安全时限'};
+  const stop=db.lastMeta&&db.lastMeta.stoppedBy,stopMap={target:'达到目标500条',manual:'手动停止',saturated:'平台样本已饱和','unique-sample-exhausted':'本轮唯一结果已采完','breadth-time-limit':'广度采集达到时限','safety-time-limit':'达到总安全时限'};
   return{id:(db.lastCapturedAt||'latest')+'|'+r.platform,platform:r.platform,createdAt:nowISO(),summary:humanSummary(r),sample:{raw:r.batch.length,valid:r.pool.length,high:r.high.length,normal:r.normal.length},topFindings:topFindings.map(x=>({...x,explain:explainFinding(x)})),layers,profile:contentProfile(r),images:imageAnalysis(r),opportunity:opp,next:nextAdvice(r),reference:bestReference(r),limits:{coverage:r.coverage,stability:r.stability,anomalies:r.anomalies.length,rankOnlyRate:r.rankOnlyRate,stop:stopMap[stop]||'',depth:(db.lastMeta&&db.lastMeta.depth)||null},confidence:r.confidence};
 }
 function saveReport(rep){
@@ -736,7 +758,7 @@ function renderAnalysis(r){
   const pool=signalPool(r),active=pool.length?pool[(window.__g81Seed||0)%pool.length]:null;window.__g81ActiveSignal=active;
   renderReport(r);
   const rawCount=$id('g823RawCount');if(rawCount)rawCount.textContent='共计 '+r.batch.length+' 条';
-  $id('g81Evidence').innerHTML=r.findings.slice(0,10).map(f=>'<div class="g81-evidence-row"><div><b>'+esc(f.label)+'</b><span>'+esc(f.category)+' · '+esc(f.level)+'</span></div><strong>'+(f.diff>=0?'+':'')+Math.round(f.diff*100)+'%</strong><small>高表现 '+f.hc+'/'+r.high.length+' = '+fmtPct(f.hp)+' ｜ 普通 '+f.nc+'/'+r.normal.length+' = '+fmtPct(f.np)+' ｜ 样本 '+f.total+'</small></div>').join('');
+  $id('g81Evidence').innerHTML=r.findings.slice(0,12).map(f=>'<div class="g81-evidence-row"><div><b>'+esc(f.label)+'</b><span>'+esc(f.category)+' · '+esc(f.level)+(f.kind==='combo'?' · 组合模式':f.kind==='phrase'?' · 自动短语挖掘':'')+'</span></div><strong>'+(f.diff>=0?'+':'')+Math.round(f.diff*100)+'%</strong><small>高表现 '+f.hc+'/'+(f.highAvailable||r.high.length)+' = '+fmtPct(f.hp)+' ｜ 普通 '+f.nc+'/'+(f.normalAvailable||r.normal.length)+' = '+fmtPct(f.np)+' ｜ 可比较样本 '+f.total+'</small></div>').join('');
   $id('g81DetailFoot').textContent='本轮高价值主要类型：'+r.dominant+'。去偏保留 '+Math.round(r.stability*100)+'%；异常高表现 '+r.anomalies.length+' 条已单独剥离；排序参考占 '+Math.round(r.rankOnlyRate*100)+'%。';
   renderHigh(r);
 }
