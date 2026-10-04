@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='8.3.0';
+const VERSION='8.4.0';
 const EXPKEY='floorGrowthExperimentsV81';
 const REPORTKEY='floorGrowthReportsV814';
 const $id=id=>document.getElementById(id);
@@ -9,7 +9,21 @@ const pos=v=>{const x=num(v);return x!==null&&x>0?x:null};
 const normText=s=>String(s||'').toLowerCase().replace(/\s+/g,' ').replace(/[^\u4e00-\u9fa5a-z0-9#×x㎡?？]+/g,' ').trim();
 const fmtPct=v=>v==null?'—':(v*100).toFixed(v<.1?1:0)+'%';
 const nowISO=()=>new Date().toISOString();
-const currentPlatform=()=>site||db.lastSite||'未知平台';
+function detectPlatform(raw){
+  try{
+    if(typeof siteFromUrl==='function'){const v=siteFromUrl(raw||'');if(v&&v!=='未知网站')return v}
+    const h=new URL(raw||'').hostname.toLowerCase();
+    if(h.includes('goofish.com')||h==='2.taobao.com'||h.endsWith('.2.taobao.com'))return'闲鱼';
+    if(h.includes('xiaohongshu.com')||h.includes('xhslink.com'))return'小红书';
+    return h.replace(/^www\./,'')||'未知平台'
+  }catch{return''}
+}
+const currentPlatform=()=>{
+  const src=(db.lastMeta&&db.lastMeta.source)||db.lastSource||'';
+  const detected=detectPlatform(src);
+  if(detected)return detected;
+  return (db.lastMeta&&db.lastMeta.platform)||db.lastSite||site||'未知平台'
+};
 const quant=(a,p)=>{if(!a.length)return null;const s=a.slice().sort((a,b)=>a-b),i=(s.length-1)*p,l=Math.floor(i),h=Math.ceil(i);return l===h?s[l]:s[l]+(s[h]-s[l])*(i-l)};
 const percentile=(v,a)=>{if(v===null||!a.length)return null;const cap=quant(a,.97),x=cap===null?v:Math.min(v,cap);let n=0;for(const z of a)if(z<=x)n++;return n/a.length};
 
@@ -33,6 +47,26 @@ function xhsType(x){
   if(/工厂|车间|库存|生产|仓库/.test(t))return'工厂/货源';
   return'产品展示';
 }
+function xyType(x){
+  const t=normText((x.title||'')+' '+(x.text||''));
+  if(/二手|闲置|拆旧|中古|个人转让|自用/.test(t))return'二手/闲置';
+  if(/全新|新品|未使用|原包装/.test(t))return'全新商品';
+  if(/库存|现货|清仓|尾货|批发|工程单/.test(t))return'库存/货源';
+  if(/工厂|厂家|车间|仓库|一手货源/.test(t))return'厂家/商家';
+  if(/包邮|发货|自提|送货|物流|同城/.test(t))return'交付/物流';
+  if(/客厅|卧室|家装|装修|铺装|实景|效果|案例/.test(t))return'场景/案例';
+  if(/价格|特价|多少钱|低价|性价比/.test(t))return'价格型';
+  return'标准商品';
+}
+function genericType(x){
+  const t=normText((x.title||'')+' '+(x.text||''));
+  if(/怎么|为什么|攻略|教程|避坑|科普|清单|指南|测评/.test(t))return'知识/指南';
+  if(/案例|实景|现场|体验|使用|完工|结果/.test(t))return'案例/体验';
+  if(/价格|预算|特价|优惠|多少钱/.test(t))return'价格/交易';
+  if(/工厂|厂家|库存|现货|仓库|货源/.test(t))return'货源/供给';
+  if(/对比|区别|vs|选择|怎么选/.test(t))return'对比/决策';
+  return'产品/内容展示';
+}
 function floorType(x){
   const t=normText((x.title||'')+' '+(x.text||''));
   if(/踢脚线|地脚线|地角线|收口条|扣条|龙骨|防潮膜|地垫|胶水|辅料|压条/.test(t))return'exclude';
@@ -52,8 +86,9 @@ function conditionOf(x){
 function bigrams(s){s=normText(s).replace(/\s+/g,'');const o=new Set();for(let i=0;i<s.length-1;i++)o.add(s.slice(i,i+2));return o}
 function jac(a,b){if(!a.size||!b.size)return 0;let n=0;for(const x of a)if(b.has(x))n++;return n/(a.size+b.size-n)}
 function rawInteraction(x,p){
-  if(p==='小红书'){const a=[num(x.likes),num(x.favs),num(x.comments),num(x.shares)].filter(v=>v!==null);return a.length?a.reduce((s,v)=>s+v,0):null}
-  const a=[num(x.wants),num(x.comments),num(x.consults)].filter(v=>v!==null);return a.length?a.reduce((s,v)=>s+v,0):null;
+  const commerce=[num(x.wants),num(x.consults),num(x.sales??x.sold)].filter(v=>v!==null);
+  if(p==='闲鱼'||commerce.length){const a=[num(x.wants),num(x.comments),num(x.consults),num(x.sales??x.sold)].filter(v=>v!==null);return a.length?a.reduce((s,v)=>s+v,0):null}
+  const a=[num(x.likes),num(x.favs),num(x.comments),num(x.shares)].filter(v=>v!==null);return a.length?a.reduce((s,v)=>s+v,0):null
 }
 function preScore(x,p){
   const d=ageDays(x),eng=rawInteraction(x,p),views=pos(x.views);let s=0;
@@ -114,17 +149,31 @@ const XHS_FEATURES=[
   ['sourceProofAngle','工厂/货源证据切入',x=>/工厂|车间|生产|仓库|库存|下线|原料|坯料|厂家/.test((x.title||'')+' '+(x.text||''))]
 ];
 const XY_FEATURES=[
-  ['spec','标题带具体规格',x=>/\d{2,4}\s*[x×*]\s*\d{2,4}/i.test(x.title||'')],
-  ['priceTitle','标题直接写价格',x=>/[¥￥]\s*\d|\d+(?:\.\d+)?\s*元/.test(x.title||'')],
-  ['stock','现货/库存表达',x=>/现货|库存|仓库/.test((x.title||'')+' '+(x.text||''))],
-  ['factory','厂家/货源表达',x=>/工厂|厂家|厂价|车间|一手货源/.test((x.title||'')+' '+(x.text||''))],
-  ['logistics','物流/交付明确',x=>/物流|发货|自提|送货|到付|运费/.test((x.title||'')+' '+(x.text||''))],
-  ['scene','使用场景切入',x=>/客厅|卧室|家装|装修|铺装|实景|效果/.test((x.title||'')+' '+(x.text||''))]
+  ['spec','标题带完整规格',x=>/\d{2,4}\s*[x×*]\s*\d{2,4}/i.test(x.title||'')],
+  ['priceTitle','标题直接写真实价格',x=>/[¥￥]\s*\d|\d+(?:\.\d+)?\s*元/.test(x.title||'')],
+  ['materialTitle','标题明确品类/材质',x=>/(地板|实木|多层|三层|橡木|柚木|红檀香|龙凤檀|菠萝格|黑胡桃|白蜡木|紫檀|spc|wpc)/i.test(x.title||'')],
+  ['condition','成色/新旧状态明确',x=>/全新|新品|二手|闲置|翻新|未使用|拆旧|中古/.test((x.title||'')+' '+(x.text||''))],
+  ['stock','现货/库存/数量明确',x=>/现货|库存|仓库|清仓|尾货|\d+\s*(?:件|套|箱|支|片|平方|㎡)/.test((x.title||'')+' '+(x.text||''))],
+  ['factory','厂家/货源证据',x=>/工厂|厂家|厂价|车间|一手货源|生产现场/.test((x.title||'')+' '+(x.text||''))],
+  ['logistics','物流/交付明确',x=>/物流|发货|自提|送货|到付|运费|包邮|同城/.test((x.title||'')+' '+(x.text||''))],
+  ['sellerProof','可信度信息明确',x=>/实拍|实物|原图|可验|可看货|支持自提|现场看|卖家信用|验货/.test((x.title||'')+' '+(x.text||''))],
+  ['scene','使用场景/落地效果',x=>/客厅|卧室|家装|装修|铺装|实景|效果|办公室|工程/.test((x.title||'')+' '+(x.text||''))],
+  ['service','安装/售后服务明确',x=>/安装|包安装|售后|测量|上门|配送/.test((x.title||'')+' '+(x.text||''))]
+];
+const GENERIC_FEATURES=[
+  ['titleQuestion','标题用问题切入',x=>/[？?]|为什么|怎么|如何|值不值|哪个好/.test(x.title||'')],
+  ['titleNumber','标题含具体数字信息',x=>/\d/.test(x.title||'')],
+  ['price','价格信息明确',x=>/[¥￥]\s*\d|\d+(?:\.\d+)?\s*元/.test((x.title||'')+' '+(x.text||''))],
+  ['spec','规格/型号信息明确',x=>/\d{2,4}\s*[x×*]\s*\d{2,4}|型号|规格|尺寸/.test((x.title||'')+' '+(x.text||''))],
+  ['compare','对比/选择表达',x=>/对比|区别|差别|vs|怎么选|选择/.test((x.title||'')+' '+(x.text||''))],
+  ['scene','真实场景/案例表达',x=>/实景|现场|案例|使用|体验|完工|实拍/.test((x.title||'')+' '+(x.text||''))],
+  ['practical','可执行信息',x=>/步骤|清单|注意|方法|攻略|发货|安装|预算|规格|价格/.test((x.title||'')+' '+(x.text||''))],
+  ['source','来源/可信度表达',x=>/官方|品牌|工厂|厂家|实拍|原图|认证|库存|现货/.test((x.title||'')+' '+(x.text||''))]
 ];
 
-function modelFor(p){
+function modelFor(p,batch=[]){
   if(p==='小红书')return{
-    features:XHS_FEATURES,
+    adapterKey:'xiaohongshu',groupMode:'content',features:XHS_FEATURES,
     dims(x){
       const views=pos(x.views),likes=num(x.likes),favs=num(x.favs),comments=num(x.comments),shares=num(x.shares),days=ageDays(x);
       const total=[likes,favs,comments,shares].filter(v=>v!==null).reduce((s,v)=>s+v,0),any=[likes,favs,comments,shares].some(v=>v!==null);
@@ -138,21 +187,40 @@ function modelFor(p){
     group:x=>({type:xhsType(x),material:materialOf(x),days:ageDays(x)})
   };
   if(p==='闲鱼')return{
-    features:XY_FEATURES,
-    dims(x){const exp=pos(x.exposure??x.impressions),views=pos(x.views),wants=num(x.wants),consults=num(x.consults),sales=num(x.sales??x.sold),days=ageDays(x);return{exp,views,wants,comments:num(x.comments),consults,sales,days,clickRate:exp&&views!==null?views/exp:null,wantRate:views&&wants!==null?wants/views:null,consultRate:views&&consults!==null?consults/views:null,saleRate:consults&&sales!==null?sales/consults:null,speed:days!==null?((consults??wants??views??null)!==null?(consults??wants??views)/Math.max(.25,days):null):null}},
-    weights:{exp:.1,views:.1,clickRate:.20,wantRate:.24,consultRate:.28,saleRate:.30,speed:.18},fallback:{wants:.75,comments:.25},
-    labels:{exp:'曝光',views:'浏览',clickRate:'浏览率',wantRate:'想要率',consultRate:'咨询率',saleRate:'成交转化',speed:'增长速度',wants:'想要',comments:'互动'},
-    kinds:{exp:'流量型',views:'流量型',clickRate:'点击型',wantRate:'互动型',consultRate:'咨询型',saleRate:'成交转化型',speed:'异常爆发型',wants:'互动型',comments:'互动型',searchRank:'排序参考'},
-    core:d=>[d.views,d.wants,d.consults,d.days],
-    group:x=>({type:floorType(x),condition:conditionOf(x),material:materialOf(x),days:ageDays(x)})
+    adapterKey:'xianyu',groupMode:'commerce',features:XY_FEATURES,
+    dims(x){const exp=pos(x.exposure??x.impressions),views=pos(x.views),wants=num(x.wants),consults=num(x.consults),sales=num(x.sales??x.sold),comments=num(x.comments),days=ageDays(x);return{exp,views,wants,comments,consults,sales,days,clickRate:exp&&views!==null?views/exp:null,wantRate:views&&wants!==null?wants/views:null,consultRate:views&&consults!==null?consults/views:null,saleRate:consults&&sales!==null?sales/consults:null,speed:days!==null?((consults??wants??views??null)!==null?(consults??wants??views)/Math.max(.25,days):null):null}},
+    weights:{exp:.08,views:.10,clickRate:.18,wantRate:.24,consultRate:.30,saleRate:.34,speed:.16},fallback:{wants:.65,comments:.15,views:.20},
+    labels:{exp:'曝光',views:'浏览',clickRate:'浏览率',wantRate:'想要率',consultRate:'咨询率',saleRate:'成交转化',speed:'增长速度',wants:'想要',consults:'咨询',sales:'成交',comments:'互动'},
+    kinds:{exp:'曝光型',views:'浏览型',clickRate:'点击型',wantRate:'想要型',consultRate:'咨询型',saleRate:'成交转化型',speed:'增长型',wants:'想要型',consults:'咨询型',sales:'成交型',comments:'互动型',searchRank:'搜索排序参考'},
+    core:d=>[d.exp,d.views,d.wants,d.consults,d.sales,d.days],
+    group:x=>({type:xyType(x),condition:conditionOf(x),material:materialOf(x),days:ageDays(x)})
   };
-  return null;
+  const commerceCoverage=batch.length?batch.filter(x=>num(x.price)!==null||num(x.wants)!==null||num(x.consults)!==null||num(x.sales??x.sold)!==null).length/batch.length:0;
+  const socialCoverage=batch.length?batch.filter(x=>num(x.likes)!==null||num(x.favs)!==null||num(x.comments)!==null||num(x.shares)!==null).length/batch.length:0;
+  if(socialCoverage>commerceCoverage)return{
+    adapterKey:'generic-content',groupMode:'content',features:GENERIC_FEATURES,
+    dims(x){const views=pos(x.views),likes=num(x.likes),favs=num(x.favs),comments=num(x.comments),shares=num(x.shares),days=ageDays(x),total=[likes,favs,comments,shares].filter(v=>v!==null).reduce((a,b)=>a+b,0);return{views,likes,favs,comments,shares,days,total,speed:days!==null?((views??(total||null))!==null?(views??total)/Math.max(.25,days):null):null}},
+    weights:{views:.15,likes:.18,favs:.24,comments:.22,shares:.24,speed:.18},fallback:{likes:.24,favs:.30,comments:.24,shares:.22},
+    labels:{views:'浏览',likes:'点赞',favs:'收藏',comments:'评论',shares:'分享',speed:'增长速度'},
+    kinds:{views:'浏览型',likes:'点赞型',favs:'收藏型',comments:'讨论型',shares:'传播型',speed:'增长型',searchRank:'排序参考'},
+    core:d=>[d.views,d.likes,d.favs,d.comments,d.shares,d.days],
+    group:x=>({type:genericType(x),material:materialOf(x),days:ageDays(x)})
+  };
+  return{
+    adapterKey:'generic-commerce',groupMode:'commerce',features:GENERIC_FEATURES,
+    dims(x){const exp=pos(x.exposure??x.impressions),views=pos(x.views),wants=num(x.wants),consults=num(x.consults),sales=num(x.sales??x.sold),comments=num(x.comments),days=ageDays(x);return{exp,views,wants,consults,sales,comments,days,speed:days!==null?((sales??consults??wants??views??null)!==null?(sales??consults??wants??views)/Math.max(.25,days):null):null}},
+    weights:{exp:.08,views:.12,wants:.24,consults:.30,sales:.34,speed:.16},fallback:{views:.25,wants:.35,comments:.15},
+    labels:{exp:'曝光',views:'浏览',wants:'意向',consults:'咨询',sales:'成交',comments:'互动',speed:'增长速度'},
+    kinds:{exp:'曝光型',views:'浏览型',wants:'意向型',consults:'咨询型',sales:'成交型',comments:'互动型',speed:'增长型',searchRank:'排序参考'},
+    core:d=>[d.exp,d.views,d.wants,d.consults,d.sales,d.days],
+    group:x=>({type:genericType(x),condition:conditionOf(x),material:materialOf(x),days:ageDays(x)})
+  };
 }
 function ageBand(d){if(d===null)return'时间未知';return d<=7?'近7天':d<=30?'8-30天':'30天以上'}
 function buildComparable(batch,p,model){
-  const base=batch.filter(x=>floorType(x)!=='exclude'&&!!String(x.title||'').trim());
+  const base=batch.filter(x=>!!String(x.title||'').trim());
   const rows=base.map(x=>({...x,__dims:model.dims(x),__group:model.group(x)}));
-  const keys=p==='小红书'?[x=>[x.__group.type,x.__group.material,ageBand(x.__group.days)].join('|'),x=>[x.__group.type,ageBand(x.__group.days)].join('|'),x=>x.__group.type]:[x=>[x.__group.type,x.__group.condition,x.__group.material,ageBand(x.__group.days)].join('|'),x=>[x.__group.type,x.__group.condition].join('|'),x=>x.__group.type];
+  const keys=model.groupMode==='content'?[x=>[x.__group.type,x.__group.material,ageBand(x.__group.days)].join('|'),x=>[x.__group.type,ageBand(x.__group.days)].join('|'),x=>x.__group.type]:[x=>[x.__group.type,x.__group.condition,x.__group.material,ageBand(x.__group.days)].join('|'),x=>[x.__group.type,x.__group.condition].join('|'),x=>x.__group.type];
   const maps=keys.map(fn=>{const m=new Map();for(const x of rows){const k=fn(x);if(!m.has(k))m.set(k,[]);m.get(k).push(x)}return m});
   const usable=[];for(const x of rows){for(let i=0;i<keys.length;i++){const k=keys[i](x),a=maps[i].get(k)||[];if(a.length>=10){usable.push({...x,__cohort:a,__cohortKey:k,__strictness:i});break}}}
   return{base,usable};
