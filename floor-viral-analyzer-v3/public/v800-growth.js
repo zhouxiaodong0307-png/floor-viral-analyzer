@@ -290,15 +290,16 @@ function analyze(){
 }
 
 function parseProduct(raw){
-  const spec=(raw.match(/\d{2,4}\s*[x×*]\s*\d{2,4}(?:\s*[x×*]\s*\d{1,3})?/i)||[])[0]||'',area=(raw.match(/\d+(?:\.\d+)?\s*(?:㎡|平米|平方)/)||[])[0]||'',layout=(raw.match(/(?:\d室\d厅|\d房|一居|两居|三居|四居|户型)/)||[])[0]||'',install=(raw.match(/鱼骨|人字|工字|369|自由拼|悬浮|平扣|锁扣|龙骨|直铺/)||[])[0]||'';
+  const spec=(raw.match(/\d{2,4}\s*[x×*]\s*\d{2,4}(?:\s*[x×*]\s*\d{1,3})?/i)||[])[0]||'',area=(raw.match(/\d+(?:\.\d+)?\s*(?:㎡|平米|平方)/)||[])[0]||'',layout=(raw.match(/(?:\d室\d厅|\d房|一居|两居|三居|四居|户型)/)||[])[0]||'',install=(raw.match(/鱼骨|人字|工字|369|自由拼|悬浮|平扣|锁扣|龙骨|直铺/)||[])[0]||'',years=(raw.match(/\d+(?:\.\d+)?\s*(?:年|个月|月|天)/)||[])[0]||'';
   const pm=raw.match(/(?:¥|￥)?\s*(\d+(?:\.\d+)?)\s*元(?:\/㎡|每平方|一平|平)?/),price=pm?pm[1]:'',mats=['红檀香','缅甸柚木','柚木','橡木','白橡','欧橡','紫檀','菠萝格','龙凤檀','黑胡桃','白蜡木','重蚁木'],mat=mats.find(x=>raw.includes(x))||raw.split(/[\s,，/|]+/).find(x=>x.length>=2&&!/^\d/.test(x))||'木地板',otherNum=(raw.match(/\d+(?:\.\d+)?/)||[])[0]||'';
-  return{raw,spec,area,layout,install,price,mat,otherNum,factory:/工厂|厂家|车间/.test(raw),experience:/用了|使用|实测|装完|铺完|住了|完工|后悔|踩坑/.test(raw)};
+  return{raw,spec,area,layout,install,years,price,mat,otherNum,factory:/工厂|厂家|车间|仓库|库存|生产/.test(raw),experience:/用了|使用|实测|装完|铺完|住了|完工|后悔|踩坑|现场|客户|业主|案例/.test(raw)};
 }
 function eligibility(s,p){
   if(!s)return{ok:false,need:'没有可测试信号'};
   const ids=s.kind==='combo'?(s.parts||[]):[s.id];
   const has=id=>ids.includes(id);
   if(has('titleSpec')&&!p.spec)return{ok:false,need:'真实规格，例如 910×125×18'};
+  if(has('titleYears')&&!p.years)return{ok:false,need:'真实使用时间，例如 使用3年'};
   if((has('titlePrice')||has('budgetAngle'))&&!p.price)return{ok:false,need:'真实价格，例如 530元/㎡'};
   if(has('titleLayout')&&!p.layout)return{ok:false,need:'真实户型，例如 三房两厅'};
   if(has('titleArea')&&!p.area)return{ok:false,need:'真实面积，例如 70㎡'};
@@ -447,7 +448,7 @@ function comboNatural(s,p,variant){
   let body='这轮数据里，这两个因素同时出现在高表现内容中的比例更高。实际发内容时不需要提“组合模式”，只要自然地把它们放在同一条里。\n\n';
   if(ids.has('factory')||ids.has('sourceProofAngle'))body+='这次直接看真实工厂/生产现场。\n';
   if(ids.has('realCaseAngle')||ids.has('experience')||ids.has('titleResult'))body+=p.raw+'\n';
-  if(ids.has('howto')||ids.has('saveValue')||ids.has('titleNumber'))body+='1. '+points[0]+'\n2. '+(points[1]||'真实产品细节')+'\n3. '+(points[2]||'最终落地判断')+'\n';
+  if(ids.has('howto')||ids.has('saveValue')||ids.has('titleNumber'))body+=(ids.has('saveValue')?'这份清单可以先收藏：\n':'')+'1. '+points[0]+'\n2. '+(points[1]||'真实产品细节')+'\n3. '+(points[2]||'最终落地判断')+'\n';
   else body+='重点看：'+points.join('、')+'。';
   if(ids.has('discussion'))body+='\n\n如果是你家，你会先看哪一个条件？';
   if(ids.has('painAngle'))body+='\n\n真正要避开的，是只看样板却忽略现场条件。';
@@ -472,6 +473,11 @@ function naturalXhsGenerate(p,s,variant='A'){
       cover='用真实铺装/样板现场，标题写「3个容易忽略的细节」。';
       images='真实空间 → 单板 → 拼铺 → 收口。';
     }
+  }else if(s.id==='titleYears'&&p.years){
+    title=variant==='A'?p.years+'以后再看'+m+'，最该关注什么？':m+'用了'+p.years+'，真正能看出哪些差别？';
+    body='这条只使用真实时间信息：'+p.years+'。长期看地板，更值得观察的是稳定性、表面状态、收口变化和日常打理；具体结论只根据你提供的真实使用情况写，不补编体验。';
+    cover='真实使用/完工后的现状图。';
+    images='当前整体 → 板面 → 边角/收口 → 日常使用细节。';
   }else if(s.id==='titleSpec'&&sp){
     if(variant==='A'){
       title=sp.full+'的'+m+'，铺出来更适合什么空间？';
@@ -566,6 +572,7 @@ function validateSignal(s,o,p){
   if(s.id==='sourceProofAngle')return /工厂|车间|生产|仓库|库存/.test(t+' '+b);
   if(s.id==='titleSpec')return !!p.spec&&t.includes(p.spec);
   if(s.id==='titleNumber')return /\d{1,2}\s*(?:个|条|点|种|件|步|招|坑|问题|细节)/.test(t);
+  if(s.id==='titleYears')return !!p.years&&(t+' '+b).includes(p.years);
   if(s.id==='titlePrice')return !!p.price&&t.includes(p.price);
   if(s.id==='titleMaterial')return t.includes(p.mat);
   if(s.id==='titleScene')return /家里|客厅|卧室|家装|装修|空间/.test(t);
