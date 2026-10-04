@@ -385,7 +385,12 @@ async function collectQuery(win,step,index){
       if(pageNo===lastPage&&pages>1){reason='page-stalled';break}
       lastPage=pageNo;
       const next=await xyGoNext(win);
-      if(!next.ok){reason=next.reason||'next-failed';break}
+      if(!next.ok){
+        reason=next.reason||'next-failed';
+        const cur=next.state?.current,totalPages=next.state?.total;
+        if(reason!=='last-page'&&(!totalPages||!cur||cur<totalPages))fatalReason='闲鱼分页失败：'+reason;
+        break
+      }
     }
     scan(win,step.q,step.tier);
     queryStats.push({query:step.q,tier:step.tier,added:out.size-started,total:out.size,pages,durationMs:Date.now()-queryStart,stoppedBy:reason});
@@ -603,14 +608,14 @@ if(!out.size){
 }
 const tierCounts={A:0,B:0,C:0};
 for(const x of out.values())tierCounts[x.sampleTier]=(tierCounts[x.sampleTier]||0)+1;
-const stopLabel=out.size>=TARGET?'已达到500条':window.__FLOOR_MANUAL_STOP__?'手动停止':stopReason==='unique-sample-exhausted'?'本轮唯一结果已采完':stopReason==='breadth-time-limit'?'广度采集达到时限':stopReason==='safety-time-limit'?'达到总安全时限':'结束';
+const stopLabel=out.size>=TARGET?'已达到500条':window.__FLOOR_MANUAL_STOP__?'手动停止':stopReason==='last-page'?'已到搜索最后一页':stopReason==='unique-sample-exhausted'?'本轮唯一结果已采完':stopReason==='breadth-time-limit'?'广度采集达到时限':stopReason==='page-stalled'?'分页停止':stopReason==='next-button-not-found'?'未找到下一页按钮':stopReason==='page-did-not-change'?'下一页未变化':stopReason==='safety-time-limit'?'达到总安全时限':'结束';
 status(window,stopLabel+'｜广度 '+out.size+'/500｜详情补全 '+(depthMeta.enriched||0)+'/'+(depthMeta.target||DEPTH_TARGET)+'，正在导入实际结果…');
 
 const payload={
   source:base.href,platform:PLATFORM,keyword:Q,
   meta:{
     target:TARGET,rawCount:rawKeys.size,validCount:out.size,duplicateCount:Math.max(0,rawKeys.size-out.size),
-    platform:PLATFORM,host:HOST,tierCounts,queryStats,depth:depthMeta,expanded:true,durationSeconds:Math.round((Date.now()-START)/1000),
+    platform:PLATFORM,host:HOST,tierCounts,queryStats,depth:depthMeta,expanded:!IS_XY,durationSeconds:Math.round((Date.now()-START)/1000),
     stoppedBy:out.size>=TARGET?'target':(window.__FLOOR_MANUAL_STOP__?'manual':(stopReason||'unknown')),processedQueries
   },
   items:[...out.values()]
