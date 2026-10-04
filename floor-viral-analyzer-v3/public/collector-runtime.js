@@ -3,7 +3,7 @@ if(window.__FLOOR_V721_COLLECTING__)return;
 window.__FLOOR_V721_COLLECTING__=true;
 
 const TARGET=500, DEPTH_TARGET=120, DEPTH_MAX_MS=150000, MAX_TOTAL_MS=6*60*1000, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
-const COLLECTOR_VERSION='8.4.2';
+const COLLECTOR_VERSION='8.4.3';
 window.__FLOOR_MANUAL_STOP__=false;
 let fatalReason='',stopReason='';
 const safeQuery=(root,sel)=>{try{return root&&root.querySelector?root.querySelector(sel):null}catch{return null}};
@@ -207,14 +207,61 @@ function xyRelevant(text,q){
   return true
 }
 
+function xyCandidateCards(doc){
+  const found=[],seen=new Set(),add=card=>{
+    if(!card||seen.has(card))return;
+    try{
+      const r=card.getBoundingClientRect(),t=C(card.innerText);
+      if(r.width<120||r.height<120||r.width>650||r.height>900)return;
+      if(!card.querySelector('img'))return;
+      if(!/[¥￥]\s*[\d,.]+/.test(t)&&!/(想要|包邮|全新|二手|实拍|库存|地板)/.test(t))return;
+      if(t.length<8||t.length>1800)return;
+      seen.add(card);found.push(card)
+    }catch{}
+  };
+  for(const a of doc.querySelectorAll('a[href]')){const c=getCard(doc,a);if(c)add(c)}
+  // 闲鱼新版卡片可能不是 a 包裹：从图片向上寻找“单个商品卡”。
+  for(const img of doc.querySelectorAll('img')){
+    let e=img;
+    for(let i=0;i<7&&e;i++,e=e.parentElement){
+      try{
+        const t=C(e.innerText),r=e.getBoundingClientRect();
+        if(r.width>=140&&r.width<=650&&r.height>=160&&r.height<=900&&/[¥￥]\s*[\d,.]+/.test(t)){
+          add(e);break
+        }
+      }catch{}
+    }
+  }
+  // 再从价格文本附近兜底。
+  for(const e of doc.querySelectorAll('div,li,section,article')){
+    try{
+      const t=C(e.innerText),r=e.getBoundingClientRect();
+      if(r.width>=140&&r.width<=650&&r.height>=160&&r.height<=900&&/[¥￥]\s*[\d,.]+/.test(t)&&e.querySelector('img'))add(e)
+    }catch{}
+    if(found.length>120)break
+  }
+  return found
+}
+function xyCardLink(card,win){
+  try{
+    const a=card.matches?.('a[href]')?card:card.querySelector('a[href]');
+    if(a&&a.href)return a.href
+  }catch{}
+  try{
+    const data=[...card.querySelectorAll('[data-id],[data-item-id],[data-itemid]')][0]||card;
+    const id=data.getAttribute?.('data-id')||data.getAttribute?.('data-item-id')||data.getAttribute?.('data-itemid');
+    if(id)return 'https://www.goofish.com/item?id='+encodeURIComponent(id)
+  }catch{}
+  return win.location.href+'#card-'+encodeURIComponent(C(card.innerText).slice(0,120))
+}
 function scanGeneric(win,q,tier){
-  const before=out.size,doc=win.document;
-  for(const a of doc.querySelectorAll('a[href]')){
-    const card=getCard(doc,a);if(!card)continue;
+  const before=out.size,doc=win.document,cards=IS_XY?xyCandidateCards(doc):[...doc.querySelectorAll('a[href]')].map(a=>getCard(doc,a)).filter(Boolean);
+  for(const card of cards){
     const baseText=C(card.innerText),attrs=[...card.querySelectorAll('[aria-label],[title]')].map(el=>C(el.getAttribute('aria-label')||el.getAttribute('title'))).filter(Boolean).join(' '),t=C(baseText+' '+attrs),lines=(card.innerText||'').split(/\n+/).map(C).filter(Boolean),title=titleOf(lines,q);
     if(!title||!xyRelevant(title+' '+t,q))continue;
-    const pm=t.match(/[¥￥]\s*([\d,.]+)/),price=pm?+pm[1].replace(/,/g,''):null,link=a.href||win.location.href,pid=idOf(link);
+    const pm=t.match(/[¥￥]\s*([\d,.]+)/),price=pm?+pm[1].replace(/,/g,''):null,link=IS_XY?xyCardLink(card,win):(card.closest?.('a[href]')?.href||card.querySelector?.('a[href]')?.href||win.location.href),pid=idOf(link);
     const cleanTitle=title.replace(/\s+/g,'').replace(/[^\u4e00-\u9fa5a-z0-9]/gi,'').slice(0,150),key=pid||cleanTitle+'|'+(price??'');
+    if(!cleanTitle)continue;
     rawKeys.add(key);
     const wm=t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:人想要|想要)/i),
           vm=t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:浏览|浏览量|查看|阅读)/i),
