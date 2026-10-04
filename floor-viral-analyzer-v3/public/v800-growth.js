@@ -340,17 +340,18 @@ function itemReasons(x,model){
   const out=[],cohort=x.__cohort||[];for(const [k,label] of Object.entries(model.labels)){const v=x.__dims[k];if(v===null||v===undefined)continue;const a=cohort.map(z=>z.__dims[k]).filter(v=>v!==null&&v!==undefined&&Number.isFinite(v));if(a.length<5)continue;const p=percentile(v,a);if(p===null||p<.78)continue;out.push(label+'同类前'+Math.max(1,Math.round((1-p)*100))+'%')}
   if(!out.length)out.push(x.__mode==='搜索排序/时效参考'?'搜索排序靠前，仅作探索参考':'综合表现位于同类前列');return out.slice(0,3);
 }
-function highThemeProfile(high,normal){
-  const names=['知识/攻略','案例/场景','价格/预算','工厂/货源','产品展示'],out=[];
+function highThemeProfile(high,normal,platform){
+  const fn=platform==='小红书'?xhsType:platform==='闲鱼'?xyType:genericType;
+  const names=[...new Set(high.concat(normal).map(fn).filter(Boolean))],out=[];
   for(const name of names){
-    const hc=high.filter(x=>xhsType(x)===name).length,nc=normal.filter(x=>xhsType(x)===name).length,hp=high.length?hc/high.length:0,np=normal.length?nc/normal.length:0;
+    const hc=high.filter(x=>fn(x)===name).length,nc=normal.filter(x=>fn(x)===name).length,hp=high.length?hc/high.length:0,np=normal.length?nc/normal.length:0;
     out.push({name,hc,nc,hp,np,diff:hp-np})
   }
   return out.sort((a,b)=>b.hp-a.hp||b.diff-a.diff)
 }
 
 function analyze(){
-  const platform=currentPlatform(),model=modelFor(platform),batch=batchItems();if(!model)return{platform,batch,unsupported:true};if(!batch.length)return{platform,batch,empty:true};
+  const platform=currentPlatform(),batch=batchItems(),model=modelFor(platform,batch);if(!model)return{platform,batch,unsupported:true};if(!batch.length)return{platform,batch,empty:true};
   const comp=buildComparable(batch,platform,model),deb=debias(comp.usable,platform),scored=outlierRows(scoreRows(deb.items,model)),anomalies=scored.filter(x=>x.__outlier),pool=scored.filter(x=>!x.__outlier).sort((a,b)=>b.__score-a.__score),highN=pool.length?Math.max(1,Math.ceil(pool.length*.20)):0,high=pool.slice(0,highN),normal=pool.slice(highN);
   const coreCount=pool[0]?model.core(pool[0].__dims).length:1,covered=pool.reduce((s,x)=>s+model.core(x.__dims).filter(v=>v!==null&&v!==undefined).length,0),coverage=pool.length?covered/(pool.length*coreCount):0,stability=comp.usable.length?deb.items.length/comp.usable.length:0,rankOnlyRate=pool.length?pool.filter(x=>x.__mode==='搜索排序/时效参考').length/pool.length:0;
   const baseFindings=evidence(high,normal,model.features,coverage,stability,rankOnlyRate),combos=platform==='小红书'?comboEvidence(high,normal,model.features,coverage,stability,rankOnlyRate):[],phrases=platform==='小红书'?phraseEvidence(high,normal):[];
@@ -362,7 +363,7 @@ function analyze(){
   const expBase=!strongest?observed.find(x=>x.diff>=.04&&x.z>=1.0):null;
   const exploratory=expBase?{...expBase,category:'探索性测试',level:'探索性信号'}:null;
   let conf='探索',confClass='low';if(high.length>=25&&normal.length>=60&&coverage>=.30&&rankOnlyRate<.8){conf='高';confClass='good'}else if(high.length>=15&&normal.length>=35&&coverage>=.22){conf='中';confClass='base'}else if(high.length>=8){conf='低';confClass='low'}
-  const kinds={};for(const x of high)kinds[x.__kind]=(kinds[x.__kind]||0)+1;const dominant=Object.entries(kinds).sort((a,b)=>b[1]-a[1])[0]?.[0]||'潜在高表现',themes=platform==='小红书'?highThemeProfile(high,normal):[];
+  const kinds={};for(const x of high)kinds[x.__kind]=(kinds[x.__kind]||0)+1;const dominant=Object.entries(kinds).sort((a,b)=>b[1]-a[1])[0]?.[0]||'潜在高表现',themes=highThemeProfile(high,normal,platform);
   return{platform,model,batch,comp,deb,pool,high,normal,anomalies,findings,baseFindings,combos,phrases,reusable,testable,none,strongest,exploratory,observed,coverage,stability,rankOnlyRate,confidence:[conf,confClass],dominant,themes,empty:false};
 }
 
