@@ -803,7 +803,7 @@ function ensureUI(){
   let report=$id('g82Report');
   if(!report){
     report=document.createElement('section');report.id='g82Report';report.className='g82-report';
-    report.innerHTML='<div class="g82-head"><div><span id="g82PlatformTitle">自动识别平台 · 本轮综合分析</span><h2>这批数据告诉了我什么</h2></div><div id="g82ReportMeta" class="g82-meta"></div></div><p id="g82Summary" class="g82-summary">正在分析本轮数据…</p><div id="g82BestRef" class="g82-best-ref" style="display:none"></div><div class="g82-grid"><div class="g82-main"><div class="g82-section-title">本轮最值得看的发现</div><div id="g82Findings"></div><div class="g82-section-title">高表现主要赢在哪里</div><div id="g82Layers" class="g82-layers"></div><div class="g82-section-title">本轮高价值内容画像</div><div id="g82Profile" class="g82-profile"></div><div class="g82-section-title">图片 / 封面规律</div><div id="g825ImageFindings" class="g825-image-findings"></div></div><aside class="g82-side"><small>下一轮建议</small><strong id="g82NextTitle">等待分析</strong><p id="g82NextDo"></p><div class="g82-dont"><b>不要</b><span id="g82NextDont"></span></div><div class="g82-purpose"><b>目的</b><span id="g82NextPurpose"></span></div><button id="g82GenerateTop" class="g81-primary">生成下一轮测试内容</button><button id="g82CopyReport" class="g81-secondary">复制综合报告</button></aside></div><div class="g82-section-title">内容机会地图</div><div id="g82Map" class="g82-map"></div><div id="g82Limit" class="g82-limit"></div>';
+    report.innerHTML='<div class="g82-head"><div><span id="g82PlatformTitle">自动识别平台 · 本轮综合分析</span><h2>这批数据告诉了我什么</h2></div><div id="g82ReportMeta" class="g82-meta"></div></div><p id="g82Summary" class="g82-summary">正在分析本轮数据…</p><div id="g82BestRef" class="g82-best-ref" style="display:none"></div><div class="g82-grid"><div class="g82-main"><div class="g82-section-title">本轮最值得看的发现</div><div id="g82Findings"></div><div class="g82-section-title">高表现主要赢在哪里</div><div id="g82Layers" class="g82-layers"></div><div class="g82-section-title">本轮高价值内容画像</div><div id="g82Profile" class="g82-profile"></div><div class="g82-section-title" id="g84ImageTitle">图片 / 封面规律</div><div id="g825ImageFindings" class="g825-image-findings"></div></div><aside class="g82-side"><small>下一轮建议</small><strong id="g82NextTitle">等待分析</strong><p id="g82NextDo"></p><div class="g82-dont"><b>不要</b><span id="g82NextDont"></span></div><div class="g82-purpose"><b>目的</b><span id="g82NextPurpose"></span></div><button id="g82GenerateTop" class="g81-primary">生成下一轮测试内容</button><button id="g82CopyReport" class="g81-secondary">复制综合报告</button></aside></div><div class="g82-section-title">内容机会地图</div><div id="g82Map" class="g82-map"></div><div id="g82Limit" class="g82-limit"></div>';
     document.querySelector('.top')?.after(report);
   }
 
@@ -1025,8 +1025,29 @@ function imageFeatureRows(r){
     return{id,label,hc,nc,hCount:h.length,nCount:n.length,hp,np,diff,z:zz,coverage:cov,level,category}
   }).filter(x=>x.coverage>0).sort((a,b)=>{const rank={可以复用:4,值得测试:3,观察:2,'暂不参考':1};return(rank[b.category]-rank[a.category])||b.diff-a.diff});
 }
+function xyImageAnalysis(r){
+  const hi=r.high||[],no=r.normal||[],defs=[
+    ['realProduct','商品/实拍主图线索',x=>!!x.imageType,x=>/商品实拍|单板|材质/.test(x.imageType||'')],
+    ['scene','场景/案例主图线索',x=>!!x.imageType,x=>/家装效果|案例/.test(x.imageType||'')],
+    ['factory','工厂/库存主图线索',x=>!!x.imageType,x=>/工厂|库存/.test(x.imageType||'')],
+    ['pricePromo','价格/促销主图线索',x=>!!x.imageType,x=>/价格|促销/.test(x.imageType||'')],
+    ['multi','多图商品卡',x=>num(x.imageCount)!==null,x=>num(x.imageCount)>=2]
+  ];
+  const rows=[];for(const [id,label,available,hit] of defs){
+    const h=hi.filter(available),n=no.filter(available),hc=h.filter(hit).length,nc=n.filter(hit).length,hp=h.length?hc/h.length:0,np=n.length?nc/n.length:0,diff=hp-np,cov=(hi.length+no.length)?(h.length+n.length)/(hi.length+no.length):0;
+    let level='观察',category='暂不参考';
+    if(h.length>=12&&n.length>=25&&diff>=.10){level='中等证据';category='值得测试'}
+    else if(h.length>=8&&n.length>=18&&diff>=.06){level='弱证据';category='值得测试'}
+    rows.push({id,label,hc,nc,hCount:h.length,nCount:n.length,hp,np,diff,z:0,coverage:cov,level,category})
+  }
+  const findings=rows.filter(x=>x.diff>0&&x.category==='值得测试').sort((a,b)=>b.diff-a.diff).slice(0,3);
+  const covered=(r.pool||[]).filter(x=>x.imageType||num(x.imageCount)!==null).length,cov=r.pool.length?covered/r.pool.length:0;
+  let summary=cov<.15?'闲鱼当前缺少可靠主图结构字段；不会套用小红书封面公式。':findings.length?('闲鱼主图侧最明显的可测试信号是“'+findings[0].label+'”，高表现 '+fmtPct(findings[0].hp)+'、普通 '+fmtPct(findings[0].np)+'。'):'闲鱼主图有一定数据覆盖，但暂未发现稳定差异；不强行给封面公式。';
+  return{coverage:cov,findings,reusable:[],testable:findings,summary}
+}
 function imageAnalysis(r){
-  if(r.platform!=='小红书')return{coverage:0,findings:[],summary:'当前平台未启用图片规律分析。',reusable:[],testable:[]};
+  if(r.platform==='闲鱼')return xyImageAnalysis(r);
+  if(r.platform!=='小红书')return{coverage:0,findings:[],summary:'当前网站没有可靠图片字段时，不套用其他平台的图片公式。',reusable:[],testable:[]};
   const fs=imageFeatureRows(r),covered=(r.pool||[]).filter(x=>x.coverRatioType||typeof x.coverHasTextOverlay==='boolean'||x.mediaType||x.carouselCount||x.coverVisualType).length,cov=r.pool.length?covered/r.pool.length:0;
   const findings=fs.filter(x=>x.diff>0&&x.category!=='暂不参考').slice(0,3),reusable=findings.filter(x=>x.category==='可以复用'),testable=findings.filter(x=>x.category==='值得测试');
   let summary='';
@@ -1089,6 +1110,7 @@ function renderReport(r){
   $id('g82Summary').textContent=rep.summary;
   const noun=rep.platform==='小红书'?'笔记':rep.platform==='闲鱼'?'商品':'内容';
   if($id('g82PlatformTitle'))$id('g82PlatformTitle').textContent=rep.platform+' · 本轮综合分析';
+  if($id('g84ImageTitle'))$id('g84ImageTitle').textContent=rep.platform==='小红书'?'图片 / 封面规律':rep.platform==='闲鱼'?'主图 / 商品图规律':'图片规律';
   if($id('g84GeneratorHint'))$id('g84GeneratorHint').textContent=rep.platform==='小红书'?'按小红书内容互动规则生成':rep.platform==='闲鱼'?'按闲鱼搜索/交易规则生成':'按当前网站实际字段生成';
   $id('g82ReportMeta').innerHTML='<b>'+rep.sample.raw+'</b><span>抓取'+noun+'</span><b>'+rep.sample.high+'</b><span>高价值样本</span><b>'+rep.confidence[0]+'</b><span>综合可信度</span>';
   $id('g82Findings').innerHTML=rep.topFindings.length?rep.topFindings.map((x,i)=>'<div class="g82-finding"><span>'+(i+1)+'</span><div><b>'+esc(x.label)+'</b><small>高表现 '+fmtPct(x.hp)+' ｜ 普通 '+fmtPct(x.np)+' ｜ <strong>'+(x.diff>=0?'+':'')+Math.round(x.diff*100)+'%</strong> ｜ '+esc(x.level)+'</small><p>'+esc(x.explain)+'</p></div></div>').join(''):'<div class="g82-empty">本轮没有达到展示门槛的正向差异；这不是分析失败，而是高表现组和普通组写法目前比较接近。</div>';
