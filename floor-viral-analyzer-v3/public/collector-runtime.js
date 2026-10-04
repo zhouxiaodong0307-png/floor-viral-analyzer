@@ -337,12 +337,13 @@ function extractXhsDetail(win,item){
     const uniqueImgs=[];const seen=new Set();for(const im of imgs){const s=im.currentSrc||im.src||'';if(s&&!seen.has(s)){seen.add(s);uniqueImgs.push(im)}}
     const mainImg=uniqueImgs[0]||doc.querySelector('img'),visual=coverMeta(doc.body||doc.documentElement,mainImg);
     const noteText=detailText(doc,item,state),mediaType=doc.querySelector('video,[class*="video"],[class*="player"]')?'视频':(visual.mediaType||item.mediaType||'图片');
-    const useful=[likes,favs,comments,shares,views].filter(v=>v!==null).length+(noteText&&noteText!==item.text?1:0)+(uniqueImgs.length?1:0);
+    const deepBody=!!(noteText&&noteText!==item.text&&String(noteText).replace(/\s+/g,'').length>=20);
+    const useful=[likes,favs,comments,shares,views].filter(v=>v!==null).length+(deepBody?1:0)+(uniqueImgs.length?1:0);
     return{title:title||item.title,text:noteText,likes:likes??item.likes??null,favs:favs??item.favs??null,comments:comments??item.comments??null,shares:shares??item.shares??null,views:views??item.views??null,
       ageText:timeMatch?timeMatch[1]:(item.ageText||''),imageCount:uniqueImgs.length||item.imageCount||null,carouselCount:uniqueImgs.length||item.carouselCount||null,mediaType,
       coverRatio:visual.coverRatio??item.coverRatio??null,coverRatioType:visual.coverRatioType||item.coverRatioType||'',coverHasTextOverlay:visual.coverHasTextOverlay??item.coverHasTextOverlay??null,
       coverVisualType:visual.coverVisualType||item.coverVisualType||'',coverVisualConfidence:visual.coverVisualConfidence||item.coverVisualConfidence||'',
-      coverOverlayText:visual.coverOverlayText||item.coverOverlayText||'',deepFetched:true,deepUsefulFields:useful}
+      coverOverlayText:visual.coverOverlayText||item.coverOverlayText||'',deepFetched:true,deepBodyFetched:deepBody,deepUsefulFields:useful}
   }catch{return null}
 }
 async function waitDetail(win){
