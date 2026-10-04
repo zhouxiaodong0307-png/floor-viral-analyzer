@@ -388,7 +388,7 @@ function parseProduct(raw){
     proofText=(raw.match(/实拍|原图|可看货|验货|现场看|支持自提/)||[])[0]||'',
     sceneText=(raw.match(/客厅|卧室|家装|装修|铺装|实景|效果|办公室|工程|案例|现场/)||[])[0]||'';
   return{raw,spec,area,layout,install,years,quantity,price,mat,otherNum,condition,stockText,logisticsText,serviceText,proofText,sceneText,
-    factory:/工厂|厂家|车间|仓库|库存|生产/.test(raw),
+    factory:/工厂|厂家|车间|生产/.test(raw),
     stock:!!stockText,
     logistics:!!logisticsText,
     service:!!serviceText,
