@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='8.4.2';
+const VERSION='8.4.3';
 const EXPKEY='floorGrowthExperimentsV81';
 const REPORTKEY='floorGrowthReportsV814';
 const $id=id=>document.getElementById(id);
@@ -1203,7 +1203,7 @@ function saveFeedback(){
   d.metrics=m;d.performance=performance;d.status='measured';d.measuredAt=nowISO();
   localStorage.setItem(EXPKEY,JSON.stringify(a.slice(-120)));$id('g81Feedback').innerHTML='<div class="g81-saved">✓ 已保存，本轮结果会进入后续同平台验证。</div>';setStatus('发布结果已记录。','oktxt')
 }
-function runAll(){ensureUI();const r=analyze();window.__g81Analysis=r;renderAnalysis(r);const p=r&&r.platform?r.platform:currentPlatform();const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const sub=document.querySelector('.top .sub');if(sub)sub.textContent='自动识别：'+p+' → 抓取 → 平台专属分析 → 测试策略 → 发布验证';const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.4.2';document.title='多平台内容增长决策系统 V8.4.2';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.4.2：平台自动识别；小红书、闲鱼使用独立指标与策略；其他网站按实际可见字段建立自己的规则。'}
+function runAll(){ensureUI();const r=analyze();window.__g81Analysis=r;renderAnalysis(r);const p=r&&r.platform?r.platform:currentPlatform();const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const sub=document.querySelector('.top .sub');if(sub)sub.textContent='自动识别：'+p+' → 抓取 → 平台专属分析 → 测试策略 → 发布验证';const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.4.3';document.title='多平台内容增长决策系统 V8.4.3';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.4.3：平台自动识别；小红书、闲鱼使用独立指标与策略；其他网站按实际可见字段建立自己的规则。'}
 const oldRender=window.render;if(typeof oldRender==='function'){window.render=function(){const v=oldRender.apply(this,arguments);setTimeout(runAll,40);return v}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(runAll,90));else setTimeout(runAll,90);
 })();
