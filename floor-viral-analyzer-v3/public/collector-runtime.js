@@ -2,8 +2,8 @@
 if(window.__FLOOR_V721_COLLECTING__)return;
 window.__FLOOR_V721_COLLECTING__=true;
 
-const TARGET=500, DEPTH_TARGET=120, DEPTH_MAX_MS=4*60*1000, MAX_TOTAL_MS=8*60*1000, SATURATED_ROUNDS=2, MIN_ROUND_GAIN=3, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
-const COLLECTOR_VERSION='8.2.6';
+const TARGET=500, DEPTH_TARGET=120, DEPTH_MAX_MS=4*60*1000, MAX_TOTAL_MS=6*60*1000, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
+const COLLECTOR_VERSION='8.2.13';
 window.__FLOOR_MANUAL_STOP__=false;
 let fatalReason='',stopReason='';
 const safeQuery=(root,sel)=>{try{return root&&root.querySelector?root.querySelector(sel):null}catch{return null}};
@@ -13,6 +13,7 @@ const N=s=>{const m=String(s||'').replace(/,/g,'').match(/([\d.]+)\s*(万|w|W|k|
 const base=new URL(location.href);
 const HOST=base.hostname.toLowerCase(),IS_XHS=HOST.includes('xiaohongshu.com'),IS_XY=HOST.includes('goofish.com');
 const Q=decodeURIComponent(base.searchParams.get('q')||base.searchParams.get('keyword')||base.searchParams.get('kw')||base.searchParams.get('query')||'').trim();
+const BREADTH_MAX_MS=IS_XHS?135000:90000, QUERY_MAX_MS=IS_XHS?14000:8000, QUERY_MAX_STEPS=IS_XHS?28:18, STALE_SCANS=4;
 
 const out=new Map(), rawKeys=new Set(), queryStats=[];
 const woods=['红檀香','缅甸柚木','柚木','橡木','白橡','欧橡','龙凤檀','菠萝格','黑胡桃','白蜡木','重蚁木','紫檀'];
@@ -52,7 +53,7 @@ function status(win,msg){
     win.document.title='采集 '+out.size+'/500｜'+(Q||'平台');
   }catch{}
 }
-status(window,'采集器 V'+COLLECTOR_VERSION+'｜准备深度抓取 0/500…');
+status(window,'采集器 V'+COLLECTOR_VERSION+'｜准备广度采集 0/500…');
 
 function idOf(u){
   let m=String(u||'').match(/[?&](?:id|itemId|goodsId|noteId)=([^&#]+)/i)||String(u||'').match(/\/(?:item|detail|goods|note|explore|search_result)\/([A-Za-z0-9_-]{6,})/i);
@@ -191,13 +192,34 @@ function scanGeneric(win,q,tier){
   return out.size-before
 }
 function scan(win,q,tier){return IS_XHS?scanXhs(win,q,tier):scanGeneric(win,q,tier)}
-function scrollables(win){
-  const arr=[];
+function primaryScroller(win){
+  let best=null,bestRoom=0;
   for(const e of win.document.querySelectorAll('main,[role="main"],section,div')){
-    try{const cs=win.getComputedStyle(e),d=e.scrollHeight-e.clientHeight;if(d>400&&/auto|scroll/.test(cs.overflowY))arr.push({e,d})}catch{}
+    try{
+      const cs=win.getComputedStyle(e),room=e.scrollHeight-e.clientHeight,r=e.getBoundingClientRect();
+      if(room>bestRoom&&room>500&&r.width>win.innerWidth*.45&&r.height>win.innerHeight*.35&&/auto|scroll/.test(cs.overflowY)){best=e;bestRoom=room}
+    }catch{}
   }
-  arr.sort((a,b)=>b.d-a.d);
-  return arr.slice(0,4).map(x=>x.e)
+  return best
+}
+function scrollSignature(win){
+  try{
+    const root=win.document.scrollingElement||win.document.documentElement;
+    return [Math.round(win.scrollY||root.scrollTop||0),root.scrollHeight,root.clientHeight].join('|')
+  }catch{return''}
+}
+async function advanceScroll(win){
+  const before=scrollSignature(win);
+  try{win.scrollBy(0,Math.max(720,win.innerHeight*.9))}catch{}
+  await new Promise(r=>setTimeout(r,70));
+  const after=scrollSignature(win);
+  if(after===before){
+    try{
+      const e=primaryScroller(win);
+      if(e)e.scrollTop=Math.min(e.scrollHeight,e.scrollTop+Math.max(650,e.clientHeight*.85))
+    }catch{}
+  }
+  return before!==scrollSignature(win)
 }
 async function waitLoad(win,expectedQ){
   for(let i=0;i<24;i++){
@@ -213,25 +235,26 @@ async function waitLoad(win,expectedQ){
   return false
 }
 async function collectQuery(win,step,index){
-  const started=out.size;
-  let stale=0,last=out.size;
+  const started=out.size,queryStart=Date.now();
+  let stale=0,last=out.size,steps=0,stuck=0,reason='limit';
   try{win.scrollTo(0,0)}catch{}
-  await new Promise(r=>setTimeout(r,350));
-  for(let i=0;out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__;i++){
+  await new Promise(r=>setTimeout(r,220));
+  for(;out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__&&steps<QUERY_MAX_STEPS;steps++){
+    if(Date.now()-queryStart>=QUERY_MAX_MS){reason='query-time-limit';break}
+    if(Date.now()-START>=BREADTH_MAX_MS){reason='breadth-time-limit';break}
     scan(win,step.q,step.tier);
-    const elapsed=Math.round((Date.now()-START)/1000);
-    status(win,'深度抓取 '+out.size+'/500｜'+(index+1)+'/'+plan.length+' '+step.tier+'级：'+step.q+'｜'+elapsed+'秒');
+    const elapsed=Math.round((Date.now()-START)/1000),added=out.size-started;
+    status(win,'广度采集 '+out.size+'/500｜'+(index+1)+'/'+plan.length+' '+step.tier+'级：'+step.q+'｜本词新增 '+added+'｜'+elapsed+'秒');
     if(out.size===last)stale++;else stale=0;
     last=out.size;
-    if(stale>=18)break;
-    try{
-      win.scrollBy(0,Math.max(650,win.innerHeight*.85));
-      for(const e of scrollables(win)) e.scrollTop=Math.min(e.scrollHeight,e.scrollTop+Math.max(550,e.clientHeight*.8));
-    }catch{}
-    await new Promise(r=>setTimeout(r,420))
+    if(stale>=STALE_SCANS){reason='no-new-unique';break}
+    const moved=await advanceScroll(win);
+    if(!moved)stuck++;else stuck=0;
+    if(stuck>=2&&stale>=2){reason='scroll-end';break}
+    await new Promise(r=>setTimeout(r,IS_XHS?300:240))
   }
   scan(win,step.q,step.tier);
-  queryStats.push({query:step.q,tier:step.tier,added:out.size-started,total:out.size});
+  queryStats.push({query:step.q,tier:step.tier,added:out.size-started,total:out.size,steps,durationMs:Date.now()-queryStart,stoppedBy:reason});
 }
 
 
@@ -338,56 +361,37 @@ async function enrichDepth(win){
   return{target:DEPTH_TARGET,selected:sample.length,attempted,enriched,failed,durationSeconds:Math.round((Date.now()-start)/1000),fieldCounts}
 }
 let worker=null;
-try{worker=window.open('about:blank','floorCollectorV812','width=980,height=760,left=28,top=28')}catch{}
+try{worker=window.open('about:blank','floorCollectorV8213','width=980,height=760,left=28,top=28')}catch{}
 if(!worker||worker.closed){
   window.__FLOOR_V721_COLLECTING__=false;
   document.getElementById('__floor_v721_status__')?.remove();
-  alert('采集器 V'+COLLECTOR_VERSION+'：采集窗口被浏览器拦截。没有导入任何不完整数据。请允许小红书弹窗后重新点击“永久采集器”。');
+  alert('采集器 V'+COLLECTOR_VERSION+'：采集窗口被浏览器拦截。没有导入任何不完整数据。请允许弹窗后重新点击“永久采集器”。');
   return
 }
 let win=worker;
-let round=0,noGrowthRounds=0;
-while(out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__){
-  if(Date.now()-START>=MAX_TOTAL_MS){stopReason='safety-time-limit';break}
+let processedQueries=0;
+for(let i=0;i<plan.length&&out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__;i++){
+  if(Date.now()-START>=BREADTH_MAX_MS){stopReason='breadth-time-limit';break}
   if(!win||win.closed){fatalReason='采集窗口被关闭';break}
-  round++;
-  const roundStart=out.size;
-  for(let i=0;i<plan.length&&out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__;i++){
-    if(win.closed){fatalReason='采集窗口被关闭';break}
-    const step=plan[i],u=new URL(base);
-    if(u.searchParams.has('q')||!u.searchParams.has('keyword'))u.searchParams.set('q',step.q);else u.searchParams.set('keyword',step.q);
-    u.searchParams.set('__floor_round',String(round));
-    let loaded=false;
-    for(let attempt=1;attempt<=3&&!loaded&&!window.__FLOOR_MANUAL_STOP__&&Date.now()-START<MAX_TOTAL_MS;attempt++){
-      try{
-        status(window,'第'+round+'轮｜关键词 '+(i+1)+'/'+plan.length+'：'+step.q+'｜已采 '+out.size+'/500');
-        win.location.href=u.href;
-        loaded=await waitLoad(win,step.q);
-      }catch{}
-      if(!loaded)await new Promise(r=>setTimeout(r,1200*attempt));
-    }
-    if(!loaded){
-      queryStats.push({query:step.q,tier:step.tier,added:0,total:out.size,error:'load-failed-after-3-retries',round});
-      continue
-    }
-    await collectQuery(win,step,i)
+  const step=plan[i],u=new URL(base);
+  if(u.searchParams.has('q')||!u.searchParams.has('keyword'))u.searchParams.set('q',step.q);else u.searchParams.set('keyword',step.q);
+  let loaded=false;
+  for(let attempt=1;attempt<=2&&!loaded&&!window.__FLOOR_MANUAL_STOP__&&Date.now()-START<BREADTH_MAX_MS;attempt++){
+    try{
+      status(window,'广度采集｜关键词 '+(i+1)+'/'+plan.length+'：'+step.q+'｜已采 '+out.size+'/500');
+      win.location.href=u.href;
+      loaded=await waitLoad(win,step.q);
+    }catch{}
+    if(!loaded)await new Promise(r=>setTimeout(r,700*attempt))
   }
-  if(out.size>=TARGET||window.__FLOOR_MANUAL_STOP__||fatalReason)break;
-  const roundGain=out.size-roundStart;
-  if(roundGain<MIN_ROUND_GAIN)noGrowthRounds++;else noGrowthRounds=0;
-  if(noGrowthRounds>=SATURATED_ROUNDS){
-    stopReason='saturated';
-    status(window,'平台当前可获取唯一样本已基本饱和｜'+out.size+'/500｜连续 '+SATURATED_ROUNDS+' 轮新增不足 '+MIN_ROUND_GAIN+' 条，准备导入实际结果');
-    break
+  if(!loaded){
+    queryStats.push({query:step.q,tier:step.tier,added:0,total:out.size,error:'load-failed-after-2-retries'});
+    continue
   }
-  if(Date.now()-START>=MAX_TOTAL_MS){
-    stopReason='safety-time-limit';
-    status(window,'达到安全时限｜'+out.size+'/500｜准备导入实际结果');
-    break
-  }
-  status(window,'第'+round+'轮完成｜'+out.size+'/500｜本轮新增 '+roundGain+'；继续尝试');
-  await new Promise(r=>setTimeout(r,noGrowthRounds?2200:900));
+  await collectQuery(win,step,i);
+  processedQueries++;
 }
+if(out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__&&!fatalReason&&!stopReason)stopReason='unique-sample-exhausted';
 let depthMeta={target:DEPTH_TARGET,selected:0,attempted:0,enriched:0,failed:0,durationSeconds:0,fieldCounts:{}};
 if(IS_XHS&&!window.__FLOOR_MANUAL_STOP__&&!fatalReason&&out.size>=60&&worker&&!worker.closed){
   try{depthMeta=await enrichDepth(worker)}catch{}
@@ -407,7 +411,7 @@ if(!out.size){
 }
 const tierCounts={A:0,B:0,C:0};
 for(const x of out.values())tierCounts[x.sampleTier]=(tierCounts[x.sampleTier]||0)+1;
-const stopLabel=out.size>=TARGET?'已达到500条':window.__FLOOR_MANUAL_STOP__?'手动停止':stopReason==='saturated'?'平台样本已饱和':stopReason==='safety-time-limit'?'达到8分钟安全时限':'结束';
+const stopLabel=out.size>=TARGET?'已达到500条':window.__FLOOR_MANUAL_STOP__?'手动停止':stopReason==='unique-sample-exhausted'?'本轮唯一结果已采完':stopReason==='breadth-time-limit'?'广度采集达到时限':stopReason==='safety-time-limit'?'达到总安全时限':'结束';
 status(window,stopLabel+'｜广度 '+out.size+'/500｜详情补全 '+(depthMeta.enriched||0)+'/'+(depthMeta.target||DEPTH_TARGET)+'，正在导入实际结果…');
 
 const payload={
@@ -415,7 +419,7 @@ const payload={
   meta:{
     target:TARGET,rawCount:rawKeys.size,validCount:out.size,duplicateCount:Math.max(0,rawKeys.size-out.size),
     tierCounts,queryStats,depth:depthMeta,expanded:true,durationSeconds:Math.round((Date.now()-START)/1000),
-    stoppedBy:out.size>=TARGET?'target':(window.__FLOOR_MANUAL_STOP__?'manual':(stopReason||'unknown')),rounds:round
+    stoppedBy:out.size>=TARGET?'target':(window.__FLOOR_MANUAL_STOP__?'manual':(stopReason||'unknown')),processedQueries
   },
   items:[...out.values()]
 };
