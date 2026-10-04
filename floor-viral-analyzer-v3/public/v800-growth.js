@@ -222,14 +222,13 @@ function titlePhraseSet(title){
   const raw=String(title||'').replace(/[#【】\[\]（）()“”"'‘’·|｜,:：，。！!？?、]/g,'').replace(/\s+/g,'');
   const out=new Set(),lex=['怎么选','如何选','为什么','别只看','别买','避坑','踩坑','后悔','实景','完工','现场','入住','装修','客厅','卧室','地暖','鱼骨','人字','工字','平扣','锁扣','收口','安装','铺装','规格','价格','预算','对比','区别','差别','稳定','耐磨','防潮','工厂','车间','库存','木纹','颜色','原木风','奶油风','真实','建议','问题','真话','效果','选购'];
   for(const w of lex)if(raw.includes(w))out.add(w);
-  const blocked=['地板','实木','木地','木板','小红','红书','装修','这个','一种','可以','真的','就是','什么','一个','我们','你家','我家','看看','一下','不要','不是','木材','三层','多层','橡木','柚木','白橡','欧橡','紫檀','菠萝格','龙凤檀','黑胡桃','白蜡木','红檀香','缅甸'];
-  const stop2=new Set(['这个','一种','可以','真的','就是','什么','一个','我们','你们','自己','还是','因为','所以','如果','时候','地板','实木','装修']);
-  for(let n=3;n<=5;n++)for(let i=0;i+n<=raw.length;i++){
-    const g=raw.slice(i,i+n);
-    if(!/^[\u4e00-\u9fa5]+$/.test(g))continue;
-    if(blocked.some(w=>g===w||g.includes(w)&&g.length<=w.length+1))continue;
-    if(n===3&&stop2.has(g))continue;
-    if(/(.)\1\1/.test(g))continue;
+  const generic=/实木地板|木地板|地板|实木|三层|多层|红檀香|缅甸柚木|柚木|橡木|白橡|欧橡|紫檀|菠萝格|龙凤檀|黑胡桃|白蜡木|重蚁木/g;
+  const chunks=raw.replace(generic,' ').split(/\s+/).filter(x=>x.length>=3);
+  const stop=new Set(['这个','一种','可以','真的','就是','什么','一个','我们','你们','自己','还是','因为','所以','如果','时候','看看','一下','不要','不是']);
+  for(const chunk of chunks)for(let n=3;n<=5;n++)for(let i=0;i+n<=chunk.length;i++){
+    const g=chunk.slice(i,i+n);
+    if(!/^[\u4e00-\u9fa5]+$/.test(g)||stop.has(g)||/(.)\1\1/.test(g))continue;
+    if(lex.some(w=>g!==w&&g.includes(w)&&g.length===w.length+1))continue;
     out.add(g)
   }
   return out
