@@ -198,7 +198,8 @@ function evidenceRank(x){
 }
 function comboEvidence(high,normal,features,coverage,stability,rankOnlyRate){
   if(!high.length||!normal.length)return[];
-  const candidates=features.filter(x=>!x[3]||((high.concat(normal)).filter(x[3]).length/(high.length+normal.length)>=.25)).slice(0,34);
+  const allowed=new Set(['titleSpec','titleNumber','titlePrice','titleMaterial','titleScene','titleQuestion','titleResult','titleCompare','titleLayout','titleArea','titleInstall','sceneBody','howto','saveValue','discussion','experience','factory','decisionTitle','practicalInfo','lowAdTone','decisionAngle','painAngle','compareAngle','realCaseAngle','performanceAngle','installDetailAngle','budgetAngle','sourceProofAngle']);
+  const candidates=features.filter(x=>allowed.has(x[0])&&(!x[3]||((high.concat(normal)).filter(x[3]).length/(high.length+normal.length)>=.25))).slice(0,34);
   const z=(p1,n1,p2,n2)=>{if(!n1||!n2)return 0;const p=(p1*n1+p2*n2)/(n1+n2),se=Math.sqrt(Math.max(1e-9,p*(1-p)*(1/n1+1/n2)));return Math.abs(p1-p2)/se};
   const out=[];
   for(let i=0;i<candidates.length;i++)for(let j=i+1;j<candidates.length;j++){
