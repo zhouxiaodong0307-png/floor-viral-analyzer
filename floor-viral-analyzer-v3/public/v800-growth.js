@@ -752,8 +752,8 @@ function ensureUI(){
 
 function dimCoverage(rows,key){if(!rows.length)return 0;return rows.filter(x=>x.__dims&&x.__dims[key]!==null&&x.__dims[key]!==undefined).length/rows.length}
 function metricLayers(r){
-  if(r.platform!=='小红书')return[];
-  const specs=[
+  let specs=[];
+  if(r.platform==='小红书')specs=[
     ['高浏览型','views','浏览'],
     ['高点赞型',dimCoverage(r.pool,'likeRate')>=.25?'likeRate':'likes','点赞'],
     ['高收藏型',dimCoverage(r.pool,'favRate')>=.25?'favRate':'favs','收藏'],
@@ -762,13 +762,26 @@ function metricLayers(r){
     ['综合互动型','totalRate','综合互动'],
     ['短期增长型','speed','增长速度']
   ];
+  else if(r.platform==='闲鱼')specs=[
+    ['高曝光型','exp','曝光'],
+    ['高浏览型','views','浏览'],
+    ['高点击型','clickRate','曝光→浏览'],
+    ['高想要型',dimCoverage(r.pool,'wantRate')>=.2?'wantRate':'wants','想要'],
+    ['高咨询型',dimCoverage(r.pool,'consultRate')>=.15?'consultRate':'consults','咨询'],
+    ['高成交型',dimCoverage(r.pool,'saleRate')>=.12?'saleRate':'sales','成交'],
+    ['近期增长型','speed','增长速度']
+  ];
+  else{
+    const preferred=['views','likes','favs','comments','shares','wants','consults','sales','speed'];
+    specs=preferred.filter(k=>r.model.labels[k]).map(k=>['高'+r.model.labels[k]+'型',k,r.model.labels[k]]);
+  }
   return specs.map(([name,key,label])=>{
     const rows=r.pool.filter(x=>x.__dims[key]!==null&&x.__dims[key]!==undefined&&Number.isFinite(x.__dims[key]));
-    const cov=r.pool.length?rows.length/r.pool.length:0,need=Math.max(20,Math.ceil(r.pool.length*.15));
-    if(rows.length<20||cov<.15){
-      let why='可用'+label+'数据 '+rows.length+'/'+r.pool.length+'，至少需要约 '+need+' 条。';
-      if(key==='views'&&rows.length<need)why+=' 小红书公开页面未稳定提供浏览/小眼睛数据，单纯增加浅层抓取数量不会解决。';
-      else why+=' 当前字段覆盖不足，需依靠详情补全，而不是继续堆浅层样本。';
+    const cov=r.pool.length?rows.length/r.pool.length:0,need=Math.max(12,Math.ceil(r.pool.length*.12));
+    if(rows.length<Math.min(12,need)||cov<.10){
+      let why='可用'+label+'数据 '+rows.length+'/'+r.pool.length+'，当前不足以稳定比较。';
+      if(r.platform==='小红书'&&key==='views')why+=' 小红书公开页面不一定稳定提供浏览数据。';
+      else if(r.platform==='闲鱼')why+=' 闲鱼只使用当前页面实际可见的曝光、浏览、想要、咨询或成交字段，不用小红书互动指标替代。';
       return{name,key,label,available:false,coverage:cov,count:rows.length,need,reason:why};
     }
     const sorted=rows.slice().sort((a,b)=>b.__dims[key]-a.__dims[key]),n=Math.max(5,Math.ceil(sorted.length*.20)),high=sorted.slice(0,n),normal=sorted.slice(n);
