@@ -3,7 +3,7 @@ if(window.__FLOOR_V721_COLLECTING__)return;
 window.__FLOOR_V721_COLLECTING__=true;
 
 const TARGET=500, DEPTH_TARGET=120, DEPTH_MAX_MS=150000, MAX_TOTAL_MS=6*60*1000, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
-const COLLECTOR_VERSION='8.3.0';
+const COLLECTOR_VERSION='8.4.0';
 window.__FLOOR_MANUAL_STOP__=false;
 let fatalReason='',stopReason='';
 const safeQuery=(root,sel)=>{try{return root&&root.querySelector?root.querySelector(sel):null}catch{return null}};
@@ -11,35 +11,42 @@ const START=Date.now();
 const C=s=>String(s||'').replace(/\s+/g,' ').trim();
 const N=s=>{const m=String(s||'').replace(/,/g,'').match(/([\d.]+)\s*(万|w|W|k|K|千)?/i);if(!m)return null;let v=+m[1],u=m[2]||'';if(/万|w/i.test(u))v*=1e4;if(/k|千/i.test(u))v*=1e3;return Math.round(v)};
 const base=new URL(location.href);
-const HOST=base.hostname.toLowerCase(),IS_XHS=HOST.includes('xiaohongshu.com'),IS_XY=HOST.includes('goofish.com');
+const HOST=base.hostname.toLowerCase(),IS_XHS=HOST.includes('xiaohongshu.com')||HOST.includes('xhslink.com'),IS_XY=HOST.includes('goofish.com')||HOST==='2.taobao.com'||HOST.endsWith('.2.taobao.com');
+const PLATFORM=IS_XHS?'小红书':IS_XY?'闲鱼':HOST.replace(/^www\./,'')||'未知网站';
 const Q=decodeURIComponent(base.searchParams.get('q')||base.searchParams.get('keyword')||base.searchParams.get('kw')||base.searchParams.get('query')||'').trim();
-const BREADTH_MAX_MS=IS_XHS?180000:90000, QUERY_MAX_MS=IS_XHS?9000:6500, QUERY_MAX_STEPS=IS_XHS?20:14, STALE_SCANS=3;
+const FLOOR_TOPIC=/地板|实木|多层|三层|强化|spc|wpc|橡木|柚木|红檀香|龙凤檀|菠萝格|黑胡桃|白蜡木|重蚁木|紫檀/i.test(Q);
+const BREADTH_MAX_MS=IS_XHS?180000:IS_XY?180000:90000, QUERY_MAX_MS=IS_XHS?9000:IS_XY?7500:6500, QUERY_MAX_STEPS=IS_XHS?20:IS_XY?18:14, STALE_SCANS=3;
 
 const out=new Map(), rawKeys=new Set(), queryStats=[];
 const woods=['红檀香','缅甸柚木','柚木','橡木','白橡','欧橡','龙凤檀','菠萝格','黑胡桃','白蜡木','重蚁木','紫檀'];
 const plan=[],seenQ=new Set();
 function add(q,tier){q=C(q);if(!q||seenQ.has(q))return;seenQ.add(q);plan.push({q,tier})}
 add(Q,'A');
-if(Q&&!/地板/.test(Q)){add(Q+'地板','A');add(Q+'实木地板','A')}
-else if(Q){const bare=C(Q.replace(/地板$/,''));if(bare&&bare!==Q)add(bare,'A')}
 if(IS_XHS&&Q){
-  const core=C(Q.replace(/地板$/,''))||Q;
-  [
-    core+'地板 实景',core+'地板 装修',core+'地板 铺装',core+'地板 怎么选',
-    core+'地板 避坑',core+'地板 价格',core+'地板 对比',core+'地板 工厂',
-    core+'地板 案例',core+'地板 客厅',core+'地板 卧室',core+'地板 完工',
-    core+'地板 实拍',core+'地板 地暖',core+'地板 规格',core+'地板 选购',
-    core+'地板 预算',core+'地板 安装',core+'地板 人字',core+'地板 鱼骨',
-    core+'地板 收口',core+'实木地板'
-  ].forEach(q=>add(q,'A'));
+  const core=FLOOR_TOPIC?(C(Q.replace(/地板$/,''))||Q):Q;
+  const suffixes=FLOOR_TOPIC?
+    ['实景','装修','铺装','怎么选','避坑','价格','对比','工厂','案例','客厅','卧室','完工','实拍','地暖','规格','选购','预算','安装','人字','鱼骨','收口']:
+    ['攻略','怎么选','避坑','对比','价格','实拍','体验','推荐','测评','案例','使用感受','新手'];
+  suffixes.forEach(x=>add((FLOOR_TOPIC?core+'地板 ':core+' ')+x,'A'));
 }
-const hit=woods.find(w=>Q.includes(w));
-for(const w of woods){
-  if(w===hit)continue;
-  add(w+'地板','B');
-  if(plan.filter(x=>x.tier==='B').length>=6)break;
+if(IS_XY&&Q){
+  const core=FLOOR_TOPIC?(C(Q.replace(/地板$/,''))||Q):Q;
+  const suffixes=FLOOR_TOPIC?
+    ['现货','库存','全新','二手','翻新','工厂','厂家','清仓','特价','规格','价格','包邮','自提','发货','实拍','工程','家装','安装','大板','小板','人字','鱼骨','锁扣','平扣']:
+    ['全新','二手','现货','库存','包邮','自提','发货','同城','低价','清仓','实拍','正品','个人闲置','商家','批发','型号','规格','价格','成色','配件'];
+  suffixes.forEach(x=>add(core+' '+x,'A'));
 }
-['实木地板','多层实木地板','三层实木地板'].forEach(q=>add(q,'C'));
+if((IS_XHS||IS_XY)&&FLOOR_TOPIC){
+  if(Q&&!/地板/.test(Q)){add(Q+'地板','A');add(Q+'实木地板','A')}
+  else if(Q){const bare=C(Q.replace(/地板$/,''));if(bare&&bare!==Q)add(bare,'A')}
+  const hit=woods.find(w=>Q.includes(w));
+  for(const w of woods){
+    if(w===hit)continue;
+    add(w+'地板','B');
+    if(plan.filter(x=>x.tier==='B').length>=8)break;
+  }
+  ['实木地板','多层实木地板','三层实木地板','二手实木地板','地板库存'].forEach(q=>add(q,'C'));
+}
 
 function status(win,msg){
   try{
@@ -195,6 +202,9 @@ function scanGeneric(win,q,tier){
     rawKeys.add(key);
     const wm=t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:人想要|想要)/i),
           vm=t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:浏览|浏览量|查看|阅读)/i),
+          em=t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:曝光|展现)/i),
+          qm=t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:咨询|询价)/i),
+          sm2=t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:已售|售出|成交)/i),
           lm=t.match(/(?:点赞|赞)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:点赞|赞)/i),
           fm=t.match(/(?:收藏)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*收藏/i),
           cm=t.match(/(?:评论)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*评论/i),
@@ -202,7 +212,8 @@ function scanGeneric(win,q,tier){
           spec=t.match(/\d{2,4}\s*[x×*]\s*\d{2,4}(?:\s*[x×*]\s*\d{1,3})?/i);
     const img=card.querySelector('img');
     putItem(key,{rank:out.size+1,productId:pid,title,text:t,url:link,image:img?.src||'',imageCount:card.querySelectorAll('img').length||null,price,
-      wants:wm?N(wm[1]):null,views:vm?N(vm[1]):null,likes:lm?N(lm[1]):null,favs:fm?N(fm[1]):null,comments:cm?N(cm[1]):null,
+      wants:wm?N(wm[1]):null,views:vm?N(vm[1]):null,exposure:em?N(em[1]):null,consults:qm?N(qm[1]):null,sales:sm2?N(sm2[1]):null,
+      likes:lm?N(lm[1]):null,favs:fm?N(fm[1]):null,comments:cm?N(cm[1]):null,
       ageText:tm?tm[1]:'',specs:spec?spec[0]:'',sourceKeyword:q,sampleTier:tier});
     if(out.size>=TARGET)break;
   }
@@ -449,10 +460,10 @@ const stopLabel=out.size>=TARGET?'已达到500条':window.__FLOOR_MANUAL_STOP__?
 status(window,stopLabel+'｜广度 '+out.size+'/500｜详情补全 '+(depthMeta.enriched||0)+'/'+(depthMeta.target||DEPTH_TARGET)+'，正在导入实际结果…');
 
 const payload={
-  source:location.href,keyword:Q,
+  source:base.href,platform:PLATFORM,keyword:Q,
   meta:{
     target:TARGET,rawCount:rawKeys.size,validCount:out.size,duplicateCount:Math.max(0,rawKeys.size-out.size),
-    tierCounts,queryStats,depth:depthMeta,expanded:true,durationSeconds:Math.round((Date.now()-START)/1000),
+    platform:PLATFORM,host:HOST,tierCounts,queryStats,depth:depthMeta,expanded:true,durationSeconds:Math.round((Date.now()-START)/1000),
     stoppedBy:out.size>=TARGET?'target':(window.__FLOOR_MANUAL_STOP__?'manual':(stopReason||'unknown')),processedQueries
   },
   items:[...out.values()]
