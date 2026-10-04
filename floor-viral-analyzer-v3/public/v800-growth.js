@@ -1087,7 +1087,7 @@ function applyImageAdvice(v){
 function buildReport(r){
   if(!r||r.empty||r.unsupported)return null;
   const layers=metricLayers(r),opp=opportunityMap(r),primary=r.reusable.concat(r.testable),seen=new Set(primary.map(x=>x.id)),secondary=(r.observed||[]).filter(x=>x.diff>=.03&&!seen.has(x.id)),topFindings=primary.concat(secondary).slice(0,5);
-  const stop=db.lastMeta&&db.lastMeta.stoppedBy,stopMap={target:'达到目标500条',manual:'手动停止',saturated:'平台样本已饱和','unique-sample-exhausted':'本轮唯一结果已采完','breadth-time-limit':'广度采集达到时限','safety-time-limit':'达到总安全时限'};
+  const stop=db.lastMeta&&db.lastMeta.stoppedBy,stopMap={target:'达到目标500条',manual:'手动停止',saturated:'平台样本已饱和','unique-sample-exhausted':'本轮唯一结果已采完','breadth-time-limit':'广度采集达到时限','last-page':'已到搜索最后一页','page-stalled':'分页没有继续前进','next-button-not-found':'未找到下一页按钮','next-click-failed':'下一页点击失败','page-did-not-change':'点击后页面未变化','safety-time-limit':'达到总安全时限'};
   return{id:(db.lastCapturedAt||'latest')+'|'+r.platform,platform:r.platform,createdAt:nowISO(),summary:humanSummary(r),sample:{raw:r.batch.length,valid:r.pool.length,high:r.high.length,normal:r.normal.length},topFindings:topFindings.map(x=>({...x,explain:explainFinding(x)})),layers,profile:contentProfile(r),images:imageAnalysis(r),opportunity:opp,next:nextAdvice(r),reference:bestReference(r),limits:{coverage:r.coverage,stability:r.stability,anomalies:r.anomalies.length,rankOnlyRate:r.rankOnlyRate,stop:stopMap[stop]||'',depth:(db.lastMeta&&db.lastMeta.depth)||null},confidence:r.confidence};
 }
 function saveReport(rep){
