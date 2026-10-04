@@ -724,7 +724,7 @@ function readabilityCheck(o,s,p){
   const bad=banned.find(x=>x!=='围绕__'&&joined.includes(x));
   if(bad)return{ok:false,reason:'出现后台/机械表达：'+bad};
   if(o.title.length<7||o.title.length>34)return{ok:false,reason:'标题长度不自然'};
-  if(String(o.body||'').replace(/\s+/g,'').length<45)return{ok:false,reason:'正文过短'};
+  const minBody=currentPlatform()==='闲鱼'?20:currentPlatform()==='小红书'?45:30;if(String(o.body||'').replace(/\s+/g,'').length<minBody)return{ok:false,reason:'正文过短'};
   if(s.id==='titleSpec'&&!numericMeaning(p))return{ok:false,reason:'规格信息没有明确语义'};
   if(s.id==='titleNumber'&&!/\d{1,2}\s*(?:个|条|点|种|件|步|招|坑|问题|细节)/.test(o.title))return{ok:false,reason:'数字清单结构不自然'};
   return{ok:true,reason:''};
