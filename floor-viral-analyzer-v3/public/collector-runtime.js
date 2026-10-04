@@ -135,6 +135,21 @@ function coverMeta(card,img){
     return{coverRatio:ratio,coverRatioType:ratioType,coverHasTextOverlay,coverVisualType:visualType,coverVisualConfidence:confidence,coverOverlayText:overlayText.slice(0,160),carouselCount,visibleImageCount:visible.length||1,mediaType}
   }catch{return{coverRatio:null,coverRatioType:'',coverHasTextOverlay:null,coverVisualType:'',coverVisualConfidence:'',carouselCount:null,mediaType:'图片'}}
 }
+function xhsCardLike(card,lines){
+  try{
+    const nodes=[...card.querySelectorAll('[class*="like"],[class*="Like"],[class*="count"],[class*="Count"]')];
+    const preferred=nodes.filter(el=>/like|点赞/i.test(String(el.className||'')+' '+String(el.parentElement?.className||'')+' '+C(el.getAttribute('aria-label')||'')));
+    for(const el of preferred.concat(nodes)){
+      const tx=C(el.innerText||el.textContent||el.getAttribute('aria-label')||'');
+      if(!tx||tx.length>30)continue;
+      const m=tx.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)/i);
+      if(m){const v=N(m[1]);if(v!==null&&v>=0&&v<1e8)return v}
+    }
+  }catch{}
+  const numeric=(lines||[]).filter(x=>/^\d+(?:\.\d+)?\s*(?:万|w|W|k|K|千)?$/i.test(x)).map(N).filter(v=>v!==null&&v>=0&&v<1e8);
+  return numeric.length?numeric[numeric.length-1]:null
+}
+
 function scanXhs(win,q,tier){
   const before=out.size,doc=win.document;
   const anchors=[...doc.querySelectorAll('a[href*="/explore/"],a[href*="/discovery/item/"],a[href*="/search_result/"]')];
@@ -148,8 +163,7 @@ function scanXhs(win,q,tier){
     const img=card.querySelector('img'),imgSrc=img?.currentSrc||img?.src||'';
     const visual=coverMeta(card,img);
     const lm=t.match(/(?:点赞|赞)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:点赞|赞)/i);
-    const numericLines=lines.filter(x=>/^\d+(?:\.\d+)?\s*(?:万|w|W|k|K|千)?$/i.test(x));
-    const fallbackLike=!lm&&numericLines.length?N(numericLines[numericLines.length-1]):null;
+    const fallbackLike=!lm?xhsCardLike(card,lines):null;
     const fm=t.match(/(?:收藏)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*收藏/i);
     const cm=t.match(/(?:评论)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*评论/i);
     const sm=t.match(/(?:转发|分享)\s*[:：]?\s*([\d,.]+\s*(?:万|w|W|k|K|千)?)/i)||t.match(/([\d,.]+\s*(?:万|w|W|k|K|千)?)\s*(?:转发|分享)/i);
