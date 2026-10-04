@@ -212,14 +212,18 @@ async function advanceScroll(win){
   const before=scrollSignature(win);
   try{win.scrollBy(0,Math.max(720,win.innerHeight*.9))}catch{}
   await new Promise(r=>setTimeout(r,70));
-  const after=scrollSignature(win);
-  if(after===before){
+  let moved=scrollSignature(win)!==before;
+  if(!moved){
     try{
       const e=primaryScroller(win);
-      if(e)e.scrollTop=Math.min(e.scrollHeight,e.scrollTop+Math.max(650,e.clientHeight*.85))
+      if(e){
+        const p=e.scrollTop;
+        e.scrollTop=Math.min(e.scrollHeight,e.scrollTop+Math.max(650,e.clientHeight*.85));
+        moved=e.scrollTop>p+2
+      }
     }catch{}
   }
-  return before!==scrollSignature(win)
+  return moved
 }
 async function waitLoad(win,expectedQ){
   for(let i=0;i<24;i++){
