@@ -361,6 +361,8 @@ async function collectQuery(win,step,index){
       try{win.scrollTo(0,win.document.documentElement.scrollHeight)}catch{}
       await new Promise(r=>setTimeout(r,180));
       scan(win,step.q,step.tier);
+      try{win.scrollTo(0,0)}catch{}
+      await new Promise(r=>setTimeout(r,120));
       const st=xyPageState(win),pageNo=st?.current||pages+1,total=st?.total||'?';
       pages=Math.max(pages,pageNo);
       status(win,'闲鱼采集 '+out.size+'/500｜第 '+pageNo+'/'+total+' 页｜搜索：'+step.q+'｜'+Math.round((Date.now()-START)/1000)+'秒');
