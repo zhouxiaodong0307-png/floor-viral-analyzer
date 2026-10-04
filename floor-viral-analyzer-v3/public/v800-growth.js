@@ -381,13 +381,19 @@ function parseProduct(raw){
     mats=['红檀香','缅甸柚木','柚木','橡木','白橡','欧橡','紫檀','菠萝格','龙凤檀','黑胡桃','白蜡木','重蚁木'],
     mat=mats.find(x=>raw.includes(x))||raw.split(/[\s,，/|]+/).find(x=>x.length>=2&&!/^\d/.test(x))||'商品',
     otherNum=(raw.match(/\d+(?:\.\d+)?/)||[])[0]||'',
-    condition=(raw.match(/全新|新品|二手|闲置|翻新|拆旧|中古|未使用/)||[])[0]||'';
-  return{raw,spec,area,layout,install,years,quantity,price,mat,otherNum,condition,
+    condition=(raw.match(/全新|新品|二手|闲置|翻新|拆旧|中古|未使用/)||[])[0]||'',
+    stockText=(raw.match(/现货|库存|仓库|清仓|尾货/)||[])[0]||'',
+    logisticsText=(raw.match(/包邮|发货|自提|送货|物流|运费|到付|同城/)||[])[0]||'',
+    serviceText=(raw.match(/包安装|安装|售后|测量|上门|配送/)||[])[0]||'',
+    proofText=(raw.match(/实拍|原图|可看货|验货|现场看|支持自提/)||[])[0]||'',
+    sceneText=(raw.match(/客厅|卧室|家装|装修|铺装|实景|效果|办公室|工程|案例|现场/)||[])[0]||'';
+  return{raw,spec,area,layout,install,years,quantity,price,mat,otherNum,condition,stockText,logisticsText,serviceText,proofText,sceneText,
     factory:/工厂|厂家|车间|仓库|库存|生产/.test(raw),
-    stock:/现货|库存|仓库|清仓|尾货/.test(raw),
-    logistics:/包邮|发货|自提|送货|物流|运费|到付|同城/.test(raw),
-    service:/安装|包安装|售后|测量|上门|配送/.test(raw),
-    proof:/实拍|原图|可看货|验货|现场看|支持自提/.test(raw),
+    stock:!!stockText,
+    logistics:!!logisticsText,
+    service:!!serviceText,
+    proof:!!proofText,
+    scene:!!sceneText,
     experience:/用了|使用|实测|装完|铺完|住了|完工|后悔|踩坑|现场|客户|业主|案例/.test(raw)};
 }
 function eligibility(s,p){
@@ -405,7 +411,10 @@ function eligibility(s,p){
   if(has('condition')&&!p.condition)return{ok:false,need:'真实状态，例如 全新 / 二手 / 翻新'};
   if(has('stock')&&!p.stock&&!p.quantity)return{ok:false,need:'真实库存/数量信息，例如 现货 / 100㎡'};
   if(has('logistics')&&!p.logistics)return{ok:false,need:'真实交付信息，例如 可发物流 / 支持自提 / 运费规则'};
+  if(has('sellerProof')&&!p.proof)return{ok:false,need:'真实可信信息，例如 实拍 / 原图 / 可看货 / 支持自提'};
+  if(has('scene')&&!p.scene)return{ok:false,need:'真实使用/铺装场景，例如 客厅实景 / 工程现场'};
   if(has('service')&&!p.service)return{ok:false,need:'真实服务信息，例如 包安装 / 配送 / 测量'};
+  if(currentPlatform()==='闲鱼'&&s.id==='themeDirection'&&![p.spec,p.condition,p.quantity,p.price,p.stockText,p.logisticsText,p.proofText,p.sceneText].some(Boolean))return{ok:false,need:'至少补充一个真实交易条件：规格 / 状态 / 价格 / 数量 / 交付 / 实拍 / 场景'};
   return{ok:true,need:''};
 }
 function semanticSpec(p){
@@ -734,35 +743,36 @@ function eligibility(s,p){
 
 function naturalXyGenerate(p,s,variant='A'){
   const m=p.mat||'商品',id=s.id;let title='',body='',cover='',images='',tags='';
-  const baseFacts=[p.spec,p.condition,p.quantity,p.price?('¥'+p.price):'',p.logistics?'交付方式见描述':''].filter(Boolean);
-  if(id==='spec'&&p.spec)title=variant==='A'?m+' '+p.spec+' '+(p.condition||'实拍现货'):p.spec+' '+m+' '+(p.condition||'实物拍摄');
-  else if(id==='priceTitle'&&p.price)title=variant==='A'?m+' ¥'+p.price+' '+(p.spec||p.condition||'实拍'):('¥'+p.price+' '+m+' '+(p.spec||p.condition||'详情见图'));
-  else if(id==='materialTitle')title=variant==='A'?m+' '+(p.spec||p.condition||'实拍现货'):m+' '+(p.condition||'实物图')+' '+(p.spec||'规格见描述');
-  else if(id==='condition'&&p.condition)title=variant==='A'?p.condition+' '+m+' '+(p.spec||'实拍'):m+' '+p.condition+' '+(p.spec||'状态如图');
-  else if(id==='stock')title=variant==='A'?m+' '+(p.quantity||'现货')+' '+(p.spec||'库存实拍'):m+' 现货库存 '+(p.quantity||p.spec||'可咨询数量');
-  else if(id==='factory')title=variant==='A'?m+' 工厂/库存实拍 '+(p.spec||'规格可选'):m+' 厂家现货 '+(p.spec||p.quantity||'实物拍摄');
-  else if(id==='logistics')title=variant==='A'?m+' '+(p.spec||'实拍')+' 支持发货/自提':m+' '+(p.logistics?'交付方式明确':'发货信息见描述')+' '+(p.spec||'');
-  else if(id==='sellerProof')title=variant==='A'?m+' 实物实拍 '+(p.spec||p.condition||''):m+' 可看货/实拍 '+(p.spec||p.condition||'');
-  else if(id==='scene')title=variant==='A'?m+' 实拍 '+(p.spec||'')+' 看实际铺装效果':m+' '+(p.spec||'实物')+' 场景效果参考';
-  else if(id==='service')title=variant==='A'?m+' '+(p.spec||'')+' '+(p.service?'安装/配送信息见描述':'服务信息见描述'):m+' '+(p.spec||'')+' 服务范围写清楚';
-  else title=variant==='A'?m+' '+baseFacts.slice(0,3).join(' '):baseFacts.slice(0,2).join(' ')+' '+m;
-  title=title.replace(/\s+/g,' ').trim().slice(0,34);
-  const lines=[];
-  lines.push('商品：'+m);
+  const factual=[p.spec,p.condition,p.quantity,p.price?('¥'+p.price):'',p.stockText,p.logisticsText,p.proofText,p.sceneText].filter(Boolean);
+  if(id==='spec'&&p.spec)title=variant==='A'?[m,p.spec,p.condition].filter(Boolean).join(' '):[p.spec,m,p.condition].filter(Boolean).join(' ');
+  else if(id==='priceTitle'&&p.price)title=variant==='A'?[m,'¥'+p.price,p.spec||p.condition].filter(Boolean).join(' '):['¥'+p.price,m,p.spec||p.condition].filter(Boolean).join(' ');
+  else if(id==='materialTitle')title=variant==='A'?[m,p.spec||p.condition||p.quantity].filter(Boolean).join(' '):[m,p.condition||p.spec||p.price&&('¥'+p.price)].filter(Boolean).join(' ');
+  else if(id==='condition'&&p.condition)title=variant==='A'?[p.condition,m,p.spec].filter(Boolean).join(' '):[m,p.condition,p.quantity].filter(Boolean).join(' ');
+  else if(id==='stock')title=variant==='A'?[m,p.stockText||p.quantity,p.spec].filter(Boolean).join(' '):[m,p.quantity||p.stockText,p.condition].filter(Boolean).join(' ');
+  else if(id==='factory')title=variant==='A'?[m,'工厂/库存',p.spec||p.quantity].filter(Boolean).join(' '):[m,'厂家货源',p.spec||p.condition].filter(Boolean).join(' ');
+  else if(id==='logistics')title=variant==='A'?[m,p.spec,p.logisticsText].filter(Boolean).join(' '):[m,p.logisticsText,p.condition].filter(Boolean).join(' ');
+  else if(id==='sellerProof')title=variant==='A'?[m,p.proofText,p.spec||p.condition].filter(Boolean).join(' '):[m,p.spec||p.condition,p.proofText].filter(Boolean).join(' ');
+  else if(id==='scene')title=variant==='A'?[m,p.sceneText,p.spec].filter(Boolean).join(' '):[m,p.spec,p.sceneText].filter(Boolean).join(' ');
+  else if(id==='service')title=variant==='A'?[m,p.spec,p.serviceText].filter(Boolean).join(' '):[m,p.serviceText,p.condition].filter(Boolean).join(' ');
+  else title=variant==='A'?[m,...factual.slice(0,3)].join(' '):[...factual.slice(0,2),m].join(' ');
+  title=title.replace(/\s+/g,' ').trim();
+  if(title.length<7&&factual.length)title=[m,...factual.slice(0,2)].join(' ');
+  title=title.slice(0,34);
+  const lines=['商品：'+m];
   if(p.spec)lines.push('规格：'+p.spec);
   if(p.condition)lines.push('状态：'+p.condition);
   if(p.quantity)lines.push('数量：'+p.quantity);
   if(p.price)lines.push('价格：'+p.price+'元'+(/㎡|平方/.test(p.raw)?'/㎡':''));
-  if(p.stock)lines.push('库存：以当前实际库存为准');
-  if(p.factory)lines.push('货源：真实工厂/仓库/生产现场信息');
-  if(p.logistics)lines.push('交付：'+(p.raw.match(/包邮|发货|自提|送货|物流|运费|到付|同城/g)||[]).join(' / '));
-  if(p.service)lines.push('服务：'+(p.raw.match(/安装|包安装|售后|测量|上门|配送/g)||[]).join(' / '));
-  if(p.proof)lines.push('图片：实物/现场实拍，可按真实情况核对');
-  if(!lines.slice(1).length)lines.push('具体规格、状态、价格和交付条件请按真实商品信息补充后再发布。');
+  if(p.stockText)lines.push('库存：'+p.stockText);
+  if(p.factory)lines.push('货源：'+(p.raw.match(/工厂|厂家|车间|仓库|库存|生产/g)||[]).join(' / '));
+  if(p.logisticsText)lines.push('交付：'+p.logisticsText);
+  if(p.serviceText)lines.push('服务：'+p.serviceText);
+  if(p.proofText)lines.push('核验：'+p.proofText);
+  if(p.sceneText)lines.push('场景：'+p.sceneText);
   body=lines.join('\n');
-  tags=[m,p.spec,p.condition].filter(Boolean).join(' / ');
-  cover='闲鱼首图优先真实商品主体，'+(p.spec?'规格清楚可见；':'')+'避免做小红书式大字海报。';
-  images='商品整体 → 关键细节/瑕疵 → 规格/包装 → 库存或交付证明。';
+  tags=[m,p.spec,p.condition,p.quantity].filter(Boolean).join(' / ');
+  cover='闲鱼首图优先真实商品主体；只展示你确实拥有的规格、状态或价格信息，不做小红书式大字海报。';
+  images='商品整体 → 真实细节/瑕疵 → 规格/状态 → 交付或库存证明；没有对应素材就不写。';
   return{title,body,tags,cover,images,plan:strategyPlan(s,p,variant)};
 }
 function naturalGenericGenerate(p,s,variant='A'){
