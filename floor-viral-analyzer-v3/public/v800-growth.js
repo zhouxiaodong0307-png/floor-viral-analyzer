@@ -332,9 +332,12 @@ function signalMatcher(signal,model){
 }
 
 function batchItems(){
-  const p=currentPlatform(),all=db.items.filter(x=>x.site===p).map(enrich),stamp=db.lastCapturedAt,expected=Number(db.lastValidCount||(db.lastMeta&&db.lastMeta.validCount)||0);
-  let batch=stamp?all.filter(x=>x._capturedAt===stamp):[];if(batch.length<Math.min(20,expected||20)&&expected>0)batch=all.slice().sort((a,b)=>new Date(b._capturedAt||0)-new Date(a._capturedAt||0)).slice(0,Math.min(expected,all.length));
-  return batch.length?batch:all;
+  const p=currentPlatform(),all=(db.items||[]).map(enrich),stamp=db.lastCapturedAt,expected=Number(db.lastValidCount||(db.lastMeta&&db.lastMeta.validCount)||0);
+  let batch=stamp?all.filter(x=>x._capturedAt===stamp):[];
+  if(batch.length>=Math.min(10,expected||10))return batch.map(x=>({...x,site:p}));
+  const same=all.filter(x=>x.site===p).sort((a,b)=>new Date(b._capturedAt||0)-new Date(a._capturedAt||0));
+  if(expected>0&&same.length)return same.slice(0,Math.min(expected,same.length));
+  return same.length?same:batch.map(x=>({...x,site:p}));
 }
 function itemReasons(x,model){
   const out=[],cohort=x.__cohort||[];for(const [k,label] of Object.entries(model.labels)){const v=x.__dims[k];if(v===null||v===undefined)continue;const a=cohort.map(z=>z.__dims[k]).filter(v=>v!==null&&v!==undefined&&Number.isFinite(v));if(a.length<5)continue;const p=percentile(v,a);if(p===null||p<.78)continue;out.push(label+'同类前'+Math.max(1,Math.round((1-p)*100))+'%')}
