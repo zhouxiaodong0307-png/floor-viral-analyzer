@@ -368,22 +368,41 @@ function analyze(){
 }
 
 function parseProduct(raw){
-  const spec=(raw.match(/\d{2,4}\s*[x×*]\s*\d{2,4}(?:\s*[x×*]\s*\d{1,3})?/i)||[])[0]||'',area=(raw.match(/\d+(?:\.\d+)?\s*(?:㎡|平米|平方)/)||[])[0]||'',layout=(raw.match(/(?:\d室\d厅|\d房|一居|两居|三居|四居|户型)/)||[])[0]||'',install=(raw.match(/鱼骨|人字|工字|369|自由拼|悬浮|平扣|锁扣|龙骨|直铺/)||[])[0]||'',years=(raw.match(/\d+(?:\.\d+)?\s*(?:年|个月|月|天)/)||[])[0]||'';
-  const pm=raw.match(/(?:¥|￥)?\s*(\d+(?:\.\d+)?)\s*元(?:\/㎡|每平方|一平|平)?/),price=pm?pm[1]:'',mats=['红檀香','缅甸柚木','柚木','橡木','白橡','欧橡','紫檀','菠萝格','龙凤檀','黑胡桃','白蜡木','重蚁木'],mat=mats.find(x=>raw.includes(x))||raw.split(/[\s,，/|]+/).find(x=>x.length>=2&&!/^\d/.test(x))||'木地板',otherNum=(raw.match(/\d+(?:\.\d+)?/)||[])[0]||'';
-  return{raw,spec,area,layout,install,years,price,mat,otherNum,factory:/工厂|厂家|车间|仓库|库存|生产/.test(raw),experience:/用了|使用|实测|装完|铺完|住了|完工|后悔|踩坑|现场|客户|业主|案例/.test(raw)};
+  const spec=(raw.match(/\d{2,4}\s*[x×*]\s*\d{2,4}(?:\s*[x×*]\s*\d{1,3})?/i)||[])[0]||'',
+    area=(raw.match(/\d+(?:\.\d+)?\s*(?:㎡|平米|平方)/)||[])[0]||'',
+    layout=(raw.match(/(?:\d室\d厅|\d房|一居|两居|三居|四居|户型)/)||[])[0]||'',
+    install=(raw.match(/鱼骨|人字|工字|369|自由拼|悬浮|平扣|锁扣|龙骨|直铺/)||[])[0]||'',
+    years=(raw.match(/\d+(?:\.\d+)?\s*(?:年|个月|月|天)/)||[])[0]||'',
+    quantity=(raw.match(/\d+(?:\.\d+)?\s*(?:件|套|箱|支|片|包|平方|㎡|米)/)||[])[0]||'';
+  const pm=raw.match(/(?:¥|￥)?\s*(\d+(?:\.\d+)?)\s*元(?:\/㎡|每平方|一平|平)?/),price=pm?pm[1]:'',
+    mats=['红檀香','缅甸柚木','柚木','橡木','白橡','欧橡','紫檀','菠萝格','龙凤檀','黑胡桃','白蜡木','重蚁木'],
+    mat=mats.find(x=>raw.includes(x))||raw.split(/[\s,，/|]+/).find(x=>x.length>=2&&!/^\d/.test(x))||'商品',
+    otherNum=(raw.match(/\d+(?:\.\d+)?/)||[])[0]||'',
+    condition=(raw.match(/全新|新品|二手|闲置|翻新|拆旧|中古|未使用/)||[])[0]||'';
+  return{raw,spec,area,layout,install,years,quantity,price,mat,otherNum,condition,
+    factory:/工厂|厂家|车间|仓库|库存|生产/.test(raw),
+    stock:/现货|库存|仓库|清仓|尾货/.test(raw),
+    logistics:/包邮|发货|自提|送货|物流|运费|到付|同城/.test(raw),
+    service:/安装|包安装|售后|测量|上门|配送/.test(raw),
+    proof:/实拍|原图|可看货|验货|现场看|支持自提/.test(raw),
+    experience:/用了|使用|实测|装完|铺完|住了|完工|后悔|踩坑|现场|客户|业主|案例/.test(raw)};
 }
 function eligibility(s,p){
   if(!s)return{ok:false,need:'没有可测试信号'};
   const ids=s.kind==='combo'?(s.parts||[]):[s.id];
   const has=id=>ids.includes(id);
-  if(has('titleSpec')&&!p.spec)return{ok:false,need:'真实规格，例如 910×125×18'};
+  if((has('titleSpec')||has('spec'))&&!p.spec)return{ok:false,need:'真实规格，例如 910×125×18'};
   if(has('titleYears')&&!p.years)return{ok:false,need:'真实使用时间，例如 使用3年'};
-  if((has('titlePrice')||has('budgetAngle'))&&!p.price)return{ok:false,need:'真实价格，例如 530元/㎡'};
+  if((has('titlePrice')||has('budgetAngle')||has('priceTitle'))&&!p.price)return{ok:false,need:'真实价格，例如 530元/㎡'};
   if(has('titleLayout')&&!p.layout)return{ok:false,need:'真实户型，例如 三房两厅'};
   if(has('titleArea')&&!p.area)return{ok:false,need:'真实面积，例如 70㎡'};
   if(has('titleInstall')&&!p.install)return{ok:false,need:'真实铺法，例如 鱼骨 / 人字 / 工字'};
   if((has('titleResult')||has('experience')||has('realCaseAngle'))&&!p.experience)return{ok:false,need:'真实案例/完工/使用结果，避免编造经历'};
-  if((has('factory')||has('sourceProofAngle'))&&!p.factory)return{ok:false,need:'确认这条内容确实是工厂/生产现场'};
+  if((has('factory')||has('sourceProofAngle'))&&!p.factory)return{ok:false,need:'确认这条内容确实是工厂/生产/库存现场'};
+  if(has('condition')&&!p.condition)return{ok:false,need:'真实状态，例如 全新 / 二手 / 翻新'};
+  if(has('stock')&&!p.stock&&!p.quantity)return{ok:false,need:'真实库存/数量信息，例如 现货 / 100㎡'};
+  if(has('logistics')&&!p.logistics)return{ok:false,need:'真实交付信息，例如 可发物流 / 支持自提 / 运费规则'};
+  if(has('service')&&!p.service)return{ok:false,need:'真实服务信息，例如 包安装 / 配送 / 测量'};
   return{ok:true,need:''};
 }
 function signalPool(r){
@@ -642,6 +661,14 @@ function naturalXhsGenerate(p,s,variant='A'){
 }
 function validateSignal(s,o,p){
   const t=o.title,b=o.body,c=o.cover;
+  if(s.id==='spec')return !!p.spec&&(t+' '+b).includes(p.spec);
+  if(s.id==='priceTitle')return !!p.price&&(t+' '+b).includes(p.price);
+  if(s.id==='materialTitle')return t.includes(p.mat);
+  if(s.id==='condition')return !!p.condition&&(t+' '+b).includes(p.condition);
+  if(s.id==='stock')return /现货|库存|仓库|清仓|尾货|\d+\s*(?:件|套|箱|支|片|包|平方|㎡|米)/.test(t+' '+b);
+  if(s.id==='logistics')return /包邮|发货|自提|送货|物流|运费|到付|同城/.test(t+' '+b);
+  if(s.id==='sellerProof')return /实拍|原图|可看货|验货|现场|自提/.test(t+' '+b+c);
+  if(s.id==='service')return /安装|售后|测量|上门|配送/.test(t+' '+b);
   if(s.kind==='phrase')return !!s.phrase&&(t.includes(s.phrase)||b.includes(s.phrase));
   if(s.kind==='combo'){
     const model=window.__g81Analysis&&window.__g81Analysis.model,fake={title:t,text:b,contentType:'笔记'};
