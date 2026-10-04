@@ -295,7 +295,17 @@ function parseProduct(raw){
   return{raw,spec,area,layout,install,price,mat,otherNum,factory:/工厂|厂家|车间/.test(raw),experience:/用了|使用|实测|装完|铺完|住了|完工|后悔|踩坑/.test(raw)};
 }
 function eligibility(s,p){
-  if(!s)return{ok:false,need:'没有可测试信号'};if(s.id==='titleSpec'&&!p.spec)return{ok:false,need:'真实规格，例如 910×125×18'};if(s.id==='titlePrice'&&!p.price)return{ok:false,need:'真实价格，例如 530元/㎡'};if(s.id==='titleLayout'&&!p.layout)return{ok:false,need:'真实户型，例如 三房两厅'};if(s.id==='titleArea'&&!p.area)return{ok:false,need:'真实面积，例如 70㎡'};if(s.id==='titleInstall'&&!p.install)return{ok:false,need:'真实铺法，例如 鱼骨 / 人字 / 工字'};if(s.id==='titleResult'&&!p.experience)return{ok:false,need:'真实使用/完工结果，避免编造体验'};if((s.id==='factory'||s.id==='sourceProofAngle')&&!p.factory)return{ok:false,need:'确认这条内容确实是工厂/生产现场'};if((s.id==='titlePrice'||s.id==='budgetAngle')&&!p.price)return{ok:false,need:'真实价格，例如 530元/㎡'};if(s.id==='realCaseAngle'&&!p.experience)return{ok:false,need:'真实案例/完工/现场信息，避免编造业主故事'};return{ok:true,need:''};
+  if(!s)return{ok:false,need:'没有可测试信号'};
+  const ids=s.kind==='combo'?(s.parts||[]):[s.id];
+  const has=id=>ids.includes(id);
+  if(has('titleSpec')&&!p.spec)return{ok:false,need:'真实规格，例如 910×125×18'};
+  if((has('titlePrice')||has('budgetAngle'))&&!p.price)return{ok:false,need:'真实价格，例如 530元/㎡'};
+  if(has('titleLayout')&&!p.layout)return{ok:false,need:'真实户型，例如 三房两厅'};
+  if(has('titleArea')&&!p.area)return{ok:false,need:'真实面积，例如 70㎡'};
+  if(has('titleInstall')&&!p.install)return{ok:false,need:'真实铺法，例如 鱼骨 / 人字 / 工字'};
+  if((has('titleResult')||has('experience')||has('realCaseAngle'))&&!p.experience)return{ok:false,need:'真实案例/完工/使用结果，避免编造经历'};
+  if((has('factory')||has('sourceProofAngle'))&&!p.factory)return{ok:false,need:'确认这条内容确实是工厂/生产现场'};
+  return{ok:true,need:''};
 }
 function signalPool(r){
   const a=r.reusable.concat(r.testable);
