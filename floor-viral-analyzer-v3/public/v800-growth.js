@@ -294,7 +294,7 @@ function parseProduct(raw){
   return{raw,spec,area,layout,install,price,mat,otherNum,factory:/工厂|厂家|车间/.test(raw),experience:/用了|使用|实测|装完|铺完|住了|完工|后悔|踩坑/.test(raw)};
 }
 function eligibility(s,p){
-  if(!s)return{ok:false,need:'没有可测试信号'};if(s.id==='titleSpec'&&!p.spec)return{ok:false,need:'真实规格，例如 910×125×18'};if(s.id==='titlePrice'&&!p.price)return{ok:false,need:'真实价格，例如 530元/㎡'};if(s.id==='titleLayout'&&!p.layout)return{ok:false,need:'真实户型，例如 三房两厅'};if(s.id==='titleArea'&&!p.area)return{ok:false,need:'真实面积，例如 70㎡'};if(s.id==='titleInstall'&&!p.install)return{ok:false,need:'真实铺法，例如 鱼骨 / 人字 / 工字'};if(s.id==='titleResult'&&!p.experience)return{ok:false,need:'真实使用/完工结果，避免编造体验'};if(s.id==='factory'&&!p.factory)return{ok:false,need:'确认这条内容确实是工厂/生产现场'};return{ok:true,need:''};
+  if(!s)return{ok:false,need:'没有可测试信号'};if(s.id==='titleSpec'&&!p.spec)return{ok:false,need:'真实规格，例如 910×125×18'};if(s.id==='titlePrice'&&!p.price)return{ok:false,need:'真实价格，例如 530元/㎡'};if(s.id==='titleLayout'&&!p.layout)return{ok:false,need:'真实户型，例如 三房两厅'};if(s.id==='titleArea'&&!p.area)return{ok:false,need:'真实面积，例如 70㎡'};if(s.id==='titleInstall'&&!p.install)return{ok:false,need:'真实铺法，例如 鱼骨 / 人字 / 工字'};if(s.id==='titleResult'&&!p.experience)return{ok:false,need:'真实使用/完工结果，避免编造体验'};if((s.id==='factory'||s.id==='sourceProofAngle')&&!p.factory)return{ok:false,need:'确认这条内容确实是工厂/生产现场'};if((s.id==='titlePrice'||s.id==='budgetAngle')&&!p.price)return{ok:false,need:'真实价格，例如 530元/㎡'};if(s.id==='realCaseAngle'&&!p.experience)return{ok:false,need:'真实案例/完工/现场信息，避免编造业主故事'};return{ok:true,need:''};
 }
 function signalPool(r){
   const a=r.reusable.concat(r.testable);
@@ -328,10 +328,9 @@ function strategyPlan(s,p,variant='A'){
     angle=variant==='A'?'用“4个问题”做选购清单':'用“3个细节”做阅读入口';
     why='这里的数字是内容结构，不是产品规格；小红书用户更容易快速理解和收藏'
   }else if(s.id==='titleYears'){
-    title=variant==='A'?m+'用了几年以后，最容易看出什么差别？':m+'别只看刚铺完，时间久了更该看这几点';
-    body='地板是不是适合长期用，不只是看刚铺完那一刻。\n\n更值得关注的是长期使用后的稳定性、表面状态、收口变化和日常打理。没有真实使用年限时，不会编造具体“用了几年”的经历。';
-    cover='如果有真实完工/使用前后素材，用同一空间做时间对比；没有就用细节实拍。';
-    images='当前实拍 → 边角/收口 → 表面细节 → 日常使用场景。';
+    action='用真实使用时间建立长期判断';
+    angle=variant==='A'?'时间变化 + 稳定性/收口':'长期使用 + 日常打理';
+    why='只有用户提供真实使用年限时才执行，避免编造“用了几年”';
   }else if(s.id==='titleScene'||s.id==='sceneBody'){action='从真实使用场景切入';angle=variant==='A'?'先说空间，再说产品':'先提家装问题，再给判断';why='让用户先知道这条内容和自己的空间有什么关系'}
   else if(s.id==='titleQuestion'){action='用明确问题做标题入口';angle=variant==='A'?'直接问“怎么选”':'直接问“差别在哪”';why='问题必须对应真实购买决策，而不是空泛提问'}
   else if(s.id==='titleCompare'){action='用对比建立阅读动机';angle=variant==='A'?'单板 VS 铺进空间':'同木种不同规格/铺法的判断差异';why='对比要回答真实选择问题，不做无依据结论'}
@@ -439,6 +438,20 @@ function naturalXhsGenerate(p,s,variant='A'){
 }
 function validateSignal(s,o,p){
   const t=o.title,b=o.body,c=o.cover;
+  if(s.kind==='phrase')return !!s.phrase&&(t.includes(s.phrase)||b.includes(s.phrase));
+  if(s.kind==='combo'){
+    const model=window.__g81Analysis&&window.__g81Analysis.model,fake={title:t,text:b,contentType:'笔记'};
+    const fns=(s.parts||[]).map(id=>model&&model.features.find(z=>z[0]===id)?.[2]).filter(Boolean);
+    return fns.length===((s.parts||[]).length)&&fns.every(fn=>{try{return !!fn(fake)}catch{return false}})
+  }
+  if(s.id==='decisionAngle')return /怎么选|如何选|适合|区别|差别|选择/.test(t+' '+b);
+  if(s.id==='painAngle')return /避坑|踩坑|问题|注意|容易|别买|后悔/.test(t+' '+b);
+  if(s.id==='compareAngle')return /对比|区别|差别|怎么选|还是|哪个/.test(t+' '+b);
+  if(s.id==='realCaseAngle')return /现场|完工|客户|业主|这次|实际/.test(t+' '+b);
+  if(s.id==='performanceAngle')return /稳定|耐磨|防潮|地暖|变形|开裂|密度|脚感/.test(t+' '+b);
+  if(s.id==='installDetailAngle')return /安装|铺装|铺法|收口|门套|柜体|踢脚线|龙骨|鱼骨|人字/.test(t+' '+b);
+  if(s.id==='budgetAngle')return !!p.price&&(t+' '+b).includes(p.price);
+  if(s.id==='sourceProofAngle')return /工厂|车间|生产|仓库|库存/.test(t+' '+b);
   if(s.id==='titleSpec')return !!p.spec&&t.includes(p.spec);
   if(s.id==='titleNumber')return /\d{1,2}\s*(?:个|条|点|种|件|步|招|坑|问题|细节)/.test(t);
   if(s.id==='titlePrice')return !!p.price&&t.includes(p.price);
@@ -747,7 +760,7 @@ function renderHigh(r){
   if(!r||!r.high){$id('g81High').innerHTML='';return}const arr=window.__g81ShowAll?r.high:r.high.slice(0,3);
   $id('g81High').innerHTML=arr.map((x,i)=>'<a class="g81-high" href="'+esc(x.url||'#')+'" target="_blank" rel="noopener"><span class="g81-no">'+(i+1)+'</span><div><b>'+esc(x.title||'未命名')+'</b><small>'+esc(x.__kind)+' · '+esc(itemReasons(x,r.model).join('；'))+'</small></div><span class="g81-open">打开</span></a>').join('')||'<div class="g81-muted">暂无足够高价值样本。</div>';$id('g81ShowHigh').style.display=r.high.length>3?'inline-flex':'none';
 }
-function signalPool(r){return r.reusable.concat(r.testable)}
+function signalPool(r){const a=r.reusable.concat(r.testable);if(!a.length&&r.exploratory)a.push(r.exploratory);return a}
 function metrics(r){const s=r.strongest,signal=s?((s.diff>=0?'+':'')+Math.round(s.diff*100)+'%'):'—';return[[r.pool.length,'有效样本'],[r.high.length,'高价值样本'],[Math.round(r.coverage*100)+'%','核心数据覆盖'],[signal,'本轮最强信号'],[r.confidence[0],'综合可信度']]}
 
 function renderAnalysis(r){
@@ -803,7 +816,7 @@ function generateCurrent(){
 
 function renderFeedback(){const box=$id('g81Feedback');box.innerHTML='<div class="g81-feedback-title">发布后记录结果</div><div class="g81-feedback-grid"><label>浏览<input data-k="views" inputmode="decimal"></label><label>点赞<input data-k="likes" inputmode="decimal"></label><label>收藏<input data-k="favs" inputmode="decimal"></label><label>评论<input data-k="comments" inputmode="decimal"></label><label>转发<input data-k="shares" inputmode="decimal"></label><label>发布天数<input data-k="days" inputmode="decimal"></label></div><button id="g81SaveFeedback" class="g81-primary">保存结果</button>';box.classList.add('show');$id('g81SaveFeedback').onclick=saveFeedback}
 function saveFeedback(){let a=[];try{a=JSON.parse(localStorage.getItem(EXPKEY)||'[]')}catch{}const wanted=window.__g82Versions&&window.__g82Versions[window.__g82RecordIndex||0]?.label;const d=[...a].reverse().find(x=>x.platform===currentPlatform()&&x.status==='draft'&&(!wanted||x.variant===wanted));if(!d)return setStatus('没有找到待验证的生成记录。','warn');const m={};$id('g81Feedback').querySelectorAll('input').forEach(i=>{const v=num(i.value);if(v!==null)m[i.dataset.k]=v});const total=(m.likes||0)+(m.favs||0)+(m.comments||0)+(m.shares||0),days=m.days||1;d.metrics=m;d.performance=m.views?total/m.views:total/Math.max(.25,days);d.status='measured';d.measuredAt=nowISO();localStorage.setItem(EXPKEY,JSON.stringify(a.slice(-120)));$id('g81Feedback').innerHTML='<div class="g81-saved">✓ 已保存，本轮结果会进入后续同平台验证。</div>';setStatus('发布结果已记录。','oktxt')}
-function runAll(){ensureUI();const r=analyze();window.__g81Analysis=r;renderAnalysis(r);const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const sub=document.querySelector('.top .sub');if(sub)sub.textContent='小红书：抓取 → 综合分析 → 测试策略 → 自然内容 → 发布验证';const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.2.6';document.title='多平台内容增长决策系统 V8.2.6';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.2.6：结论在前、行动其次、关键证据随后、原始数据最后；生成结果必须通过测试变量执行校验。'}
+function runAll(){ensureUI();const r=analyze();window.__g81Analysis=r;renderAnalysis(r);const top=document.querySelector('.top h1');if(top)top.textContent='多平台内容增长决策系统';const sub=document.querySelector('.top .sub');if(sub)sub.textContent='小红书：抓取 → 综合分析 → 测试策略 → 自然内容 → 发布验证';const badge=document.querySelector('.badge');if(badge)badge.textContent='V8.3.0';document.title='多平台内容增长决策系统 V8.3.0';const foot=document.querySelector('.foot');if(foot)foot.textContent='V8.3.0：结论在前、行动其次、关键证据随后、原始数据最后；生成结果必须通过测试变量执行校验。'}
 const oldRender=window.render;if(typeof oldRender==='function'){window.render=function(){const v=oldRender.apply(this,arguments);setTimeout(runAll,40);return v}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(runAll,90));else setTimeout(runAll,90);
 })();
