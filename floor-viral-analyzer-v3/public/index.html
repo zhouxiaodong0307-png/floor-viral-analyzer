@@ -110,7 +110,7 @@ function canonicalItemId(x,source){
   return't:'+title+'|p:'+price+'|s:'+seller
 }
 function keyOf(x,source){return canonicalItemId(x,source)}
-function mergeCapture(source,newSite,newItems,capturedAt){const detectedSite=siteFromUrl(source||'');if(detectedSite&&detectedSite!=='未知网站')newSite=detectedSite;newSite=newSite||detectedSite||'未知网站';const stamp=String(capturedAt||new Date().toISOString());if(db.seenCaptures.includes(stamp))return 0;let map=new Map(db.items.map(x=>{const k=keyOf(x,x.sourcePage||'');x._key=k;return[k,x]})),added=0;(newItems||[]).forEach(raw=>{if(!raw?.title)return;let x=enrich({...raw,site:newSite,sourcePage:source,_capturedAt:stamp}),k=keyOf(x,source);x._key=k;if(map.has(k)){let old=map.get(k);map.set(k,enrich({...old,...x,_firstCapturedAt:old._firstCapturedAt||old._capturedAt||stamp}))}else{map.set(k,{...x,_firstCapturedAt:stamp});added++}});db.items=[...map.values()].sort((a,b)=>new Date(b._capturedAt||0)-new Date(a._capturedAt||0)).slice(0,900);db.lastSite=newSite;db.lastSource=source;db.lastBatchCount=added;db.lastCapturedAt=stamp;db.seenCaptures=[...db.seenCaptures,stamp].slice(-100);localStorage.setItem(DBKEY,JSON.stringify(db));site=newSite;return added}
+function mergeCapture(source,newSite,newItems,capturedAt){const detectedSite=siteFromUrl(source||'');if(detectedSite&&detectedSite!=='未知网站')newSite=detectedSite;newSite=newSite||detectedSite||'未知网站';const stamp=String(capturedAt||new Date().toISOString());if(db.seenCaptures.includes(stamp))return 0;let map=new Map(db.items.map(x=>{const k=keyOf(x,x.sourcePage||'');x._key=k;return[k,x]})),added=0;(newItems||[]).forEach(raw=>{if(!raw?.title)return;let x=enrich({...raw,site:newSite,sourcePage:source,_capturedAt:stamp}),k=keyOf(x,source);x._key=k;if(map.has(k)){let old=map.get(k);map.set(k,enrich({...old,...x,_firstCapturedAt:old._firstCapturedAt||old._capturedAt||stamp,wants:x.wants??old.wants??null,views:x.views??old.views??null,exposure:x.exposure??old.exposure??null,impressions:x.impressions??old.impressions??null,consults:x.consults??old.consults??null,sales:x.sales??old.sales??null,sold:x.sold??old.sold??null,likes:x.likes??old.likes??null,favs:x.favs??old.favs??null,comments:x.comments??old.comments??null,shares:x.shares??old.shares??null,price:x.price??old.price??null,deepFetched:!!(x.deepFetched||old.deepFetched),deepBodyFetched:!!(x.deepBodyFetched||old.deepBodyFetched),deepUsefulFields:x.deepUsefulFields??old.deepUsefulFields??null}))}else{map.set(k,{...x,_firstCapturedAt:stamp});added++}});db.items=[...map.values()].sort((a,b)=>new Date(b._capturedAt||0)-new Date(a._capturedAt||0)).slice(0,900);db.lastSite=newSite;db.lastSource=source;db.lastBatchCount=added;db.lastCapturedAt=stamp;db.seenCaptures=[...db.seenCaptures,stamp].slice(-100);localStorage.setItem(DBKEY,JSON.stringify(db));site=newSite;return added}
 function dedupeStoredItems(){
   const map=new Map();
   for(const raw of db.items||[]){
@@ -122,8 +122,10 @@ function dedupeStoredItems(){
       _firstCapturedAt:old._firstCapturedAt||x._firstCapturedAt||old._capturedAt||x._capturedAt,
       _capturedAt:new Date(old._capturedAt||0)>=new Date(x._capturedAt||0)?old._capturedAt:x._capturedAt,
       keywordHits:[...new Set([...(old.keywordHits||[]),...(x.keywordHits||[])])],
-      wants:x.wants??old.wants??null,likes:x.likes??old.likes??null,favs:x.favs??old.favs??null,
-      comments:x.comments??old.comments??null,views:x.views??old.views??null,price:x.price??old.price??null
+      wants:x.wants??old.wants??null,views:x.views??old.views??null,exposure:x.exposure??old.exposure??null,impressions:x.impressions??old.impressions??null,
+      consults:x.consults??old.consults??null,sales:x.sales??old.sales??null,sold:x.sold??old.sold??null,likes:x.likes??old.likes??null,favs:x.favs??old.favs??null,
+      comments:x.comments??old.comments??null,shares:x.shares??old.shares??null,price:x.price??old.price??null,
+      deepFetched:!!(x.deepFetched||old.deepFetched),deepBodyFetched:!!(x.deepBodyFetched||old.deepBodyFetched),deepUsefulFields:x.deepUsefulFields??old.deepUsefulFields??null
     };
     map.set(k,enrich(merged));
   }
