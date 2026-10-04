@@ -21,9 +21,9 @@ const plan=[],seenQ=new Set();
 function add(q,tier){q=C(q);if(!q||seenQ.has(q))return;seenQ.add(q);plan.push({q,tier})}
 add(Q,'A');
 if(Q&&!/地板/.test(Q)){add(Q+'地板','A');add(Q+'实木地板','A')}
-else if(Q){const bare=C(Q.replace(/木?地板/g,''));if(bare&&bare!==Q)add(bare,'A')}
+else if(Q){const bare=C(Q.replace(/地板$/,''));if(bare&&bare!==Q)add(bare,'A')}
 if(IS_XHS&&Q){
-  const core=C(Q.replace(/木?地板/g,''))||Q;
+  const core=C(Q.replace(/地板$/,''))||Q;
   [
     core+'地板 实景',core+'地板 装修',core+'地板 铺装',core+'地板 怎么选',
     core+'地板 避坑',core+'地板 价格',core+'地板 对比',core+'地板 工厂',
