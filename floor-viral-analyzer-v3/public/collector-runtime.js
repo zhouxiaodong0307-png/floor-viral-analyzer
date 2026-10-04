@@ -3,7 +3,7 @@ if(window.__FLOOR_V721_COLLECTING__)return;
 window.__FLOOR_V721_COLLECTING__=true;
 
 const TARGET=500, DEPTH_TARGET=120, DEPTH_MAX_MS=150000, MAX_TOTAL_MS=6*60*1000, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
-const COLLECTOR_VERSION='8.4.1';
+const COLLECTOR_VERSION='8.4.2';
 window.__FLOOR_MANUAL_STOP__=false;
 let fatalReason='',stopReason='';
 const safeQuery=(root,sel)=>{try{return root&&root.querySelector?root.querySelector(sel):null}catch{return null}};
@@ -267,34 +267,49 @@ function xyPageFingerprint(win){
 function xyNextButton(win,st){
   try{
     const doc=win.document,candidates=[];
+    const pushClickable=el=>{
+      let e=el;
+      for(let i=0;i<5&&e;i++,e=e.parentElement){
+        try{
+          const r=e.getBoundingClientRect(),cs=win.getComputedStyle(e),tx=C((e.innerText||'')+' '+(e.getAttribute?.('aria-label')||'')+' '+(e.getAttribute?.('title')||''));
+          if(r.width<14||r.height<14||r.width>180||r.height>100)continue;
+          if(e.disabled||e.getAttribute?.('aria-disabled')==='true')continue;
+          const clickable=e.tagName==='BUTTON'||e.tagName==='A'||e.getAttribute?.('role')==='button'||typeof e.onclick==='function'||cs.cursor==='pointer'||e.querySelector?.('svg');
+          if(clickable||/下一页|next|后页|下页|›|>|→/i.test(tx)){candidates.push(e);break}
+        }catch{}
+      }
+    };
+    // 1) 最可靠：以 “1/50” 页码文本为锚点，直接探测它右侧的箭头区域。
     if(st){
-      let p=st.el;
-      for(let depth=0;depth<5&&p;depth++,p=p.parentElement){
-        for(const el of p.querySelectorAll('button,[role="button"],a')){
-          try{
-            const r=el.getBoundingClientRect();
-            if(el.disabled||el.getAttribute('aria-disabled')==='true'||r.width<16||r.height<16)continue;
-            if(r.left>=st.rect.right-12&&Math.abs((r.top+r.bottom)/2-(st.rect.top+st.rect.bottom)/2)<90)candidates.push(el)
-          }catch{}
-        }
-        if(candidates.length)break
+      const y=(st.rect.top+st.rect.bottom)/2;
+      for(const dx of [18,28,38,50,64,80,96,115]){
+        const el=doc.elementFromPoint(Math.min(win.innerWidth-6,st.rect.right+dx),y);
+        if(el)pushClickable(el)
+      }
+      // 同一行、页码右侧的小型控件也纳入候选，不要求 button/a。
+      for(const el of doc.querySelectorAll('button,a,[role="button"],div,span')){
+        try{
+          const r=el.getBoundingClientRect();
+          if(r.left<st.rect.right-8||r.left>st.rect.right+150)continue;
+          if(Math.abs((r.top+r.bottom)/2-y)>55)continue;
+          if(r.width<16||r.width>100||r.height<16||r.height>80)continue;
+          pushClickable(el)
+        }catch{}
       }
     }
-    for(const el of doc.querySelectorAll('button,[role="button"],a')){
+    // 2) 语义兜底。
+    for(const el of doc.querySelectorAll('button,a,[role="button"],[aria-label],[title]')){
       try{
         const tx=C((el.innerText||'')+' '+(el.getAttribute('aria-label')||'')+' '+(el.getAttribute('title')||''));
-        if(/下一页|next|后页|下页/i.test(tx)&&!el.disabled&&el.getAttribute('aria-disabled')!=='true')candidates.unshift(el)
+        if(/下一页|next|后页|下页/i.test(tx))pushClickable(el)
       }catch{}
     }
     const unique=[...new Set(candidates)];
     if(!unique.length)return null;
-    unique.sort((a,b)=>{
-      const ta=C((a.innerText||'')+' '+(a.getAttribute('aria-label')||'')+' '+(a.getAttribute('title')||'')),
-            tb=C((b.innerText||'')+' '+(b.getAttribute('aria-label')||'')+' '+(b.getAttribute('title')||''));
-      const sa=/下一页|next|后页|下页/i.test(ta)?100:0,sb=/下一页|next|后页|下页/i.test(tb)?100:0;
-      if(sa!==sb)return sb-sa;
-      const ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();
-      return ra.left-rb.left
+    unique.sort((x,y)=>{
+      const rx=x.getBoundingClientRect(),ry=y.getBoundingClientRect();
+      const cx=st?Math.abs(rx.left-st.rect.right):999,cy=st?Math.abs(ry.left-st.rect.right):999;
+      return cx-cy||rx.width-ry.width
     });
     return unique[0]
   }catch{return null}
@@ -303,9 +318,17 @@ async function xyGoNext(win){
   const st=xyPageState(win);if(st&&st.current>=st.total)return{ok:false,reason:'last-page',state:st};
   const before=xyPageFingerprint(win),btn=xyNextButton(win,st);
   if(!btn)return{ok:false,reason:'next-button-not-found',state:st};
-  try{btn.click()}catch{return{ok:false,reason:'next-click-failed',state:st}}
-  for(let i=0;i<30;i++){
-    await new Promise(r=>setTimeout(r,160));
+  let clicked=false;
+  try{btn.click();clicked=true}catch{}
+  if(!clicked){
+    try{
+      for(const type of ['pointerdown','mousedown','pointerup','mouseup','click'])btn.dispatchEvent(new MouseEvent(type,{bubbles:true,cancelable:true,view:win}));
+      clicked=true
+    }catch{}
+  }
+  if(!clicked)return{ok:false,reason:'next-click-failed',state:st};
+  for(let i=0;i<36;i++){
+    await new Promise(r=>setTimeout(r,180));
     const now=xyPageFingerprint(win),ns=xyPageState(win);
     if(now&&now!==before&&(ns?.current!==st?.current||now.split('|')[1]!==before.split('|')[1])){
       try{win.scrollTo(0,0)}catch{}
