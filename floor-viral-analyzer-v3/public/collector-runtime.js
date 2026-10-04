@@ -291,8 +291,8 @@ async function collectQuery(win,step,index){
 
 
 function depthScore(x){
-  const likes=N(x.likes)||0,favs=N(x.favs)||0,comments=N(x.comments)||0,shares=N(x.shares)||0,rank=N(x.rank)||999;
-  return likes+favs*2+comments*3+shares*4+Math.max(0,600-rank)*.03;
+  const likes=N(x.likes)||0,favs=N(x.favs)||0,comments=N(x.comments)||0,shares=N(x.shares)||0,wants=N(x.wants)||0,consults=N(x.consults)||0,sales=N(x.sales)||0,rank=N(x.rank)||999;
+  return likes+favs*2+comments*3+shares*4+wants*2+consults*4+sales*8+Math.max(0,600-rank)*.03;
 }
 function sampleBand(arr,count){
   if(!arr.length||count<=0)return[];
@@ -301,7 +301,12 @@ function sampleBand(arr,count){
   return out
 }
 function selectDepthSample(limit){
-  const entries=[...out.entries()].filter(([,x])=>/^https?:\/\/[^/]*xiaohongshu\.com\/(?:explore|discovery\/item|search_result)\//i.test(String(x.url||'')));
+  const entries=[...out.entries()].filter(([,x])=>{
+    const u=String(x.url||'');
+    if(IS_XHS)return /^https?:\/\/[^/]*xiaohongshu\.com\/(?:explore|discovery\/item|search_result)\//i.test(u);
+    if(IS_XY)return /^https?:\/\/[^/]*(?:goofish\.com|2\.taobao\.com)\//i.test(u)&&/(?:item|detail|id=|itemId=|goodsId=)/i.test(u);
+    return false
+  });
   entries.sort((a,b)=>depthScore(b[1])-depthScore(a[1]));
   if(entries.length<=limit)return entries;
   const n=entries.length,parts=[
@@ -334,12 +339,12 @@ function decodeJsonString(v){try{return JSON.parse('"'+String(v||'').replace(/"/
 function scriptState(doc){
   let raw='';
   try{
-    raw=[...doc.scripts].map(x=>x.textContent||'').filter(x=>/likedCount|collectedCount|commentCount|shareCount|"desc"|"title"/.test(x)).join('\n').slice(0,2500000)
+    raw=[...doc.scripts].map(x=>x.textContent||'').filter(x=>/likedCount|collectedCount|commentCount|shareCount|wantCount|viewCount|browseCount|consultCount|soldCount|sales|"desc"|"title"/.test(x)).join('\n').slice(0,2500000)
   }catch{}
   if(!raw)return{};
   const str=k=>{const m=raw.match(new RegExp('"'+k+'"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"','i'));return m?decodeJsonString(m[1]):''};
   const metric=keys=>{for(const k of keys){const m=raw.match(new RegExp('"'+k+'"\\s*:\\s*"?([\\d.,]+\\s*(?:万|w|W|k|K|千)?)"?','i'));if(m){const v=N(m[1]);if(v!==null)return v}}return null};
-  return{title:str('title'),desc:str('desc')||str('description'),likes:metric(['likedCount','likeCount','likes']),favs:metric(['collectedCount','collectCount','favCount']),comments:metric(['commentCount','comments']),shares:metric(['shareCount','shares'])}
+  return{title:str('title'),desc:str('desc')||str('description'),likes:metric(['likedCount','likeCount','likes']),favs:metric(['collectedCount','collectCount','favCount']),comments:metric(['commentCount','comments']),shares:metric(['shareCount','shares']),wants:metric(['wantCount','wantedCount','favorCount']),views:metric(['viewCount','browseCount','pv']),consults:metric(['consultCount','inquiryCount']),sales:metric(['soldCount','sales','saleCount'])}
 }
 function detailText(doc,item,state){
   const metas=[
@@ -371,42 +376,59 @@ function extractXhsDetail(win,item){
       coverOverlayText:visual.coverOverlayText||item.coverOverlayText||'',deepFetched:true,deepBodyFetched:deepBody,deepUsefulFields:useful}
   }catch{return null}
 }
+function extractXyDetail(win,item){
+  try{
+    const doc=win.document,body=C(doc.body?.innerText||''),state=scriptState(doc);
+    const wants=detailMetric(doc,body,'想要|收藏')??state.wants??item.wants??null;
+    const views=detailMetric(doc,body,'浏览|查看|阅读')??state.views??item.views??null;
+    const consults=detailMetric(doc,body,'咨询|询价')??state.consults??item.consults??null;
+    const sales=detailMetric(doc,body,'已售|售出|成交')??state.sales??item.sales??null;
+    const comments=detailMetric(doc,body,'评论')??item.comments??null;
+    const timeMatch=body.match(/(刚刚|今天|昨天|\d+\s*(?:分钟|小时|天|周|个月|年)前|\d{4}[.\-/年]\d{1,2}(?:[.\-/月]\d{1,2})?)/);
+    const imgs=[...doc.querySelectorAll('img')].filter(im=>{try{const r=im.getBoundingClientRect(),w=im.naturalWidth||r.width,h=im.naturalHeight||r.height;return w>=180&&h>=180&&r.width>100&&r.height>100}catch{return false}});
+    const unique=[];const seen=new Set();for(const im of imgs){const u=im.currentSrc||im.src||'';if(u&&!seen.has(u)){seen.add(u);unique.push(im)}}
+    const desc=C(state.desc||doc.querySelector('meta[name="description"]')?.content||doc.querySelector('meta[property="og:description"]')?.content||'');
+    const deepBody=!!(desc&&desc!==item.text&&desc.length>=20);
+    const useful=[wants,views,consults,sales,comments].filter(v=>v!==null).length+(deepBody?1:0)+(unique.length?1:0);
+    return{text:deepBody?desc:item.text,wants,views,consults,sales,comments,ageText:timeMatch?timeMatch[1]:(item.ageText||''),imageCount:unique.length||item.imageCount||null,deepFetched:true,deepBodyFetched:deepBody,deepUsefulFields:useful}
+  }catch{return null}
+}
 async function waitDetail(win){
   for(let i=0;i<18;i++){
     try{
       const doc=win.document,body=doc?.body,ready=doc&&doc.readyState!=='loading';
-      if(body&&ready&&(body.innerText.length>180||[...doc.scripts].some(x=>/likedCount|collectedCount|"desc"/.test(x.textContent||''))))return true
+      if(body&&ready&&(body.innerText.length>180||[...doc.scripts].some(x=>/likedCount|collectedCount|wantCount|viewCount|soldCount|"desc"/.test(x.textContent||''))))return true
     }catch{}
     await new Promise(r=>setTimeout(r,200))
   }
   return false
 }
 async function enrichDepth(win){
-  const sample=selectDepthSample(DEPTH_TARGET),start=Date.now();
+  const sample=selectDepthSample(DEPTH_TARGET),start=Date.now(),maxMs=IS_XY?90000:DEPTH_MAX_MS;
   let attempted=0,enriched=0,failed=0,failStreak=0;
   for(let i=0;i<sample.length&&!window.__FLOOR_MANUAL_STOP__;i++){
-    if(Date.now()-start>=DEPTH_MAX_MS)break;
+    if(Date.now()-start>=maxMs)break;
     if(!win||win.closed)break;
     const [key,item]=sample[i];attempted++;
-    status(window,'500条广度采集完成｜正在补全详情 '+(i+1)+'/'+sample.length+'｜已成功 '+enriched);
+    status(window,'广度 '+out.size+'/500｜'+PLATFORM+' 详情补全 '+(i+1)+'/'+sample.length+'｜已成功 '+enriched);
     let loaded=false;
     try{win.location.href=item.url;loaded=await waitDetail(win)}catch{}
     if(!loaded){failed++;failStreak++;if(failStreak>=8)break;continue}
-    await new Promise(r=>setTimeout(r,140));
-    const d=extractXhsDetail(win,item);
+    await new Promise(r=>setTimeout(r,IS_XY?110:140));
+    const d=IS_XHS?extractXhsDetail(win,item):IS_XY?extractXyDetail(win,item):null;
     if(d&&d.deepUsefulFields>=1){
       out.set(key,{...item,...d,keywordHits:item.keywordHits||[],sampleTier:item.sampleTier});
       enriched++;failStreak=0;
     }else{failed++;failStreak++}
-    await new Promise(r=>setTimeout(r,90));
+    await new Promise(r=>setTimeout(r,IS_XY?70:90));
     if(failStreak>=8)break
   }
-  const fields=['views','likes','favs','comments','shares','ageText','imageCount','coverRatioType','coverVisualType'];
+  const fields=IS_XY?['views','wants','consults','sales','comments','ageText','imageCount']:['views','likes','favs','comments','shares','ageText','imageCount','coverRatioType','coverVisualType'];
   const fieldCounts={};for(const k of fields)fieldCounts[k]=[...out.values()].filter(x=>x[k]!==null&&x[k]!==undefined&&x[k]!=='').length;
-  return{target:DEPTH_TARGET,selected:sample.length,attempted,enriched,failed,durationSeconds:Math.round((Date.now()-start)/1000),fieldCounts}
+  return{target:DEPTH_TARGET,selected:sample.length,attempted,enriched,failed,durationSeconds:Math.round((Date.now()-start)/1000),fieldCounts,platform:PLATFORM}
 }
 let worker=null;
-try{worker=window.open('about:blank','floorCollectorV8300','width=980,height=760,left=28,top=28')}catch{}
+try{worker=window.open('about:blank','floorCollectorV8400','width=980,height=760,left=28,top=28')}catch{}
 if(!worker||worker.closed){
   window.__FLOOR_V721_COLLECTING__=false;
   document.getElementById('__floor_v721_status__')?.remove();
@@ -438,7 +460,7 @@ for(let i=0;i<plan.length&&out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__;i++){
 }
 if(out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__&&!fatalReason&&!stopReason)stopReason='unique-sample-exhausted';
 let depthMeta={target:DEPTH_TARGET,selected:0,attempted:0,enriched:0,failed:0,durationSeconds:0,fieldCounts:{}};
-if(IS_XHS&&!window.__FLOOR_MANUAL_STOP__&&!fatalReason&&out.size>=60&&worker&&!worker.closed){
+if((IS_XHS||IS_XY)&&!window.__FLOOR_MANUAL_STOP__&&!fatalReason&&out.size>=60&&worker&&!worker.closed){
   try{depthMeta=await enrichDepth(worker)}catch{}
 }
 if(worker&&!worker.closed)try{worker.close()}catch{}
