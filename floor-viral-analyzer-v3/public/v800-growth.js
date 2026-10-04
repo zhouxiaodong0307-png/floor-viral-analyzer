@@ -272,6 +272,15 @@ function itemReasons(x,model){
   const out=[],cohort=x.__cohort||[];for(const [k,label] of Object.entries(model.labels)){const v=x.__dims[k];if(v===null||v===undefined)continue;const a=cohort.map(z=>z.__dims[k]).filter(v=>v!==null&&v!==undefined&&Number.isFinite(v));if(a.length<5)continue;const p=percentile(v,a);if(p===null||p<.78)continue;out.push(label+'同类前'+Math.max(1,Math.round((1-p)*100))+'%')}
   if(!out.length)out.push(x.__mode==='搜索排序/时效参考'?'搜索排序靠前，仅作探索参考':'综合表现位于同类前列');return out.slice(0,3);
 }
+function highThemeProfile(high,normal){
+  const names=['知识/攻略','案例/场景','价格/预算','工厂/货源','产品展示'],out=[];
+  for(const name of names){
+    const hc=high.filter(x=>xhsType(x)===name).length,nc=normal.filter(x=>xhsType(x)===name).length,hp=high.length?hc/high.length:0,np=normal.length?nc/normal.length:0;
+    out.push({name,hc,nc,hp,np,diff:hp-np})
+  }
+  return out.sort((a,b)=>b.hp-a.hp||b.diff-a.diff)
+}
+
 function analyze(){
   const platform=currentPlatform(),model=modelFor(platform),batch=batchItems();if(!model)return{platform,batch,unsupported:true};if(!batch.length)return{platform,batch,empty:true};
   const comp=buildComparable(batch,platform,model),deb=debias(comp.usable,platform),scored=outlierRows(scoreRows(deb.items,model)),anomalies=scored.filter(x=>x.__outlier),pool=scored.filter(x=>!x.__outlier).sort((a,b)=>b.__score-a.__score),highN=pool.length?Math.max(1,Math.ceil(pool.length*.20)):0,high=pool.slice(0,highN),normal=pool.slice(highN);
@@ -285,8 +294,8 @@ function analyze(){
   const expBase=!strongest?observed.find(x=>x.diff>=.04&&x.z>=1.0):null;
   const exploratory=expBase?{...expBase,category:'探索性测试',level:'探索性信号'}:null;
   let conf='探索',confClass='low';if(high.length>=25&&normal.length>=60&&coverage>=.30&&rankOnlyRate<.8){conf='高';confClass='good'}else if(high.length>=15&&normal.length>=35&&coverage>=.22){conf='中';confClass='base'}else if(high.length>=8){conf='低';confClass='low'}
-  const kinds={};for(const x of high)kinds[x.__kind]=(kinds[x.__kind]||0)+1;const dominant=Object.entries(kinds).sort((a,b)=>b[1]-a[1])[0]?.[0]||'潜在高表现';
-  return{platform,model,batch,comp,deb,pool,high,normal,anomalies,findings,baseFindings,combos,phrases,reusable,testable,none,strongest,exploratory,observed,coverage,stability,rankOnlyRate,confidence:[conf,confClass],dominant,empty:false};
+  const kinds={};for(const x of high)kinds[x.__kind]=(kinds[x.__kind]||0)+1;const dominant=Object.entries(kinds).sort((a,b)=>b[1]-a[1])[0]?.[0]||'潜在高表现',themes=platform==='小红书'?highThemeProfile(high,normal):[];
+  return{platform,model,batch,comp,deb,pool,high,normal,anomalies,findings,baseFindings,combos,phrases,reusable,testable,none,strongest,exploratory,observed,coverage,stability,rankOnlyRate,confidence:[conf,confClass],dominant,themes,empty:false};
 }
 
 function parseProduct(raw){
@@ -706,7 +715,11 @@ function explainFinding(f){
   if(f.diff>0)return(what?what+' ':'')+'高表现内容中略多一些，目前只作为观察信号。';
   return'高低表现组差异很小，本轮不建议参考。';
 }
-function contentProfile(r){return r.reusable.concat(r.testable).filter(x=>x.diff>0).slice(0,5).map(x=>x.label)}
+function contentProfile(r){
+  const out=r.reusable.concat(r.testable).filter(x=>x.diff>0).slice(0,4).map(x=>x.label);
+  for(const t of (r.themes||[]).slice(0,3)){if(t.hp>=.12)out.push('高价值主题「'+t.name+'」'+Math.round(t.hp*100)+'%')}
+  return [...new Set(out)].slice(0,6)
+}
 function opportunityMap(r){
   const reuse=r.reusable.slice(0,4),test=r.testable.slice(0,5);
   if(!test.length&&r.exploratory)test.push(r.exploratory);
@@ -724,14 +737,15 @@ function humanSummary(r){
   if(s){
     return'本轮'+r.batch.length+'条笔记暂未达到“可直接复用”级别，但并非没有信息。当前最明显的是“'+s.label+'”：高表现 '+fmtPct(s.hp)+'、普通 '+fmtPct(s.np)+'、差异 '+(s.diff>=0?'+':'')+Math.round(s.diff*100)+'%，下一轮应针对它做验证'+gap;
   }
-  return'本轮没有发现足以单独定型的内容因子。系统不会把这解释成“什么都研究不出来”，而是转为从高价值样本的主题集中度、组合模式和标题短语中选择下一轮测试方向'+gap;
+  const themes=(r.themes||[]).slice(0,2).filter(x=>x.hp>0),themeText=themes.length?(' 当前高价值内容主要集中在 '+themes.map(x=>'“'+x.name+'” '+Math.round(x.hp*100)+'%').join('、')+'。'):'';
+  return'本轮没有发现足以单独定型的内容因子，但不等于没有方向。'+themeText+' 系统会从高价值样本的主题集中度、组合模式和标题短语中选择下一轮测试方向'+gap;
 }
 function nextAdvice(r){
   const s=r.strongest||r.exploratory;
   if(!s){
-    const types=new Map();for(const x of r.high||[]){const t=xhsType(x);types.set(t,(types.get(t)||0)+1)}
-    const top=[...types.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0]||'真实案例/选购问题';
-    return{title:'下一轮测试「'+top+'」切入',doText:'从本轮高价值样本最集中的内容类型出发：先提出一个真实用户问题，再用实际产品/现场信息给判断，结尾只留一个可验证的选择点。',dont:'不要复制固定文案，也不要同时改标题、封面、正文结构三个变量。',purpose:'即使没有单一强因子，也必须从高价值样本中形成一个明确可验证的下一步，而不是给空建议。'};
+    const top=(r.themes||[])[0]||{name:'真实案例/选购问题',hp:0};
+    const actions={'知识/攻略':'做一条真正能帮助选购的判断型内容：只解决一个问题，给出条件、对比和结论。','案例/场景':'用一个真实空间/完工案例开头，先讲现场条件，再讲为什么这样选。','价格/预算':'围绕真实预算拆解“单价之外还要算什么”，把损耗、铺法和安装条件说清楚。','工厂/货源':'用真实工厂/生产现场做证据，展示板面、规格、选材或库存中用户能据此判断的东西。','产品展示':'不要只晒产品，给产品展示绑定一个明确选择问题，例如规格、铺法或适用空间。'};
+    return{title:'下一轮测试「'+top.name+'」方向',doText:(actions[top.name]||actions['知识/攻略'])+(top.hp?(' 本轮高价值样本中该方向约占 '+Math.round(top.hp*100)+'%。'):''),dont:'不要复制固定文案，也不要同时改标题、封面、正文结构三个变量。',purpose:'先验证高价值样本最集中的内容方向，再用你的真实发布结果决定是否继续加码。'};
   }
   let doText=s.label,title=s.label,dont='不要把后台统计标签直接写进正文。';
   if(s.kind==='combo'){
