@@ -2,8 +2,8 @@
 if(window.__FLOOR_V721_COLLECTING__)return;
 window.__FLOOR_V721_COLLECTING__=true;
 
-const TARGET=500, DEPTH_TARGET=120, DEPTH_MAX_MS=4*60*1000, MAX_TOTAL_MS=6*60*1000, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
-const COLLECTOR_VERSION='8.2.13';
+const TARGET=500, DEPTH_TARGET=120, DEPTH_MAX_MS=150000, MAX_TOTAL_MS=6*60*1000, ENDPOINT='https://floor-viral-analyzer.onrender.com/import';
+const COLLECTOR_VERSION='8.3.0';
 window.__FLOOR_MANUAL_STOP__=false;
 let fatalReason='',stopReason='';
 const safeQuery=(root,sel)=>{try{return root&&root.querySelector?root.querySelector(sel):null}catch{return null}};
@@ -13,7 +13,7 @@ const N=s=>{const m=String(s||'').replace(/,/g,'').match(/([\d.]+)\s*(万|w|W|k|
 const base=new URL(location.href);
 const HOST=base.hostname.toLowerCase(),IS_XHS=HOST.includes('xiaohongshu.com'),IS_XY=HOST.includes('goofish.com');
 const Q=decodeURIComponent(base.searchParams.get('q')||base.searchParams.get('keyword')||base.searchParams.get('kw')||base.searchParams.get('query')||'').trim();
-const BREADTH_MAX_MS=IS_XHS?135000:90000, QUERY_MAX_MS=IS_XHS?14000:8000, QUERY_MAX_STEPS=IS_XHS?28:18, STALE_SCANS=4;
+const BREADTH_MAX_MS=IS_XHS?180000:90000, QUERY_MAX_MS=IS_XHS?9000:6500, QUERY_MAX_STEPS=IS_XHS?20:14, STALE_SCANS=3;
 
 const out=new Map(), rawKeys=new Set(), queryStats=[];
 const woods=['红檀香','缅甸柚木','柚木','橡木','白橡','欧橡','龙凤檀','菠萝格','黑胡桃','白蜡木','重蚁木','紫檀'];
@@ -27,7 +27,10 @@ if(IS_XHS&&Q){
   [
     core+'地板 实景',core+'地板 装修',core+'地板 铺装',core+'地板 怎么选',
     core+'地板 避坑',core+'地板 价格',core+'地板 对比',core+'地板 工厂',
-    core+'地板 案例',core+'地板 客厅',core+'地板 卧室',core+'实木地板'
+    core+'地板 案例',core+'地板 客厅',core+'地板 卧室',core+'地板 完工',
+    core+'地板 实拍',core+'地板 地暖',core+'地板 规格',core+'地板 选购',
+    core+'地板 预算',core+'地板 安装',core+'地板 人字',core+'地板 鱼骨',
+    core+'地板 收口',core+'实木地板'
   ].forEach(q=>add(q,'A'));
 }
 const hit=woods.find(w=>Q.includes(w));
@@ -302,7 +305,18 @@ function detailMetric(doc,body,keys){
   const re2=new RegExp('([\\d,.]+\\s*(?:万|w|W|k|K|千)?)\\s*(?:'+keys+')','i');
   const m=body.match(re1)||body.match(re2);return m?N(m[1]):null
 }
-function detailText(doc,item){
+function decodeJsonString(v){try{return JSON.parse('"'+String(v||'').replace(/"/g,'\\"')+'"')}catch{return String(v||'').replace(/\\n/g,' ').replace(/\\u([0-9a-f]{4})/gi,(_,h)=>String.fromCharCode(parseInt(h,16)))}}
+function scriptState(doc){
+  let raw='';
+  try{
+    raw=[...doc.scripts].map(x=>x.textContent||'').filter(x=>/likedCount|collectedCount|commentCount|shareCount|"desc"|"title"/.test(x)).join('\n').slice(0,2500000)
+  }catch{}
+  if(!raw)return{};
+  const str=k=>{const m=raw.match(new RegExp('"'+k+'"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"','i'));return m?decodeJsonString(m[1]):''};
+  const metric=keys=>{for(const k of keys){const m=raw.match(new RegExp('"'+k+'"\\s*:\\s*"?([\\d.,]+\\s*(?:万|w|W|k|K|千)?)"?','i'));if(m){const v=N(m[1]);if(v!==null)return v}}return null};
+  return{title:str('title'),desc:str('desc')||str('description'),likes:metric(['likedCount','likeCount','likes']),favs:metric(['collectedCount','collectCount','favCount']),comments:metric(['commentCount','comments']),shares:metric(['shareCount','shares'])}
+}
+function detailText(doc,item,state){
   const metas=[
     doc.querySelector('meta[name="description"]')?.content,
     doc.querySelector('meta[property="og:description"]')?.content,
@@ -310,19 +324,19 @@ function detailText(doc,item){
   ].map(C).filter(Boolean);
   const selectors='[class*="note-content"],[class*="desc"],[class*="description"],[class*="content-text"],[class*="note-text"]';
   const blocks=[...doc.querySelectorAll(selectors)].map(x=>C(x.innerText)).filter(x=>x.length>=20&&x.length<=8000).sort((a,b)=>b.length-a.length);
-  const candidate=blocks[0]||metas.sort((a,b)=>b.length-a.length)[0]||'';
+  const candidate=blocks[0]||C(state?.desc||'')||metas.sort((a,b)=>b.length-a.length)[0]||'';
   if(candidate&&candidate.length>=20)return candidate;
   return item.text||''
 }
 function extractXhsDetail(win,item){
   try{
-    const doc=win.document,body=C(doc.body?.innerText||''),title=C(doc.querySelector('meta[property="og:title"]')?.content||safeQuery(doc,'[class*="title"],[class*="note-title"]')?.innerText||item.title||'').replace(/\s*[-|｜]\s*小红书.*$/,'');
-    const likes=detailMetric(doc,body,'点赞|赞'),favs=detailMetric(doc,body,'收藏'),comments=detailMetric(doc,body,'评论'),shares=detailMetric(doc,body,'转发|分享'),views=detailMetric(doc,body,'浏览|阅读|小眼睛');
+    const doc=win.document,body=C(doc.body?.innerText||''),state=scriptState(doc),title=C(doc.querySelector('meta[property="og:title"]')?.content||safeQuery(doc,'[class*="title"],[class*="note-title"]')?.innerText||state.title||item.title||'').replace(/\s*[-|｜]\s*小红书.*$/,'');
+    const likes=detailMetric(doc,body,'点赞|赞')??state.likes??null,favs=detailMetric(doc,body,'收藏')??state.favs??null,comments=detailMetric(doc,body,'评论')??state.comments??null,shares=detailMetric(doc,body,'转发|分享')??state.shares??null,views=detailMetric(doc,body,'浏览|阅读|小眼睛');
     const timeMatch=body.match(/(刚刚|今天|昨天|\d+\s*(?:分钟|小时|天|周|个月|年)前|\d{4}[.\-/年]\d{1,2}(?:[.\-/月]\d{1,2})?)/);
     const imgs=[...doc.querySelectorAll('img')].filter(im=>{try{const r=im.getBoundingClientRect(),w=im.naturalWidth||r.width,h=im.naturalHeight||r.height;return w>=220&&h>=220&&r.width>120&&r.height>120}catch{return false}});
     const uniqueImgs=[];const seen=new Set();for(const im of imgs){const s=im.currentSrc||im.src||'';if(s&&!seen.has(s)){seen.add(s);uniqueImgs.push(im)}}
     const mainImg=uniqueImgs[0]||doc.querySelector('img'),visual=coverMeta(doc.body||doc.documentElement,mainImg);
-    const noteText=detailText(doc,item),mediaType=doc.querySelector('video,[class*="video"],[class*="player"]')?'视频':(visual.mediaType||item.mediaType||'图片');
+    const noteText=detailText(doc,item,state),mediaType=doc.querySelector('video,[class*="video"],[class*="player"]')?'视频':(visual.mediaType||item.mediaType||'图片');
     const useful=[likes,favs,comments,shares,views].filter(v=>v!==null).length+(noteText&&noteText!==item.text?1:0)+(uniqueImgs.length?1:0);
     return{title:title||item.title,text:noteText,likes:likes??item.likes??null,favs:favs??item.favs??null,comments:comments??item.comments??null,shares:shares??item.shares??null,views:views??item.views??null,
       ageText:timeMatch?timeMatch[1]:(item.ageText||''),imageCount:uniqueImgs.length||item.imageCount||null,carouselCount:uniqueImgs.length||item.carouselCount||null,mediaType,
@@ -332,11 +346,12 @@ function extractXhsDetail(win,item){
   }catch{return null}
 }
 async function waitDetail(win){
-  for(let i=0;i<28;i++){
+  for(let i=0;i<18;i++){
     try{
-      if(win.document?.body&&win.document.body.innerText.length>180&&win.document.readyState!=='loading')return true
+      const doc=win.document,body=doc?.body,ready=doc&&doc.readyState!=='loading';
+      if(body&&ready&&(body.innerText.length>180||[...doc.scripts].some(x=>/likedCount|collectedCount|"desc"/.test(x.textContent||''))))return true
     }catch{}
-    await new Promise(r=>setTimeout(r,250))
+    await new Promise(r=>setTimeout(r,200))
   }
   return false
 }
@@ -350,22 +365,22 @@ async function enrichDepth(win){
     status(window,'500条广度采集完成｜正在补全详情 '+(i+1)+'/'+sample.length+'｜已成功 '+enriched);
     let loaded=false;
     try{win.location.href=item.url;loaded=await waitDetail(win)}catch{}
-    if(!loaded){failed++;failStreak++;if(failStreak>=12)break;continue}
-    await new Promise(r=>setTimeout(r,260));
+    if(!loaded){failed++;failStreak++;if(failStreak>=8)break;continue}
+    await new Promise(r=>setTimeout(r,140));
     const d=extractXhsDetail(win,item);
-    if(d&&d.deepUsefulFields>=2){
+    if(d&&d.deepUsefulFields>=1){
       out.set(key,{...item,...d,keywordHits:item.keywordHits||[],sampleTier:item.sampleTier});
       enriched++;failStreak=0;
     }else{failed++;failStreak++}
-    await new Promise(r=>setTimeout(r,180));
-    if(failStreak>=12)break
+    await new Promise(r=>setTimeout(r,90));
+    if(failStreak>=8)break
   }
   const fields=['views','likes','favs','comments','shares','ageText','imageCount','coverRatioType','coverVisualType'];
   const fieldCounts={};for(const k of fields)fieldCounts[k]=[...out.values()].filter(x=>x[k]!==null&&x[k]!==undefined&&x[k]!=='').length;
   return{target:DEPTH_TARGET,selected:sample.length,attempted,enriched,failed,durationSeconds:Math.round((Date.now()-start)/1000),fieldCounts}
 }
 let worker=null;
-try{worker=window.open('about:blank','floorCollectorV8213','width=980,height=760,left=28,top=28')}catch{}
+try{worker=window.open('about:blank','floorCollectorV8300','width=980,height=760,left=28,top=28')}catch{}
 if(!worker||worker.closed){
   window.__FLOOR_V721_COLLECTING__=false;
   document.getElementById('__floor_v721_status__')?.remove();
