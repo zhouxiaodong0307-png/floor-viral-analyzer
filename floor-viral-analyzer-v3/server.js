@@ -1,4 +1,4 @@
-// deploy-refresh-v8.4.1
+// deploy-refresh-v8.4.2
 import express from "express";
 import { chromium } from "playwright";
 import dns from "node:dns/promises";
@@ -175,7 +175,7 @@ async function analyzeUrl(url) {
 }
 
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, version: "8.4.1", mode: "decision-system-permanent-collector" });
+  res.json({ ok: true, version: "8.4.2", mode: "decision-system-permanent-collector" });
 });
 
 app.get("/browser-bridge.zip", (req, res) => {
@@ -214,10 +214,10 @@ app.post("/import", (req, res) => {
     try { host = new URL(source).hostname.toLowerCase(); } catch {}
     const meta = { ...(payload.meta || {}), platform: site, sourceHost: host };
     const safe = JSON.stringify({ source, site, keyword: clean(payload.keyword,120), meta, capturedAt: new Date().toISOString(), items }).replace(/</g, "\\u003c");
-    res.type("html").send(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>正在导入</title></head><body><script>localStorage.setItem('floorV7Import',JSON.stringify(${safe}));location.replace('/?imported=1&v=8410&t='+Date.now());<\/script></body></html>`);
+    res.type("html").send(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>正在导入</title></head><body><script>localStorage.setItem('floorV7Import',JSON.stringify(${safe}));location.replace('/?imported=1&v=8420&t='+Date.now());<\/script></body></html>`);
   } catch (err) {
     res.status(400).type("html").send(`<!doctype html><meta charset="utf-8"><body style="font-family:-apple-system;padding:30px"><h2>导入失败</h2><p>${clean(err?.message || "未知错误", 300)}</p></body>`);
   }
 });
 
-app.listen(PORT, "0.0.0.0", () => console.log(`V8.4.1 running on :${PORT}`));
+app.listen(PORT, "0.0.0.0", () => console.log(`V8.4.2 running on :${PORT}`));
