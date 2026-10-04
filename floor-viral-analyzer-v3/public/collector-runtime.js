@@ -13,15 +13,17 @@ const N=s=>{const m=String(s||'').replace(/,/g,'').match(/([\d.]+)\s*(万|w|W|k|
 const base=new URL(location.href);
 const HOST=base.hostname.toLowerCase(),IS_XHS=HOST.includes('xiaohongshu.com')||HOST.includes('xhslink.com'),IS_XY=HOST.includes('goofish.com')||HOST==='2.taobao.com'||HOST.endsWith('.2.taobao.com');
 const PLATFORM=IS_XHS?'小红书':IS_XY?'闲鱼':HOST.replace(/^www\./,'')||'未知网站';
-const Q=decodeURIComponent(base.searchParams.get('q')||base.searchParams.get('keyword')||base.searchParams.get('kw')||base.searchParams.get('query')||'').trim();
+const QUERY_KEYS=['q','keyword','kw','query','search_query','search_keyword','wd','key'],QUERY_KEY=QUERY_KEYS.find(k=>base.searchParams.has(k))||((IS_XHS||IS_XY)?'q':'');
+const Q=decodeURIComponent((QUERY_KEY&&base.searchParams.get(QUERY_KEY))||'').trim();
 const FLOOR_TOPIC=/地板|实木|多层|三层|强化|spc|wpc|橡木|柚木|红檀香|龙凤檀|菠萝格|黑胡桃|白蜡木|重蚁木|紫檀/i.test(Q);
 const BREADTH_MAX_MS=IS_XHS?180000:IS_XY?180000:90000, QUERY_MAX_MS=IS_XHS?9000:IS_XY?7500:6500, QUERY_MAX_STEPS=IS_XHS?20:IS_XY?18:14, STALE_SCANS=3;
 
 const out=new Map(), rawKeys=new Set(), queryStats=[];
 const woods=['红檀香','缅甸柚木','柚木','橡木','白橡','欧橡','龙凤檀','菠萝格','黑胡桃','白蜡木','重蚁木','紫檀'];
 const plan=[],seenQ=new Set();
-function add(q,tier){q=C(q);if(!q||seenQ.has(q))return;seenQ.add(q);plan.push({q,tier})}
+function add(q,tier){q=C(q);if(!q||seenQ.has(q))return;seenQ.add(q);plan.push({q,tier,current:false})}
 add(Q,'A');
+if(!Q&&!IS_XHS&&!IS_XY)plan.push({q:'',tier:'A',current:true});
 if(IS_XHS&&Q){
   const core=FLOOR_TOPIC?(C(Q.replace(/地板$/,''))||Q):Q;
   const suffixes=FLOOR_TOPIC?
@@ -78,7 +80,8 @@ function getCard(doc,a){
   let e=a;
   for(let i=0;i<8&&e;i++,e=e.parentElement){
     const t=C(e.innerText),r=e.getBoundingClientRect();
-    if(t.length>=10&&t.length<=2200&&r.width>=110&&r.height>=55&&(/[¥￥]\s*[\d,.]+/.test(t)||/(想要|点赞|收藏|评论|浏览|已售)/.test(t))&&(e.querySelector('img')||doc.defaultView.getComputedStyle(e).backgroundImage!=='none')) return e;
+    const metricCue=/[¥￥]\s*[\d,.]+/.test(t)||/(想要|点赞|收藏|评论|浏览|已售|分享|播放|阅读)/.test(t),genericCue=!IS_XHS&&!IS_XY;
+    if(t.length>=10&&t.length<=2200&&r.width>=110&&r.height>=55&&(metricCue||genericCue)&&(e.querySelector('img')||doc.defaultView.getComputedStyle(e).backgroundImage!=='none')) return e;
   }
   return null
 }
@@ -441,7 +444,7 @@ for(let i=0;i<plan.length&&out.size<TARGET&&!window.__FLOOR_MANUAL_STOP__;i++){
   if(Date.now()-START>=BREADTH_MAX_MS){stopReason='breadth-time-limit';break}
   if(!win||win.closed){fatalReason='采集窗口被关闭';break}
   const step=plan[i],u=new URL(base);
-  if(u.searchParams.has('q')||!u.searchParams.has('keyword'))u.searchParams.set('q',step.q);else u.searchParams.set('keyword',step.q);
+  if(!step.current&&QUERY_KEY)u.searchParams.set(QUERY_KEY,step.q);
   let loaded=false;
   for(let attempt=1;attempt<=2&&!loaded&&!window.__FLOOR_MANUAL_STOP__&&Date.now()-START<BREADTH_MAX_MS;attempt++){
     try{
