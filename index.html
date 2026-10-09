@@ -2844,8 +2844,8 @@ function validateQuoteBeforeGenerate(){
   quoteExtraRows().forEach((row,index)=>{
     const field=k=>row.querySelector(`[data-field="${k}"]`);
     const name=field('species'),area=field('area'),price=field('price'),spec=field('spec');
-    const values=[name,area,price,spec].map(el=>String(el?.value??'').trim());
-    if(values.every(v=>v===''))return; // Empty unused extra rows are ignored by calculation.
+    // An added extra row exists in the source product list even when its user fields are blank.
+    // Require a complete row or explicit removal to avoid exporting phantom products.
     add(name,`第${index+2}款地板名称`,'text');
     add(area,`第${index+2}款实际面积`,'positive');
     add(price,`第${index+2}款地板单价`,'positive');
