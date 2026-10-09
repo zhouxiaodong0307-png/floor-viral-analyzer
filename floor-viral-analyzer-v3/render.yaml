@@ -1,7 +1,0 @@
-services:
-  - type: web
-    name: floor-viral-analyzer-v3
-    runtime: docker
-    plan: free
-    autoDeploy: true
-    healthCheckPath: /api/health
