@@ -1,0 +1,10 @@
+{
+  "name": "木地板生意助手 V285 测试版",
+  "short_name": "地板助手测试",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f4f6",
+  "theme_color": "#111111",
+  "icons": []
+}
