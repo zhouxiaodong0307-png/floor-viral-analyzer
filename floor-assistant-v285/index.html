@@ -3134,28 +3134,55 @@ async function inspectMigrationBackupV343(input){
   inspectedMigrationV344=previewMigrationImportV344(obj,file.name);
   const counts=inspectedMigrationV344.result;
   out.textContent=note+'\\n预计可新增：订单 '+counts.orders.newCount+'、成本 '+counts.costLibrary.newCount+'、产品 '+counts.productLibrary.newCount+'、报价 '+counts.allProductQuotes.newCount+'、草稿 '+counts.quoteDrafts.newCount+'。';
-  const btn=document.getElementById('migrationImportBtnV344');if(btn)btn.hidden=false;
+  const mismatches=Object.entries(counts).filter(([key,c])=>c.conflictCount>0);
+  if(mismatches.length){
+   out.textContent+='\\n⚠ 迁移已暂停：发现同 ID 但内容不同的历史数据，不能只按订单数量判定成功。'+
+    '\\n冲突分类：'+mismatches.map(([key,c])=>key+' '+c.conflictCount+' 项').join('，')+
+    '\\n请先核对现有记录（包括系统内置历史订单），当前记录没有被覆盖。';
+  }
+  const btn=document.getElementById('migrationImportBtnV344');if(btn)btn.hidden=mismatches.length>0;
  }catch(e){inspectedMigrationV344=null;const btn=document.getElementById('migrationImportBtnV344');if(btn)btn.hidden=true;out.textContent='检查失败：'+String(e.message||e)+'。现有数据未改变。'}
  finally{input.value=''}
 }
 /* V344: explicit local-only migration. Import missing IDs, retain existing records on collisions. */
 let inspectedMigrationV344=null;
+/* V345 staging-only: refuse silent partial imports on same-ID content differences. */
 function previewMigrationImportV344(obj,name){
  const available={orders:orders(),costLibrary:costItems(),productLibrary:productItems(),allProductQuotes:allProductQuotes(),quoteDrafts:quoteDrafts()};
  const categories=['orders','costLibrary','productLibrary','allProductQuotes','quoteDrafts'];
- const idFor=(x,k)=>k==='orders'||k==='quoteDrafts'?String(x.id??''):k==='costLibrary'?[x.id,x.type,x.name,x.spec].join('|'):k==='productLibrary'?[x.id,x.name,x.spec,x.condition].join('|'):[x.id,x.name,x.spec,x.condition].join('|');
- const result={};for(const key of categories){
-   const incoming=Array.isArray(obj[key])?obj[key]:[],existing=available[key];
-   const known=new Set(existing.map(x=>idFor(x,key)));let fresh=[];
-   for(const x of incoming){if(!x||typeof x!=='object')continue;let id=idFor(x,key);if(!id||id==='undefined'||id==='null'||known.has(id))continue;known.add(id);fresh.push(x)}
-   result[key]={existing:existing.length,incoming:incoming.length,newCount:fresh.length,fresh};
+ const idFor=(x,k)=>{
+  if(x.id!==undefined&&x.id!==null&&x.id!=='')return String(x.id);
+  if(k==='orders'||k==='quoteDrafts')return '';
+  if(k==='costLibrary')return 'cost:'+String(x.type||'')+'|'+String(x.name||'')+'|'+String(x.spec||'');
+  return 'item:'+String(x.name||'')+'|'+String(x.spec||'')+'|'+String(x.condition||'');
+ };
+ const same=(a,b)=>JSON.stringify(stableSignatureValue(a))===JSON.stringify(stableSignatureValue(b));
+ const result={};
+ for(const key of categories){
+  const incoming=Array.isArray(obj[key])?obj[key]:[],existing=available[key];
+  const known=new Map();
+  for(const x of existing){if(x&&typeof x==='object'&&!Array.isArray(x)){const id=idFor(x,key);if(id&&!known.has(id))known.set(id,x)}}
+  const fresh=[],conflictIds=[];
+  for(const x of incoming){
+   if(!x||typeof x!=='object'||Array.isArray(x))continue;
+   const id=idFor(x,key);
+   if(!id)continue;
+   if(known.has(id)){if(!same(known.get(id),x))conflictIds.push(id);continue}
+   known.set(id,x);fresh.push(x);
+  }
+  result[key]={existing:existing.length,incoming:incoming.length,newCount:fresh.length,fresh,conflictCount:conflictIds.length,conflictIds:[...new Set(conflictIds)]};
  }
  return {name,obj,result};
 }
 function confirmMigrationImportV344(){
  const plan=inspectedMigrationV344,out=document.getElementById('migrationBackupResultV343');if(!plan){alert('请先选择并检查旧站备份。');return}
  if(SUPABASE_URL||SUPABASE_KEY){alert('当前环境存在云同步配置，禁止直接本机迁入。');return}
- const {obj,result}=plan;
+ const {obj}=plan;
+ const verified=previewMigrationImportV344(obj,plan.name);
+ const result=verified.result;
+ if(Object.values(result).some(v=>v.conflictCount>0)){
+  alert('发现同 ID 但内容不同的订单或产品，已停止迁入。现有数据未变。请先核对冲突详情。');return;
+ }
  const incomingDeleted=normalizeDeletedMap(obj.deleted);
  const currentDeleted=cloudDeleted();
  const current=currentBusinessState();
@@ -3187,6 +3214,13 @@ function confirmMigrationImportV344(){
   renderOrders();updateDash();renderCostList();renderProductList();renderAllProductsQuote();renderQuoteDraftList();
   const expected=rollback.orders.length+result.orders.newCount;
   if(orders().length!==expected)throw new Error('订单数量核对未通过：预期 '+expected+' 笔，实际 '+orders().length+' 笔');
+  // V345: verify every persisted category, not just the final order count.
+  for(const [key,records] of data){
+   if(JSON.stringify(JSON.parse(localStorage.getItem(key)||'[]'))!==JSON.stringify(records))
+    throw new Error('导入内容校验未通过：'+key);
+  }
+  if(JSON.stringify(cloudDeleted())!==JSON.stringify(mergeDeletedMaps(rollback.deleted,incomingDeleted)))
+   throw new Error('删除记录校验未通过');
   inspectedMigrationV344=null;
   const btn=document.getElementById('migrationImportBtnV344');if(btn)btn.hidden=true;
   if(out)out.textContent='本机导入完成：新增 '+total+' 笔订单，现有订单保持不变。可使用「下载本机数据备份」保存合并后的数据。云同步仍然隔离。';
