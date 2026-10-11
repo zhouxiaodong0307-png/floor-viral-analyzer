@@ -3147,7 +3147,7 @@ function previewMigrationImportV344(obj,name){
  const result={};for(const key of categories){
    const incoming=Array.isArray(obj[key])?obj[key]:[],existing=available[key];
    const known=new Set(existing.map(x=>idFor(x,key)));let fresh=[];
-   for(const x of incoming){let id=idFor(x,key);if(!x||typeof x!=='object'||!id||known.has(id))continue;known.add(id);fresh.push(x)}
+   for(const x of incoming){if(!x||typeof x!=='object')continue;let id=idFor(x,key);if(!id||id==='undefined'||id==='null'||known.has(id))continue;known.add(id);fresh.push(x)}
    result[key]={existing:existing.length,incoming:incoming.length,newCount:fresh.length,fresh};
  }
  return {name,obj,result};
