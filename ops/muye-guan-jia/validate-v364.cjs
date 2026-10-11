@@ -26,7 +26,7 @@ const store=new Map();
 const storage={getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,v)};
 const pre=`const DATA_SAFETY_SNAPSHOT_KEY="snap",DATA_SAFETY_BEST_KEY="best",CLOUD_DELETED_KEY="deleted",CLOUD_ID="main",SUPABASE_URL="isolated";
 const localStorage=ls;function hasCloudPending(){return false}function isHistoricalSeedOnly(){return false}
-function isDefaultQuoteSeedOnly(a){return a.length===0}function normText(x){return String(x)}
+function isDefaultQuoteSeedOnly(a){return a.length===0}function isPristineHistoricalSeedV346(x){return x?.historicalSource==='销售财务助手'&&x?.testPristine===true}function normText(x){return String(x)}
 function normSpec(x){return String(x)};`;
 const api=new Function('ls',pre+helpers+'return {cloudSafePlanV362,cloudConflictReasonV362,saveCloudBaselineV364};')(storage);
 let checks=0;
@@ -48,4 +48,6 @@ test('delete with tombstone honored',()=>{api.saveCloudBaselineV364(st([a]),'t')
 test('edit vs deletion conflict',()=>{api.saveCloudBaselineV364(st([a]),'t');return api.cloudSafePlanV362(st([order('a',{paid:2900})]),st([],[],{orders:{a:1800000000000}})).conflicts.length===1});
 test('historical snapshot not auto inserted',()=>{storage.setItem('snap',JSON.stringify({orders:[order('legacy')]}));let p=api.cloudSafePlanV362(st([a]),st([a]));return p.recoveredOrders===1&&p.state.orders.length===1});
 test('product local vs cloud based on baseline',()=>{api.saveCloudBaselineV364(st([a],[{id:'p',price:100}]),'t');let p=api.cloudSafePlanV362(st([a],[{id:'p',price:100}]),st([a],[{id:'p',price:120}]));return !p.conflicts.length&&p.state.products[0].price===120});
+test('pristine legacy seed replaced with authoritative cloud order',()=>{const seed={...a,historicalSource:'销售财务助手',testPristine:true,paid:0};const p=api.cloudSafePlanV362(st([seed]),st([a]));return !p.conflicts.length&&p.state.orders[0].paid===2500});
+test('modified legacy seed remains blocked',()=>{const seed={...a,historicalSource:'销售财务助手',testPristine:false,paid:0};const p=api.cloudSafePlanV362(st([seed]),st([a]));return p.conflicts.length===1});
 console.log('OK: '+checks+' behavior tests, '+scripts.length+' JS syntax blocks, staging safety checks');
