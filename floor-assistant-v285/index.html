@@ -2941,7 +2941,7 @@ function savedQuoteManualInputs(d){
   return {area:String(old.area??'')!=='',install:String(old.install??'')!==''};
 }
 
-function saveLastQuoteState(){if(restoringLastQuoteState)return;try{const snapshot=quoteDraftSnapshot();const prev=localStorage.getItem(LAST_QUOTE_STATE_KEY);if(prev&&prev.length>20&&prev!==JSON.stringify(snapshot)){localStorage.setItem('wood_quote_recovery_previous_v341',prev)}localStorage.setItem(LAST_QUOTE_STATE_KEY,JSON.stringify(snapshot));localStorage.setItem('wood_quote_recovery_saved_at_v341',new Date().toISOString())}catch(e){console.warn('报价自动恢复快照写入失败',e)}}
+function saveLastQuoteState(){if(restoringLastQuoteState)return;try{const snapshot=quoteDraftSnapshot();const prev=localStorage.getItem(LAST_QUOTE_STATE_KEY);if(prev&&prev.length>20&&prev!==JSON.stringify(snapshot)){const t=Number(localStorage.getItem('wood_quote_recovery_previous_at_v341')||0);if(!t||Date.now()-t>60000){localStorage.setItem('wood_quote_recovery_previous_v341',prev);localStorage.setItem('wood_quote_recovery_previous_at_v341',String(Date.now()))}}localStorage.setItem(LAST_QUOTE_STATE_KEY,JSON.stringify(snapshot));localStorage.setItem('wood_quote_recovery_saved_at_v341',new Date().toISOString())}catch(e){console.warn('报价自动恢复快照写入失败',e)}}
 function restoreLastQuoteState(){try{let raw=localStorage.getItem(LAST_QUOTE_STATE_KEY);if(!raw)return false;let d=JSON.parse(raw);if(!d||!d.fields)return false;restoringLastQuoteState=true;applyQuoteDraft(d);activeQuoteDraftId=null;restoringLastQuoteState=false;return true}catch(_){restoringLastQuoteState=false;return false}}
 function restorePreviousQuoteV341(){try{
  const raw=localStorage.getItem('wood_quote_recovery_previous_v341');if(!raw){alert('暂无可恢复的上一版报价记录。');return false}
