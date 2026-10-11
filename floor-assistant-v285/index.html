@@ -2848,8 +2848,8 @@ function initSmartSuggest(){document.addEventListener('input',e=>{if(smartFieldT
 
 let orderSaveGuard=false;function nextOrderId(){let base=Date.now()*1000,n=Number(sessionStorage.getItem('floor_order_id_seq')||0);n=(n+1)%1000;sessionStorage.setItem('floor_order_id_seq',String(n));return base+n}
 
-const SUPABASE_URL='https://cygdpihurwznpeltcntd.supabase.co';
-const SUPABASE_KEY='sb_publishable_IDb6GNaoMVdT1Ob6I0egBQ_hnoBlnQn';
+const SUPABASE_URL='';
+const SUPABASE_KEY='';
 /* V156 云同步认证：sb_publishable_* 是不透明 API Key，不是 JWT。
    REST 请求只放 apikey；只有旧版 JWT anon key 才放 Authorization: Bearer。 */
 function cloudHeaders(prefer=''){
