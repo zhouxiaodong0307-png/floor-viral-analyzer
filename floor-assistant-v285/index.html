@@ -2849,13 +2849,16 @@ function initSmartSuggest(){document.addEventListener('input',e=>{if(smartFieldT
 let orderSaveGuard=false;function nextOrderId(){let base=Date.now()*1000,n=Number(sessionStorage.getItem('floor_order_id_seq')||0);n=(n+1)%1000;sessionStorage.setItem('floor_order_id_seq',String(n));return base+n}
 
 const SUPABASE_URL='';
+/* V355: independent login endpoint; business cloud sync remains isolated. */
+const FLOOR_AUTH_URL='https://cygdpihurwznpeltcntd.supabase.co';
+const FLOOR_AUTH_PUBLIC_KEY='sb_publishable_IDb6GNaoMVdT1Ob6I0egBQ_hnoBlnQn';
 /* V348: staging-only authentication preparation; intentionally disabled. */
-const FLOOR_AUTH_MODE='disabled';
-function floorAuthConfigured(){return FLOOR_AUTH_MODE==='password'&&!!SUPABASE_URL&&!!SUPABASE_KEY}
+const FLOOR_AUTH_MODE='password';
+function floorAuthConfigured(){return FLOOR_AUTH_MODE==='password'&&!!FLOOR_AUTH_URL&&!!FLOOR_AUTH_PUBLIC_KEY}
 async function floorAuthToken(grantType,credentials){
  if(!floorAuthConfigured())throw new Error('测试站尚未配置云端登录');
- const response=await fetch(SUPABASE_URL+'/auth/v1/token?grant_type='+encodeURIComponent(grantType),{
-  method:'POST',headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json'},
+ const response=await fetch(FLOOR_AUTH_URL+'/auth/v1/token?grant_type='+encodeURIComponent(grantType),{
+  method:'POST',headers:{apikey:FLOOR_AUTH_PUBLIC_KEY,'Content-Type':'application/json'},
   body:JSON.stringify(credentials)
  });
  const payload=await response.json();
@@ -2872,6 +2875,7 @@ function checkAuthMigrationReadinessV349(){
  out.textContent='本机订单 '+local.length+' 笔；'+(configured?'认证配置存在，但仍须验证登录身份与 RLS 后才可读取云端。':'尚未配置安全登录，禁止自动访问生产云端。')+' 本机数据保持不变。';
 }
 /* V350 staging auth UI: in-memory session, no token persistence, read-only preview. */
+const FLOOR_RLS_VERIFIED_V355=false;
 let floorAuthSessionV350=null;
 function floorAuthMessageV350(message){
  const el=document.getElementById('authMigrationStatusTextV349');
@@ -2894,6 +2898,8 @@ function floorAuthLogoutV350(){
  floorAuthMessageV350('已清除本次会话；本机订单未变。');
 }
 async function floorAuthReadOnlyCheckV350(){
+ if(!FLOOR_RLS_VERIFIED_V355){floorAuthMessageV350('账号登录已可用；数据库匿名权限尚未收紧，云端订单读取仍暂停。');return}
+
  if(!floorAuthConfigured()||!floorAuthSessionV350){floorAuthMessageV350('请先完成安全登录；不会读取生产数据。');return}
  try{
   if(Date.now()/1000>floorAuthSessionV350.expires_at-90){
@@ -2914,7 +2920,7 @@ async function floorAuthReadOnlyCheckV350(){
 }
 function floorAuthHeaders(token){
  if(!floorAuthConfigured()||!token)throw new Error('未登录云端');
- return {apikey:SUPABASE_KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'};
+ return {apikey:FLOOR_AUTH_PUBLIC_KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'};
 }
 /* Cloud writes remain isolated until owner identity and RLS are verified. */
 
