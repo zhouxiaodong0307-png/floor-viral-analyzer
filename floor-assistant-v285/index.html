@@ -4768,8 +4768,9 @@ async function initCloud(silent=false){
   saveDataSafetySnapshot('V158合并后保护');
   cloudLast=mergedSig;
   if(cloudReadOnly){
-   clearCloudPending(remoteUpdated||localStorage.getItem(CLOUD_LAST_SYNC_KEY)||new Date().toISOString());
-   cloudStatus(cloudRecoveredOrderCount>0?'已读取生产数据并恢复本机安全快照':'已读取生产数据（测试环境不写入）');
+   /* V342: Read-only visits must never acknowledge unsent local edits as synced. */
+   const pending=hasCloudPending();
+   cloudStatus(pending?'只读状态：本机修改尚未同步':(cloudRecoveredOrderCount>0?'已读取生产数据并恢复本机安全快照':'已读取生产数据（测试环境不写入）'));
    return;
   }
   cloudReady=true;
