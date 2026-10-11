@@ -1,0 +1,17 @@
+name: Muye migration staging verification
+on:
+  push:
+    branches: [wood-floor-migration-v345-validation]
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate complete HTML and isolated migration safety
+        run: node ops/muye-guan-jia/validate-v364.cjs
