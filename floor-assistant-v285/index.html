@@ -2943,6 +2943,19 @@ function savedQuoteManualInputs(d){
 
 function saveLastQuoteState(){if(restoringLastQuoteState)return;try{const snapshot=quoteDraftSnapshot();const prev=localStorage.getItem(LAST_QUOTE_STATE_KEY);if(prev&&prev.length>20&&prev!==JSON.stringify(snapshot)){localStorage.setItem('wood_quote_recovery_previous_v341',prev)}localStorage.setItem(LAST_QUOTE_STATE_KEY,JSON.stringify(snapshot));localStorage.setItem('wood_quote_recovery_saved_at_v341',new Date().toISOString())}catch(e){console.warn('报价自动恢复快照写入失败',e)}}
 function restoreLastQuoteState(){try{let raw=localStorage.getItem(LAST_QUOTE_STATE_KEY);if(!raw)return false;let d=JSON.parse(raw);if(!d||!d.fields)return false;restoringLastQuoteState=true;applyQuoteDraft(d);activeQuoteDraftId=null;restoringLastQuoteState=false;return true}catch(_){restoringLastQuoteState=false;return false}}
+function restorePreviousQuoteV341(){try{
+ const raw=localStorage.getItem('wood_quote_recovery_previous_v341');if(!raw){alert('暂无可恢复的上一版报价记录。');return false}
+ const snap=JSON.parse(raw);if(!snap||!snap.fields){alert('恢复快照无效，当前报价未修改。');return false}
+ if(!confirm('恢复上一次自动保存的报价？当前内容会先备份，再恢复之前的内容。'))return false;
+ const current=localStorage.getItem(LAST_QUOTE_STATE_KEY);if(current)localStorage.setItem('wood_quote_recovery_undo_v341',current);
+ restoringLastQuoteState=true;try{applyQuoteDraft(snap)}finally{restoringLastQuoteState=false}
+ activeQuoteDraftId=null;saveLastQuoteState();return true;
+ }catch(e){console.warn('报价恢复失败',e);alert('恢复失败，原报价保留。');return false}}
+function initQuoteRecoveryV341(){const anchor=document.getElementById('saveQuoteDraftBtn');if(!anchor||document.getElementById('recoverQuoteV341'))return;
+ const btn=document.createElement('button');btn.id='recoverQuoteV341';btn.type='button';btn.className='secondary';btn.textContent='恢复上次';btn.title='恢复上一次自动保存的报价';btn.style.cssText='width:auto;min-height:34px;padding:5px 8px;font-size:12px;margin:0;border:1px solid #ddd';btn.onclick=restorePreviousQuoteV341;
+ const parent=anchor.parentElement;if(parent)parent.insertBefore(btn,anchor.nextSibling);
+}
+
 function initQuoteAutoMemory(){const root=$('quote');if(!root)return;root.addEventListener('input',e=>{if(e.target.matches('input,textarea,select'))setTimeout(saveLastQuoteState,0)});root.addEventListener('change',e=>{if(e.target.matches('input,textarea,select'))setTimeout(saveLastQuoteState,0)})}
 
 function quoteDraftSnapshot(){
@@ -4951,7 +4964,7 @@ function prepareV230UpgradeProtection(){
 }
 prepareV230UpgradeProtection();
 
-initBusinessTitleAccess();initOpenerMemory();
+initBusinessTitleAccess();initQuoteRecoveryV341();initOpenerMemory();
 migrateHistoricalOrdersV33();fixHistoricalOrderOpenersV34();migrateCompletedCostSnapshotsV65();
 addMeasureRow();migrateLegacyQuoteDraft();restoreLastQuoteState();initQuoteAutoMemory();initQuoteGenerateValidationFeedback();ensureOrderEntryDateDefault();syncDateShell('ordDate','ordDateText');syncDateShell('eOrderDate','eOrderDateText');addOrderProductRow();calc();renderOrders();updateDash();renderCostList();syncCostUnit();renderProductList();['pName','pSpec'].forEach(id=>{let el=$(id);if(el)el.addEventListener('input',refreshProductCostLink)});refreshProductCostLink();hideInternalMode();syncAllRatioValues();updateDataSyncPanel();initCloud();
 
@@ -9289,6 +9302,7 @@ body .app #quote details.quote-compact-details.quote-entry-optional:not(.quote-c
  body > .app > #quote > .box{padding-left:9px!important;padding-right:9px!important}
 }
 </style>
+
 
 <style id="v341-measure-focus">
 @media screen and (max-width:699px){
