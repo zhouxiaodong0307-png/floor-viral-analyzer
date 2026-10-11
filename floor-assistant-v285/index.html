@@ -2875,7 +2875,7 @@ function checkAuthMigrationReadinessV349(){
  out.textContent='本机订单 '+local.length+' 笔；'+(configured?'认证配置存在，但仍须验证登录身份与 RLS 后才可读取云端。':'尚未配置安全登录，禁止自动访问生产云端。')+' 本机数据保持不变。';
 }
 /* V350 staging auth UI: in-memory session, no token persistence, read-only preview. */
-const FLOOR_RLS_VERIFIED_V355=false;
+const FLOOR_RLS_VERIFIED_V355=true; /* authenticated owner RLS validated via SQL role tests; legacy anon remains enabled */
 let floorAuthSessionV350=null;
 function floorAuthMessageV350(message){
  const el=document.getElementById('authMigrationStatusTextV349');
@@ -2905,7 +2905,7 @@ async function floorAuthReadOnlyCheckV350(){
   if(Date.now()/1000>floorAuthSessionV350.expires_at-90){
    floorAuthSessionV350=await floorAuthRefresh(floorAuthSessionV350.refresh_token);
   }
-  const url=SUPABASE_URL+'/rest/v1/'+CLOUD_TABLE+'?id=eq.'+encodeURIComponent(CLOUD_ID)+'&select=id,data,updated_at';
+  const url=FLOOR_AUTH_URL+'/rest/v1/'+CLOUD_TABLE+'?id=eq.'+encodeURIComponent(CLOUD_ID)+'&select=id,data,updated_at';
   const res=await fetch(url,{method:'GET',headers:floorAuthHeaders(floorAuthSessionV350.access_token),cache:'no-store'});
   if(!res.ok)throw new Error('HTTP '+res.status);
   const rows=await res.json(),data=rows[0]?.data;
