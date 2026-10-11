@@ -3253,7 +3253,7 @@ function confirmMigrationImportV344(){
    throw new Error('删除记录校验未通过');
   inspectedMigrationV344=null;
   const btn=document.getElementById('migrationImportBtnV344');if(btn)btn.hidden=true;
-  if(out)out.textContent='本机导入完成：新增 '+total+' 笔订单，现有订单保持不变。可使用「下载本机数据备份」保存合并后的数据。云同步仍然隔离。';
+  if(out)out.textContent='本机导入完成：新增 '+total+' 笔订单，安全恢复 '+seedReplacements.length+' 笔未经编辑的内置历史订单；其他现有记录未覆盖。请下载本机数据备份留存。云同步仍然隔离。';
  }catch(e){
   try{const v=JSON.parse(localStorage.getItem('wood_migration_rollback_v344')||'null');if(v){
     _nativeSetItem.call(localStorage,KEY,JSON.stringify(v.orders));
