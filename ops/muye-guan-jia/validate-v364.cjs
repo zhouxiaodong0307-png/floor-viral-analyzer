@@ -7,10 +7,10 @@ const root=path.resolve(__dirname,'../..');
 const html=fs.readFileSync(path.join(root,'floor-assistant-v285/index.html'),'utf8');
 const version=JSON.parse(fs.readFileSync(path.join(root,'floor-assistant-v285/version.json'),'utf8'));
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'floor-assistant-v285/manifest.webmanifest'),'utf8'));
-const scripts=[...html.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script>/gi)].filter(m=>!/\\bsrc\\s*=/.test(m[1]));
+const scripts=[...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)].filter(m=>!/\bsrc\s*=/.test(m[1]));
 for(let i=0;i<scripts.length;i++)new vm.Script(scripts[i][2],{filename:'inline-'+i+'.js'});
 assert.equal(scripts.length,18,'unexpected inline script count');
-assert.equal(html.match(/const APP_VERSION='(\\d+)'/)[1],version.version);
+assert.equal(html.match(/const APP_VERSION='(\d+)'/)[1],version.version);
 assert.equal(version.cloudSync,'isolated','staging cloud must remain isolated');
 assert.match(html,/const SUPABASE_URL='';/);
 assert.match(html,/const SUPABASE_KEY='';/);
@@ -24,13 +24,13 @@ const helpers=html.slice(html.indexOf('function normalizeDeletedMap(v)'),html.in
 assert.ok(helpers.length>5000);
 const store=new Map();
 const storage={getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,v)};
-const pre=\`const DATA_SAFETY_SNAPSHOT_KEY="snap",DATA_SAFETY_BEST_KEY="best",CLOUD_DELETED_KEY="deleted",CLOUD_ID="main",SUPABASE_URL="isolated";
+const pre=`const DATA_SAFETY_SNAPSHOT_KEY="snap",DATA_SAFETY_BEST_KEY="best",CLOUD_DELETED_KEY="deleted",CLOUD_ID="main",SUPABASE_URL="isolated";
 const localStorage=ls;function hasCloudPending(){return false}function isHistoricalSeedOnly(){return false}
 function isDefaultQuoteSeedOnly(a){return a.length===0}function normText(x){return String(x)}
-function normSpec(x){return String(x)};\`;
+function normSpec(x){return String(x)};`;
 const api=new Function('ls',pre+helpers+'return {cloudSafePlanV362,cloudConflictReasonV362,saveCloudBaselineV364};')(storage);
 let checks=0;
-const test=(title,fn)=>{store.clear();assert.ok(fn(),title);checks++;process.stdout.write('PASS '+title+'\\n')};
+const test=(title,fn)=>{store.clear();assert.ok(fn(),title);checks++;process.stdout.write('PASS '+title+'\n')};
 const order=(id,extra={})=>({id,finalAmount:5000,paid:2500,cost:2000,profit:3000,
  updatedAt:'2026-01-01T00:00:00Z',paymentHistory:[{amount:2500,date:'2026-01-01T00:00:00Z'}],
  costSnapshot:{totalCost:2000,lockedAt:'2026-01-01T00:00:00Z'},...extra});
