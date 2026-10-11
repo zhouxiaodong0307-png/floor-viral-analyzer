@@ -2849,6 +2849,28 @@ function initSmartSuggest(){document.addEventListener('input',e=>{if(smartFieldT
 let orderSaveGuard=false;function nextOrderId(){let base=Date.now()*1000,n=Number(sessionStorage.getItem('floor_order_id_seq')||0);n=(n+1)%1000;sessionStorage.setItem('floor_order_id_seq',String(n));return base+n}
 
 const SUPABASE_URL='';
+/* V348: staging-only authentication preparation; intentionally disabled. */
+const FLOOR_AUTH_MODE='disabled';
+function floorAuthConfigured(){return FLOOR_AUTH_MODE==='password'&&!!SUPABASE_URL&&!!SUPABASE_KEY}
+async function floorAuthToken(grantType,credentials){
+ if(!floorAuthConfigured())throw new Error('测试站尚未配置云端登录');
+ const response=await fetch(SUPABASE_URL+'/auth/v1/token?grant_type='+encodeURIComponent(grantType),{
+  method:'POST',headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json'},
+  body:JSON.stringify(credentials)
+ });
+ const payload=await response.json();
+ if(!response.ok||!payload.access_token||!payload.user||!payload.user.id)throw new Error('云端登录失败');
+ return {access_token:payload.access_token,refresh_token:payload.refresh_token,
+  expires_at:Math.floor(Date.now()/1000)+(payload.expires_in||3600),user_id:payload.user.id};
+}
+function floorAuthSignIn(email,password){return floorAuthToken('password',{email,password})}
+function floorAuthRefresh(refresh_token){return floorAuthToken('refresh_token',{refresh_token})}
+function floorAuthHeaders(token){
+ if(!floorAuthConfigured()||!token)throw new Error('未登录云端');
+ return {apikey:SUPABASE_KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'};
+}
+/* Cloud writes remain isolated until owner identity and RLS are verified. */
+
 const SUPABASE_KEY='';
 /* V156 云同步认证：sb_publishable_* 是不透明 API Key，不是 JWT。
    REST 请求只放 apikey；只有旧版 JWT anon key 才放 Authorization: Bearer。 */
