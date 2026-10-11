@@ -3093,6 +3093,7 @@ function exportLocalBusinessBackupV342(){
    orders:snapshot.orders,costLibrary:snapshot.costs,productLibrary:snapshot.products,
    allProductQuotes:snapshot.quotes,deleted:snapshot.deleted,
    quoteDrafts:typeof quoteDrafts==='function'?quoteDrafts():[],
+   contractDrafts:migrationContractDraftsV347(),
    lastQuote:JSON.parse(localStorage.getItem(LAST_QUOTE_STATE_KEY)||'null'),
    cloudPending:hasCloudPending(),
    cloudLastSync:localStorage.getItem(CLOUD_LAST_SYNC_KEY)||''
@@ -3114,7 +3115,9 @@ async function inspectMigrationBackupV343(input){
   const file=input.files[0];if(file.size>30*1024*1024)throw new Error('备份超过30MB，请先核对文件');
   const raw=await file.text();const obj=JSON.parse(raw);
   if(!obj||typeof obj!=='object'||!Array.isArray(obj.orders))throw new Error('文件不包含有效的 orders 数组');
-  for(const field of ['costLibrary','productLibrary','allProductQuotes'])if(obj[field]!==undefined&&!Array.isArray(obj[field]))throw new Error(field+' 格式无效');
+  for(const field of ['costLibrary','productLibrary','allProductQuotes','quoteDrafts'])if(obj[field]!==undefined&&!Array.isArray(obj[field]))throw new Error(field+' 格式无效');
+  if(obj.contractDrafts!==undefined)validateMigrationContractDraftsV347(obj.contractDrafts);
+  if(obj.lastQuote!==undefined&&obj.lastQuote!==null&&(typeof obj.lastQuote!=='object'||Array.isArray(obj.lastQuote)))throw new Error('上次报价状态格式无效');
   const oldIds=new Set(orders().map(x=>String(x?.id??'')));
   const ids=obj.orders.map(x=>String(x?.id??''));
   if(ids.some(x=>!x))throw new Error('订单存在缺失 ID 的记录');
@@ -3134,6 +3137,7 @@ async function inspectMigrationBackupV343(input){
   inspectedMigrationV344=previewMigrationImportV344(obj,file.name);
   const counts=inspectedMigrationV344.result;
   out.textContent=note+'\\n预计可新增：订单 '+counts.orders.newCount+'、成本 '+counts.costLibrary.newCount+'、产品 '+counts.productLibrary.newCount+'、报价 '+counts.allProductQuotes.newCount+'、草稿 '+counts.quoteDrafts.newCount+'。';
+  out.textContent+='\\n合同草稿：'+(obj.contractDrafts===undefined?'原备份未包含':Object.keys(obj.contractDrafts).length+' 项')+'；上次报价：'+(obj.lastQuote===undefined?'原备份未包含':obj.lastQuote===null?'无':'已包含')+'。';
   if(counts.orders.replaceCount)out.textContent+='\\n可安全恢复：'+counts.orders.replaceCount+' 笔未编辑的内置历史订单，将以所选真实备份原样替换（需再次确认）。';
   const mismatches=Object.entries(counts).filter(([key,c])=>c.conflictCount>0);
   if(mismatches.length){
@@ -3147,6 +3151,21 @@ async function inspectMigrationBackupV343(input){
 }
 /* V344: explicit local-only migration. Import missing IDs, retain existing records on collisions. */
 let inspectedMigrationV344=null;
+/* V347 staged local-only complete draft backup. */
+function validateMigrationContractDraftsV347(value){
+ if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('合同草稿格式无效');
+ const out=Object.create(null);
+ for(const [key,entry] of Object.entries(value)){
+  if(!key||key==='__proto__'||key==='constructor'||key==='prototype')throw new Error('合同草稿键名无效');
+  out[key]=entry;
+ }
+ return out;
+}
+function migrationContractDraftsV347(){
+ const raw=localStorage.getItem(CONTRACT_DRAFTS_KEY);
+ if(raw===null)return {};
+ return validateMigrationContractDraftsV347(JSON.parse(raw));
+}
 /* V345 staging-only: refuse silent partial imports on same-ID content differences. */
 /* V346 staging: pristine built-in history is replaceable only after an exact template check.
    This is intentionally restricted to the 13 V33 seed objects. */
@@ -3202,6 +3221,19 @@ function previewMigrationImportV344(obj,name){
   }
   result[key]={existing:existing.length,incoming:incoming.length,newCount:fresh.length,fresh,replacements,replaceCount:replacements.length,conflictCount:conflictIds.length,conflictIds:[...new Set(conflictIds)]};
  }
+ const incomingContracts=obj.contractDrafts===undefined?Object.create(null):validateMigrationContractDraftsV347(obj.contractDrafts);
+ const existingContracts=migrationContractDraftsV347();
+ const freshContracts=Object.create(null),contractConflicts=[];
+ for(const [key,value] of Object.entries(incomingContracts)){
+  if(Object.prototype.hasOwnProperty.call(existingContracts,key)){
+   if(!same(existingContracts[key],value))contractConflicts.push(key);
+  }else freshContracts[key]=value;
+ }
+ result.contractDrafts={existing:Object.keys(existingContracts).length,incoming:Object.keys(incomingContracts).length,newCount:Object.keys(freshContracts).length,fresh:freshContracts,conflictCount:contractConflicts.length,conflictIds:contractConflicts};
+ const existingLastQuote=localStorage.getItem(LAST_QUOTE_STATE_KEY),incomingLastQuote=obj.lastQuote;
+ const hasLastQuote=incomingLastQuote!==undefined&&incomingLastQuote!==null;
+ const quoteConflict=hasLastQuote&&existingLastQuote!==null&&!same(JSON.parse(existingLastQuote),incomingLastQuote);
+ result.lastQuote={newCount:hasLastQuote&&existingLastQuote===null?1:0,conflictCount:quoteConflict?1:0};
  return {name,obj,result};
 }
 function confirmMigrationImportV344(){
@@ -3225,7 +3257,7 @@ function confirmMigrationImportV344(){
   const rollback={
    orders:current.orders,costLibrary:current.costs,productLibrary:current.products,
    allProductQuotes:current.quotes,quoteDrafts:quoteDrafts(),
-   lastQuote:localStorage.getItem(LAST_QUOTE_STATE_KEY),deleted:cloudDeleted(),
+   lastQuote:localStorage.getItem(LAST_QUOTE_STATE_KEY),contractDraftsRaw:localStorage.getItem(CONTRACT_DRAFTS_KEY),deleted:cloudDeleted(),
    savedAt:new Date().toISOString()
   };
   const text=JSON.stringify(rollback);
@@ -3240,6 +3272,11 @@ function confirmMigrationImportV344(){
    [QUOTE_DRAFTS_KEY,[...rollback.quoteDrafts,...result.quoteDrafts.fresh]]
   ];
   for(const [key,records] of data)localStorage.setItem(key,JSON.stringify(records));
+  if(result.contractDrafts.newCount){
+   const contracts={...migrationContractDraftsV347(),...result.contractDrafts.fresh};
+   localStorage.setItem(CONTRACT_DRAFTS_KEY,JSON.stringify(contracts));
+  }
+  if(result.lastQuote.newCount)localStorage.setItem(LAST_QUOTE_STATE_KEY,JSON.stringify(obj.lastQuote));
   writeCloudDeleted(mergeDeletedMaps(rollback.deleted,incomingDeleted));
   renderOrders();updateDash();renderCostList();renderProductList();renderAllProductsQuote();renderQuoteDraftList();
   const expected=rollback.orders.length+result.orders.newCount;
@@ -3251,9 +3288,17 @@ function confirmMigrationImportV344(){
   }
   if(JSON.stringify(cloudDeleted())!==JSON.stringify(mergeDeletedMaps(rollback.deleted,incomingDeleted)))
    throw new Error('删除记录校验未通过');
+  if(result.contractDrafts.newCount){
+   for(const [key,value] of Object.entries(result.contractDrafts.fresh)){
+    if(JSON.stringify(stableSignatureValue(migrationContractDraftsV347()[key]))!==JSON.stringify(stableSignatureValue(value)))
+     throw new Error('合同草稿校验未通过：'+key);
+   }
+  }
+  if(result.lastQuote.newCount&&JSON.stringify(stableSignatureValue(JSON.parse(localStorage.getItem(LAST_QUOTE_STATE_KEY)||'null')))!==JSON.stringify(stableSignatureValue(obj.lastQuote)))
+   throw new Error('上次报价恢复校验未通过');
   inspectedMigrationV344=null;
   const btn=document.getElementById('migrationImportBtnV344');if(btn)btn.hidden=true;
-  if(out)out.textContent='本机导入完成：新增 '+total+' 笔订单，安全恢复 '+seedReplacements.length+' 笔未经编辑的内置历史订单；其他现有记录未覆盖。请下载本机数据备份留存。云同步仍然隔离。';
+  if(out)out.textContent='本机导入完成：新增 '+total+' 笔订单，安全恢复 '+seedReplacements.length+' 笔未经编辑的内置历史订单，迁入合同草稿 '+result.contractDrafts.newCount+' 份；其他现有记录未覆盖。请下载本机数据备份留存，云同步仍然隔离。';
  }catch(e){
   try{const v=JSON.parse(localStorage.getItem('wood_migration_rollback_v344')||'null');if(v){
     _nativeSetItem.call(localStorage,KEY,JSON.stringify(v.orders));
@@ -3261,6 +3306,10 @@ function confirmMigrationImportV344(){
     _nativeSetItem.call(localStorage,PRODUCT_KEY,JSON.stringify(v.productLibrary));
     _nativeSetItem.call(localStorage,ALL_PRODUCT_QUOTES_KEY,JSON.stringify(v.allProductQuotes));
     _nativeSetItem.call(localStorage,QUOTE_DRAFTS_KEY,JSON.stringify(v.quoteDrafts));
+    if(v.contractDraftsRaw===null)localStorage.removeItem(CONTRACT_DRAFTS_KEY);
+    else _nativeSetItem.call(localStorage,CONTRACT_DRAFTS_KEY,v.contractDraftsRaw);
+    if(v.lastQuote===null)localStorage.removeItem(LAST_QUOTE_STATE_KEY);
+    else _nativeSetItem.call(localStorage,LAST_QUOTE_STATE_KEY,v.lastQuote);
     writeCloudDeleted(v.deleted);
     renderOrders();updateDash();renderCostList();renderProductList();renderAllProductsQuote();renderQuoteDraftList();
   }}catch(err){console.error('Rollback incomplete',err)}
