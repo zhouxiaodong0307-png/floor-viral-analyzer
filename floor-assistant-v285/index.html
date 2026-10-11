@@ -3134,6 +3134,7 @@ async function inspectMigrationBackupV343(input){
   inspectedMigrationV344=previewMigrationImportV344(obj,file.name);
   const counts=inspectedMigrationV344.result;
   out.textContent=note+'\\n预计可新增：订单 '+counts.orders.newCount+'、成本 '+counts.costLibrary.newCount+'、产品 '+counts.productLibrary.newCount+'、报价 '+counts.allProductQuotes.newCount+'、草稿 '+counts.quoteDrafts.newCount+'。';
+  if(counts.orders.replaceCount)out.textContent+='\\n可安全恢复：'+counts.orders.replaceCount+' 笔未编辑的内置历史订单，将以所选真实备份原样替换（需再次确认）。';
   const mismatches=Object.entries(counts).filter(([key,c])=>c.conflictCount>0);
   if(mismatches.length){
    out.textContent+='\\n⚠ 迁移已暂停：发现同 ID 但内容不同的历史数据，不能只按订单数量判定成功。'+
@@ -3147,6 +3148,29 @@ async function inspectMigrationBackupV343(input){
 /* V344: explicit local-only migration. Import missing IDs, retain existing records on collisions. */
 let inspectedMigrationV344=null;
 /* V345 staging-only: refuse silent partial imports on same-ID content differences. */
+/* V346 staging: pristine built-in history is replaceable only after an exact template check.
+   This is intentionally restricted to the 13 V33 seed objects. */
+function isPristineHistoricalSeedV346(record){
+ if(!record||typeof record!=='object'||Array.isArray(record)||record.historicalSource!=='销售财务助手')return false;
+ const seed=historicalSeedsV33().find(x=>String(x.id)===String(record.id));
+ if(!seed)return false;
+ seed.cust='未命名客户';seed.opener=record.opener==='周潇东'?'周潇东':'';
+ seed.price=0;seed.project='';seed.status='已完成';seed.completedAt=seed.date;
+ seed.balance=0;seed.paymentMode='normal';seed.paymentPlan=null;seed.historicalSource='销售财务助手';
+ seed.cost=costTotal(seed.costBreakdown);seed.profit=seed.sales-seed.cost;
+ seed.margin=isProfitKnown(seed)&&seed.sales?seed.profit/seed.sales*100:0;
+ const existing={...record},snapshot=existing.costSnapshot;delete existing.costSnapshot;
+ const same=(a,b)=>JSON.stringify(stableSignatureValue(a))===JSON.stringify(stableSignatureValue(b));
+ if(!same(existing,seed))return false;
+ if(snapshot!==undefined){
+  if(!snapshot||typeof snapshot!=='object'||Array.isArray(snapshot)||!snapshot.lockedAt||!Number.isFinite(Date.parse(snapshot.lockedAt)))return false;
+  const actual={...snapshot};delete actual.lockedAt;
+  lockCompletedCostSnapshot(seed);
+  const expected={...seed.costSnapshot};delete expected.lockedAt;
+  if(!same(actual,expected))return false;
+ }
+ return true;
+}
 function previewMigrationImportV344(obj,name){
  const available={orders:orders(),costLibrary:costItems(),productLibrary:productItems(),allProductQuotes:allProductQuotes(),quoteDrafts:quoteDrafts()};
  const categories=['orders','costLibrary','productLibrary','allProductQuotes','quoteDrafts'];
@@ -3162,15 +3186,21 @@ function previewMigrationImportV344(obj,name){
   const incoming=Array.isArray(obj[key])?obj[key]:[],existing=available[key];
   const known=new Map();
   for(const x of existing){if(x&&typeof x==='object'&&!Array.isArray(x)){const id=idFor(x,key);if(id&&!known.has(id))known.set(id,x)}}
-  const fresh=[],conflictIds=[];
+  const fresh=[],conflictIds=[],replacements=[];
   for(const x of incoming){
    if(!x||typeof x!=='object'||Array.isArray(x))continue;
    const id=idFor(x,key);
    if(!id)continue;
-   if(known.has(id)){if(!same(known.get(id),x))conflictIds.push(id);continue}
+   if(known.has(id)){
+    if(!same(known.get(id),x)){
+     if(key==='orders'&&isPristineHistoricalSeedV346(known.get(id)))replacements.push(x);
+     else conflictIds.push(id);
+    }
+    continue;
+   }
    known.set(id,x);fresh.push(x);
   }
-  result[key]={existing:existing.length,incoming:incoming.length,newCount:fresh.length,fresh,conflictCount:conflictIds.length,conflictIds:[...new Set(conflictIds)]};
+  result[key]={existing:existing.length,incoming:incoming.length,newCount:fresh.length,fresh,replacements,replaceCount:replacements.length,conflictCount:conflictIds.length,conflictIds:[...new Set(conflictIds)]};
  }
  return {name,obj,result};
 }
@@ -3189,8 +3219,8 @@ function confirmMigrationImportV344(){
  const clashOrder=current.orders.some(o=>incomingDeleted.orders[String(o?.id)]&&recordUpdatedAt(o)<=Number(incomingDeleted.orders[String(o?.id)]));
  const clashProduct=current.products.some(o=>incomingDeleted.products[String(o?.id)]&&recordUpdatedAt(o)<=Number(incomingDeleted.products[String(o?.id)]));
  if(clashOrder||clashProduct){alert('备份中的删除记录与当前已有业务记录冲突，已阻止自动迁入。请人工核对。');return}
- const total=result.orders.newCount;
- if(!confirm('仅迁入不重复的本机记录，不覆盖已有订单或成本。\\n新增订单：'+total+'笔。\\n同 ID 的现有记录将保持不变。\\n确定继续？'))return;
+ const total=result.orders.newCount,seedReplacements=result.orders.replacements||[];
+ if(!confirm('仅迁入本机数据，不连接云端。\\n新增订单：'+total+' 笔；经严格校验的未编辑内置历史订单：'+seedReplacements.length+' 笔将使用原始备份完整记录替换。\\n其他同 ID 数据不覆盖；导入前保存可回退快照。\\n确定继续？'))return;
  try{
   const rollback={
    orders:current.orders,costLibrary:current.costs,productLibrary:current.products,
@@ -3203,7 +3233,7 @@ function confirmMigrationImportV344(){
   localStorage.setItem(testKey,text);
   if(localStorage.getItem(testKey)!==text)throw new Error('备份校验失败，已停止导入');
   const data=[
-   [KEY,[...current.orders,...result.orders.fresh]],
+   [KEY,[...current.orders.map(o=>{const replacement=seedReplacements.find(x=>String(x.id)===String(o.id));return replacement||o}),...result.orders.fresh]],
    [COST_KEY,[...current.costs,...result.costLibrary.fresh]],
    [PRODUCT_KEY,[...current.products,...result.productLibrary.fresh]],
    [ALL_PRODUCT_QUOTES_KEY,[...current.quotes,...result.allProductQuotes.fresh]],
@@ -4832,7 +4862,7 @@ function exportFinanceCSV(){let map={};for(let o of orders()){let n=(o.opener||'
 const HISTORY_OPENER_FIX_KEY='floor_history_opener_fix_v34_done';
 function fixHistoricalOrderOpenersV34(){if(localStorage.getItem(HISTORY_OPENER_FIX_KEY)==='1')return;let a=orders(),ids=new Set([2025122301,2026011201,2026012601,2026012701,2026020401,2026030601,2026041701,2026052601,2026052701,2026061201,2026072801,2026082701,2026091101]);let changed=false;for(let o of a){if(ids.has(Number(o.id))){o.opener='周潇东';changed=true}}if(changed)localStorage.setItem(KEY,JSON.stringify(a));localStorage.setItem(HISTORY_OPENER_FIX_KEY,'1');}
 const HISTORY_MIGRATION_KEY='floor_history_migration_v33_done';
-function migrateHistoricalOrdersV33(){if(localStorage.getItem(HISTORY_MIGRATION_KEY)==='1')return;let a=orders();let hist=[
+function historicalSeedsV33(){return [
 {id:2025122301,opener:'周潇东',date:'2025/12/23',species:'南美柚木',spec:'550×118×18',area:0,sales:1000,paid:1000,costBreakdown:{floor:0,install:0,skirt:0,material:0,freight:0,remove:0,other:0},costStatus:'missing',profitKnown:false,historyNote:'历史记录未提供任何成本数据，因此总成本及利润留空，不按0元成本计算。'},
 {id:2026011201,opener:'周潇东',date:'2026/1/12',species:'缅甸柚木',spec:'890×115×17',area:0,sales:4728,paid:4728,costBreakdown:{floor:0,install:450,skirt:0,material:0,freight:0,remove:0,other:0},costStatus:'partial',profitKnown:false,historyNote:'仅记录安装支出450元，未记录地板材料成本。'},
 {id:2026012601,opener:'周潇东',date:'2026/1/26',species:'南美柚木',spec:'610×118×18',area:0,sales:1972,paid:1972,costBreakdown:{floor:0,install:0,skirt:0,material:0,freight:210,remove:0,other:0},costStatus:'partial',profitKnown:false,historyNote:'仅记录运输成本210元，未记录地板材料成本。'},
@@ -4846,7 +4876,8 @@ function migrateHistoricalOrdersV33(){if(localStorage.getItem(HISTORY_MIGRATION_
 {id:2026072801,opener:'周潇东',date:'2026/7/28',species:'红檀香',spec:'890×115×17',area:88,sales:54500,paid:54500,costBreakdown:{floor:15840,install:2375,skirt:0,material:744,freight:184,remove:0,other:11000},costStatus:'complete',profitKnown:true,historyNote:'地板成本88㎡×180=15840元；踢脚线+收口条590元与保护膜154元合并计入辅料744元；设计师费用5000元及多出12㎡返点6000元计入其他成本；追加运费184元已合并。'},
 {id:2026082701,opener:'周潇东',date:'2026/8/27',species:'红檀香',spec:'740×115×17',area:15,sales:3500,paid:3500,costBreakdown:{floor:2000,install:620,skirt:0,material:0,freight:0,remove:0,other:0},costStatus:'complete',profitKnown:true,historyNote:''},
 {id:2026091101,opener:'周潇东',date:'2026/9/11',species:'二手橡木多层实木地板',spec:'',area:45,sales:3375,paid:3375,costBreakdown:{floor:1050,install:700,skirt:0,material:347.95,freight:110.73,remove:0,other:0},costStatus:'complete',profitKnown:true,historyNote:'地板收入2250元，安装费收入1125元；实际送货42㎡，地板成本按42㎡×25元=1050元。'}
-];for(let h of hist){h.cust='未命名客户';h.opener='';h.price=0;h.project='';h.status='已完成';h.completedAt=h.date;h.balance=0;h.paymentMode='normal';h.paymentPlan=null;h.historicalSource='销售财务助手';h.cost=costTotal(h.costBreakdown);h.profit=h.sales-h.cost;h.margin=isProfitKnown(h)&&h.sales?h.profit/h.sales*100:0;let dup=a.some(o=>o.historicalSource==='销售财务助手'&&o.date===h.date&&o.species===h.species&&(+o.sales||0)===h.sales)||a.some(o=>o.date===h.date&&o.species===h.species&&o.spec===h.spec&&(+o.sales||0)===h.sales);if(!dup)a.push(h)}a.sort((x,y)=>{let dx=new Date(x.date),dy=new Date(y.date);return dy-dx});localStorage.setItem(KEY,JSON.stringify(a));localStorage.setItem(HISTORY_MIGRATION_KEY,'1')}
+];}
+function migrateHistoricalOrdersV33(){if(localStorage.getItem(HISTORY_MIGRATION_KEY)==='1')return;let a=orders(),hist=historicalSeedsV33();for(let h of hist){h.cust='未命名客户';h.opener='';h.price=0;h.project='';h.status='已完成';h.completedAt=h.date;h.balance=0;h.paymentMode='normal';h.paymentPlan=null;h.historicalSource='销售财务助手';h.cost=costTotal(h.costBreakdown);h.profit=h.sales-h.cost;h.margin=isProfitKnown(h)&&h.sales?h.profit/h.sales*100:0;let dup=a.some(o=>o.historicalSource==='销售财务助手'&&o.date===h.date&&o.species===h.species&&(+o.sales||0)===h.sales)||a.some(o=>o.date===h.date&&o.species===h.species&&o.spec===h.spec&&(+o.sales||0)===h.sales);if(!dup)a.push(h)}a.sort((x,y)=>{let dx=new Date(x.date),dy=new Date(y.date);return dy-dx});localStorage.setItem(KEY,JSON.stringify(a));localStorage.setItem(HISTORY_MIGRATION_KEY,'1')}
 
 const _nativeSetItem=__HAS_NATIVE_LOCAL_STORAGE?Storage.prototype.setItem:function(k,v){return this.setItem(k,v)};
 const CLOUD_DELETED_KEY='floor_cloud_deleted_v2',DATA_SAFETY_SNAPSHOT_KEY='floor_data_safety_snapshot_v1',DATA_SAFETY_BEST_KEY='floor_data_safety_best_v1';
