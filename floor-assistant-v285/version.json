@@ -1,6 +1,6 @@
 {
-  "version": "364",
-  "channel": "migration-test",
-  "cloudSync": "isolated",
+  "version": "365",
+  "channel": "production",
+  "cloudSync": "authenticated_owner_only",
   "builtAt": "2026-10-12"
 }
