@@ -9,6 +9,7 @@ on:
       - 'ops/muye-guan-jia/smoke-browser.cjs'
       - 'ops/muye-guan-jia/ipad-width-v374.cjs'
       - 'ops/muye-guan-jia/refresh-stability-v380.cjs'
+      - 'ops/muye-guan-jia/ratio-v384.cjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -31,6 +32,8 @@ jobs:
         run: node ops/muye-guan-jia/ipad-width-v374.cjs
       - name: Test first visible frames and three consecutive reloads on five viewports
         run: node ops/muye-guan-jia/refresh-stability-v380.cjs
+      - name: Verify fine touch dragging and iPad payment slider length
+        run: node ops/muye-guan-jia/ratio-v384.cjs
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
