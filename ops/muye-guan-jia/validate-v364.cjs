@@ -127,7 +127,7 @@ test('V371 missing payment event rejected',()=>{const orders=structuredClone(sam
 test('V371 missing product baseline rejected',()=>{assert.throws(()=>verifyCloud({...sampleCloud,products:sampleCloud.products.slice(0,3)}));return true});
 assert.match(html,/countMismatch&&!cloudReadOnly&&!cloudConflict&&cloudStatusOkay!==false/,'conflict status must not be masked');
 assert.match(html,/fetch\(url,\{method:method,cache:'no-store'/,'cloud reads must bypass stale cache');
-assert.equal(version.version,'372','staging version must be 372');
+assert.equal(version.version,'373','staging version must be 373');
 assert.match(html,/Number\(cloudRemoteOrderCount\)>=24&&all\.length===13/,'recovery entry must support 25+ cloud orders');
 assert.match(html,/cloudRemoteOrderCount=remote\.orders\.length/,'post-recovery count must reflect current cloud');
 assert.match(html,/从云端安全恢复当前云端订单（自动备份本机）/,'recovery button must be dynamic');
@@ -206,7 +206,7 @@ test('V372 changed cloud historical cost status rejected',()=>{let cloud=structu
 test('V372 custom local product rejected',()=>!v372Api.check({orders:v372Local,products:[{id:'custom'}]},v372Cloud));
 test('V372 custom local quote rejected',()=>!v372Api.check({orders:v372Local,quotes:[{id:'custom'}]},v372Cloud));
 test('V372 cloud less than 24 orders rejected',()=>!v372Api.check({orders:v372Local},{...v372Cloud,orders:v372Cloud.orders.slice(0,23)}));
-assert.match(html,/plan.reason==='verified-v371-mac-backup'/,'V372 auto restore requires exact verified reason');
-assert.match(html,/恢复后数据签名校验失败/,'V372 restore must verify complete signature');
-assert.match(html,/本机回退快照保存失败，已阻止自动恢复/,'V372 restore must fail closed on backup failure');
-assert.match(html,/if\(st!=='complete'\)return '待补成本'/,'V372 incomplete cost cannot display fabricated accurate profit');
+assert.doesNotMatch(html,/plan.reason==='verified-v371-mac-backup'/,'V373 restores only after explicit confirmation');
+assert.match(html,/恢复后完整校验失败/,'V373 restore verifies complete state signature');
+assert.match(html,/本机回退快照保存失败，恢复已停止/,'V373 backup failure stops restore');
+assert.match(html,/if\(st==='missing'\)return '待补成本'/,'V373 leaves existing V371 profit calculations unchanged');
