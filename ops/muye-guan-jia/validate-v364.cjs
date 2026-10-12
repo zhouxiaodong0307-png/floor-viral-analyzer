@@ -109,7 +109,7 @@ test('nonlegacy order IDs stop replace',()=>{
  const changed=structuredClone(pristineLocal);changed.orders[0].id=123456;
  return !historyApi.isPristineHistoryOnlyV366(changed,official24)
 });
-assert.match(html,/if\(!isPristineHistoryOnlyV366\(local,remote\)\)\{/,'manual recovery must reject edited cache');
+assert.match(html,/if\(!isPristineHistoryOnlyV366\(local,remote\)&&!isVerifiedV371MacBackupOnlyV372\(local,remote\)\)\{/,'manual recovery must reject unknown edited cache');
 assert.match(html,/throw new Error\('本机13笔中仅 '/,'manual recovery must explain nonpristine records');
 const verifyCloudSource=sliceBetween('function verifyOwnerCloud24V367(remote){','async function safeRestoreFromCloudV367()');
 const verifyCloud=new Function('normalizeBusinessStateLike',verifyCloudSource+'return verifyOwnerCloud24V367;')(x=>x);
@@ -127,7 +127,7 @@ test('V371 missing payment event rejected',()=>{const orders=structuredClone(sam
 test('V371 missing product baseline rejected',()=>{assert.throws(()=>verifyCloud({...sampleCloud,products:sampleCloud.products.slice(0,3)}));return true});
 assert.match(html,/countMismatch&&!cloudReadOnly&&!cloudConflict&&cloudStatusOkay!==false/,'conflict status must not be masked');
 assert.match(html,/fetch\(url,\{method:method,cache:'no-store'/,'cloud reads must bypass stale cache');
-assert.equal(version.version,'371','staging version must be 371');
+assert.equal(version.version,'372','staging version must be 372');
 assert.match(html,/Number\(cloudRemoteOrderCount\)>=24&&all\.length===13/,'recovery entry must support 25+ cloud orders');
 assert.match(html,/cloudRemoteOrderCount=remote\.orders\.length/,'post-recovery count must reflect current cloud');
 assert.match(html,/从云端安全恢复当前云端订单（自动备份本机）/,'recovery button must be dynamic');
@@ -180,3 +180,33 @@ const key='floor_authenticated_session_v363';
  process.stdout.write('PASS remembered login offline, reconnect, revoked token\n');
 })().catch(e=>{console.error(e);process.exitCode=1});
 
+
+/* V372: fingerprinted Mac backup can bootstrap, but any local edits must block. */
+const v372Source=sliceBetween('/* V372: exactly fingerprint','function isPristineHistoryOnlyV366(');
+const v372VerifySource=sliceBetween('function verifyOwnerCloud24V367(remote){','async function safeRestoreFromCloudV367()');
+const v372TestSource=v372Source.replace(
+ "return hash.toString(16).padStart(16,'0');",
+ "return V371_VERIFIED_MAC_ORDER_HASHES_V372[String(record.id)]||'not-known';"
+);
+const v372Api=new Function(
+ 'const normalizeBusinessStateLike=v=>({orders:v?.orders||[],costs:v?.costs||[],products:v?.products||[],quotes:v?.quotes||[],deleted:{orders:{},costs:{},products:{},quotes:{},...(v?.deleted||{})}};'+
+ 'const isDefaultQuoteSeedOnly=v=>!v.length;'+
+ 'const stableSignatureValue=v=>v;'+
+ v372VerifySource+v372TestSource+
+ 'return {check:isVerifiedV371MacBackupOnlyV372,hash:v371RecordFingerprintV372,hashes:V371_VERIFIED_MAC_ORDER_HASHES_V372};'
+)();
+const v372Local=pristine13.map(x=>({...x,costSnapshot:{sales:x.sales,cost:x.cost,costStatus:x.costStatus,profitKnown:x.profitKnown},entrySource:'manual'}));
+const v372Remote=structuredClone(v372Local).map(x=>({...x,sales:x.sales+1,paymentHistory:[{amount:1}]}));
+const v372Cloud={orders:[...v372Remote,...Array.from({length:12},(_,i)=>({id:'new-'+i,costSnapshot:{cost:1},paymentHistory:[]}))],products:Array.from({length:4},(_,i)=>({id:i})),quotes:Array.from({length:34},(_,i)=>({id:i}))};
+test('V372 known Mac backup all 13 accepted with cloud 25',()=>v372Api.check({orders:v372Local},v372Cloud));
+test('V372 new local order rejected',()=>!v372Api.check({orders:[...v372Local,{id:123}]},v372Cloud));
+test('V372 changed local payment rejected',()=>{let local=structuredClone(v372Local);local[0].paid+=1;return !v372Api.check({orders:local},v372Cloud)});
+test('V372 changed cloud historical cost rejected',()=>{let cloud=structuredClone(v372Cloud);cloud.orders[0].cost+=1;return !v372Api.check({orders:v372Local},cloud)});
+test('V372 changed cloud historical cost status rejected',()=>{let cloud=structuredClone(v372Cloud);cloud.orders[0].costStatus='complete';return !v372Api.check({orders:v372Local},cloud)});
+test('V372 custom local product rejected',()=>!v372Api.check({orders:v372Local,products:[{id:'custom'}]},v372Cloud));
+test('V372 custom local quote rejected',()=>!v372Api.check({orders:v372Local,quotes:[{id:'custom'}]},v372Cloud));
+test('V372 cloud less than 24 orders rejected',()=>!v372Api.check({orders:v372Local},{...v372Cloud,orders:v372Cloud.orders.slice(0,23)}));
+assert.match(html,/plan.reason==='verified-v371-mac-backup'/,'V372 auto restore requires exact verified reason');
+assert.match(html,/恢复后数据签名校验失败/,'V372 restore must verify complete signature');
+assert.match(html,/本机回退快照保存失败，已阻止自动恢复/,'V372 restore must fail closed on backup failure');
+assert.match(html,/if\(st!=='complete'\)return '待补成本'/,'V372 incomplete cost cannot display fabricated accurate profit');
