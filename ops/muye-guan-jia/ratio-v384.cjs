@@ -31,6 +31,16 @@ const {chromium}=require('playwright');
     };
     let loss=await track('measureLoss',[0,.25,.5,.75,1]);
     assert.deepEqual(loss,[5,10,15,20],label+' loss finger tracking '+loss);
+    // V385: loss uses 0.1%, not coarse 1% snapping. Preserve the exact manual editor value.
+    const fine=await track('measureLoss',[0,.257,.263]);
+    assert.deepEqual(fine,[5.1,5.3],label+' loss fine-grained thumb tracking '+fine);
+    await page.waitForTimeout(350);
+    const persistence=await page.evaluate(()=>{
+      const range=document.getElementById('measureLoss'),manual=document.querySelector('[data-ratio-for="measureLoss"] .ratio-manual-input');
+      const snapshot=JSON.parse(localStorage.getItem('floor_last_quote_state_v1')||'{}');
+      return {step:range.step,range:range.value,manual:manual?.value,saved:snapshot.fields?.measureLoss};
+    });
+    assert.deepEqual(persistence,{step:'0.1',range:'5.3',manual:'5.3',saved:'5.3'},label+' loss editor and autosave '+JSON.stringify(persistence));
     let deposit=await track('depositRate',[0,.25,.5,.75,1]);
     assert.deepEqual(deposit,[25,50,75,100],label+' deposit finger tracking '+deposit);
     assert.ok(!errs.some(x=>/SyntaxError|TypeError|ReferenceError/.test(x)),label+' errors '+errs.join('|'));
