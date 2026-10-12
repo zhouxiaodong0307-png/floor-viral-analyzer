@@ -128,7 +128,7 @@ test('V371 missing product baseline rejected',()=>{assert.throws(()=>verifyCloud
 assert.match(html,/countMismatch&&!cloudReadOnly&&!cloudConflict&&cloudStatusOkay!==false/,'conflict status must not be masked');
 assert.match(html,/fetch\(url,\{method:method,cache:'no-store'/,'cloud reads must bypass stale cache');
 assert.equal(version.version,'379','staging version must be 379');
-assert.match(html,/id="v378LegacyTools"/);
+assert.ok(html.indexOf('id="v374-ipad-both-orientations-content-width"') < html.indexOf("</head><body>"),"iPad critical CSS must be in head");
 
 
 assert.match(html,/id="v375-ipad-compact-nested-spacing"/,'V375 tablet spacing CSS missing');

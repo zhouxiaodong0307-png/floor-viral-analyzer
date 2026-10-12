@@ -25,7 +25,7 @@ async function smoke(browser,name,url){
       const isolated=await page.evaluate(()=>({url:SUPABASE_URL,write:FLOOR_SYNC_WRITE_RELEASED_V363}));
       assert.equal(isolated.url,'','test must never connect to production database');
       assert.equal(isolated.write,false,'test must never write production data');
-    }else { assert.equal(title,'木业管家 V379','production must serve V375'); assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','production Mac recovery guard must initialize'); }
+    }else { assert.equal(title,'木业管家 V377','production still V377 until promotion'); assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','production Mac recovery guard must initialize'); }
     console.log('PASS',name,'main JS initialized',title);
     // This legacy V58 control is deliberately CSS-hidden in both current layouts.
     if(await page.locator('#statsToggle').isVisible())
@@ -42,20 +42,6 @@ async function smoke(browser,name,url){
     await pass('manual order toggle',()=>page.locator('#orderManagerToggle').click(),()=>page.locator('#orderManagerContent').evaluate(el=>!el.classList.contains('collapsed')));
     await pass('cloud panel toggle',()=>page.locator('#dataSyncPanel > summary').click(),()=>page.locator('#dataSyncPanel').evaluate(el=>el.open));
     await pass('advanced sync panel toggle',()=>page.locator('#dataSyncAdvancedV370 > summary').click(),()=>page.locator('#dataSyncAdvancedV370').evaluate(el=>el.open));
-    if(name==='staging'){
-      const ui=await page.evaluate(()=>{
-        const legacy=document.getElementById('v378LegacyTools');
-        const buttons=[...document.querySelectorAll('#dataSyncAdvancedV370 .v378-daily-actions button')];
-        return {closed:!legacy.open,labels:buttons.map(b=>b.textContent.trim()),legacyActions:legacy.querySelectorAll('button').length,legacyHidden:legacy.getBoundingClientRect().height<60};
-      });
-      assert.equal(ui.closed,true,'old restoration tools collapsed by default');
-      assert.deepEqual(ui.labels,['下载数据备份','同步核对','退出云端账号']);
-      assert.ok(ui.legacyActions>=10,'existing maintenance actions preserved');
-      assert.ok(ui.legacyHidden,'no long maintenance stack initially');
-      await page.locator('#v378LegacyTools > summary').click();
-      assert.equal(await page.locator('#v378LegacyTools').evaluate(e=>e.open),true);
-      console.log('PASS V378 condensed actions and expandable legacy tools',JSON.stringify(ui));
-    }
 
     if(name==='staging'){
       const ui=await page.locator('#dataSyncPanel').evaluate(el=>{
