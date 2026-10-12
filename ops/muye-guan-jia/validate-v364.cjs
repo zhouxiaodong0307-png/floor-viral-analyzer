@@ -123,7 +123,7 @@ const authLocalStorage={
  removeItem:k=>authStorage.delete(k)
 };
 let fakeAuthFetch=async()=>{throw new Error('offline')};
-const authApi=new Function('ls','mockFetch',String.raw\`
+const authApi=new Function('ls','mockFetch',String.raw`
  const localStorage=ls;
  const FLOOR_AUTH_URL='https://example.invalid',FLOOR_AUTH_PUBLIC_KEY='public-key',FLOOR_AUTH_MODE='password';
  const FLOOR_AUTH_STORAGE_V363='floor_authenticated_session_v363';
@@ -131,7 +131,7 @@ const authApi=new Function('ls','mockFetch',String.raw\`
  const fetch=(...args)=>mockFetch(...args);
  function floorAuthMessageV350(){}
  function floorAuthConfigured(){return true}
- \`+authSource.replace("const FLOOR_AUTH_STORAGE_V363='floor_authenticated_session_v363';",'')+
+ `+authSource.replace("const FLOOR_AUTH_STORAGE_V363='floor_authenticated_session_v363';",'')+
  'return {restore:floorAuthRestoreV363,ensure:ensureFloorCloudAuthV363,getSession:()=>floorAuthSessionV350,setSession:v=>floorAuthSessionV350=v};'
 )(authLocalStorage,(...args)=>fakeAuthFetch(...args));
 const validSaved={access_token:'expired',refresh_token:'valid-refresh',expires_at:1,user_id:'owner'};
