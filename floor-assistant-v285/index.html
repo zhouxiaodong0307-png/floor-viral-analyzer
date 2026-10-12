@@ -5429,7 +5429,7 @@ function v371RecordFingerprintV372(record){
 function isVerifiedV371MacBackupOnlyV372(localState,remoteState){
  const local=normalizeBusinessStateLike(localState),remote=normalizeBusinessStateLike(remoteState);
  if(local.orders.length!==13||remote.orders.length<24||local.costs.length||local.products.length)return false;
- if(local.quotes.length&&!isDefaultQuoteSeedOnly(local.quotes))return false;
+ if(local.quotes.length&&!isDefaultQuoteSeedOnly(local.quotes)&&v371RecordFingerprintV372(local.quotes)!=='eb9a54a268c66148')return false;
  if(Object.values(local.deleted).some(group=>Object.keys(group).length))return false;
  try{verifyOwnerCloud24V367(remote)}catch(_){return false}
  const byId=new Map(remote.orders.map(o=>[String(o?.id??''),o]));
