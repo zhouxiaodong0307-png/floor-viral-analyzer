@@ -3,6 +3,10 @@ on:
   push:
     branches:
       - spend-dashboard-netlify
+  pull_request:
+    branches:
+      - spend-dashboard-netlify
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -14,23 +18,35 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm install
-      - name: Syntax check browser scripts
+          cache: npm
+          cache-dependency-path: spend-dashboard/package-lock.json
+      - run: npm ci
+      - name: Verify production HTML
         run: |
-          node --check public/app1.js
-          node --check public/app2.js
-          node --check public/app3a.js
-          node --check public/app3b.js
-          node --check public/app4a.js
-          node --check public/app4b.js
-          node --check public/app4c.js
+          grep -q "const APP_VERSION='1.5.6'" public/index.html
+          grep -Fq "const PRELOAD = [];" public/index.html
+          grep -q "spend_dashboard_v1" public/index.html
+          grep -q "spend_dashboard_snapshots_v1" public/index.html
+          ! grep -q "const PRELOAD = \[{" public/index.html
+      - name: Syntax check inline browser JavaScript
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html=Path("public/index.html").read_text(encoding="utf-8")
+          scripts=re.findall(r"<script(?:\s[^>]*)?>([\s\S]*?)</script>",html,re.I)
+          Path("/tmp/spend-inline.js").write_text("\n".join(scripts),encoding="utf-8")
+          print(f"inline scripts: {len(scripts)}")
+          PY
+          node --check /tmp/spend-inline.js
       - name: Syntax check Netlify functions
         run: |
           node --check netlify/functions/sync.mjs
           node --check netlify/functions/health.mjs
-      - name: Verify referenced assets
+      - name: Verify versions and privacy invariants
         run: |
-          for f in styles.css app1.js app2.js app3a.js app3b.js app4a.js app4b.js app4c.js; do
-            test -f "public/$f"
-            grep -q "$f" public/index.html
-          done
+          grep -q '"version": "1.5.6"' package.json
+          grep -q 'version: "1.5.6"' netlify/functions/health.mjs
+          grep -q "spend-dashboard-v1.5.6-netlify" public/index.html
+          grep -q 'name: "spend-dashboard-sync"' netlify/functions/sync.mjs
+          grep -q 'region: "ap-southeast-1"' netlify/functions/sync.mjs
