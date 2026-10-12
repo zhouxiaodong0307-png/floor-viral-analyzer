@@ -19,7 +19,10 @@ async function smoke(browser,name,url){
     await page.waitForFunction(()=>typeof window.show==='function'&&typeof window.showInternal==='function',{timeout:20000});
     assert.equal(await page.locator('#quote').count(),1);
     console.log('PASS',name,'main JS initialized',await page.title());
-    await pass('business stats',()=>page.locator('#statsToggle').click(),()=>page.locator('#statsCards').evaluate(el=>!el.classList.contains('collapsed')));
+    // This legacy V58 control is deliberately CSS-hidden in both current layouts.
+    if(await page.locator('#statsToggle').isVisible())
+      await pass('business stats',()=>page.locator('#statsToggle').click(),()=>page.locator('#statsCards').evaluate(el=>!el.classList.contains('collapsed')));
+    else console.log('SKIP',name,'retired stats toggle intentionally hidden by stylesheet');
     await pass('tools navigation',()=>page.locator('#navTools').click(),()=>page.locator('#tools').evaluate(el=>!el.classList.contains('hide')));
     await pass('tools action',()=>page.locator('#tools [data-tool="area"]').click(),()=>page.locator('#quickToolPanel').evaluate(el=>!el.classList.contains('hide')));
     await pass('more products',()=>page.locator('#navAllProducts').click(),()=>page.locator('#allProductsQuote').evaluate(el=>!el.classList.contains('hide')));
