@@ -111,7 +111,14 @@ test('nonlegacy order IDs stop replace',()=>{
 assert.match(html,/if\(!isPristineHistoryOnlyV366\(local,remote\)\)[\s\S]{0,200}throw new Error/,'manual recovery must reject edited cache');
 assert.match(html,/countMismatch&&!cloudReadOnly&&!cloudConflict&&cloudStatusOkay!==false/,'conflict status must not be masked');
 assert.match(html,/fetch\(url,\{method:method,cache:'no-store'/,'cloud reads must bypass stale cache');
-assert.equal(version.version,'369','staging version must be 369');
+assert.equal(version.version,'370','staging version must be 370');
+assert.match(html,/<details id="dataSyncAdvancedV370" class="data-sync-advanced">/);
+assert.match(html,/authCardV370\.style\.display=needsCloudLogin\?'block':'none'/);
+assert.match(html,/<button id="restoreFromCloudV367"/);
+assert.match(html,/id="restore24PanelV351"/);
+assert.match(html,/id="auditHistoryV353"/);
+assert.match(html,/id="migrationImportBtnV344"/);
+assert.match(html,/确认导入到本机（不覆盖原记录）<\/button><\/div><\/div><\/details><\/details><button id="orderManagerToggle"/);
 
 console.log('OK: '+checks+' behavior tests, '+scripts.length+' JS syntax blocks, staging safety checks');
 
