@@ -45,7 +45,7 @@ const allCases=[target,'https://muye-guan-jia.onrender.com/'].flatMap((url,i)=>c
       await page.waitForFunction(()=>document.documentElement.classList.contains('muye-ui-ready')&&typeof show==='function',{timeout:20000});
       await page.waitForTimeout(250);
       const state=await page.evaluate(()=>({frames:window.__v380PaintLog.slice(),app:document.querySelector('.app').getBoundingClientRect().width,scroll:document.documentElement.scrollWidth,stylesAfterHead:Array.from(document.querySelectorAll('style')).filter(x=>x.parentNode!==document.head).length,cssGuard:!!document.getElementById('v380-first-paint-guard'),version:document.querySelector('meta[name="app-version"]')?.content}));
-      assert.equal(state.version,item.url===target?'V382':'V381',item.label+' version');
+      assert.equal(state.version,item.url===target?'V383':'V381',item.label+' version');
       assert.equal(state.stylesAfterHead,0,item.label+' late styles');
       assert.ok(state.cssGuard,item.label+' first-paint guard');
       assert.ok(state.frames.length>0,item.label+' no frame samples');
