@@ -26,7 +26,7 @@ const store=new Map();
 const storage={getItem:k=>store.get(k)??null,setItem:(k,v)=>store.set(k,v)};
 const pre=`const DATA_SAFETY_SNAPSHOT_KEY="snap",DATA_SAFETY_BEST_KEY="best",CLOUD_DELETED_KEY="deleted",CLOUD_ID="main",SUPABASE_URL="isolated";
 const localStorage=ls;function hasCloudPending(){return false}function isHistoricalSeedOnly(){return false}
-function isDefaultQuoteSeedOnly(a){return a.length===0}function isPristineHistoricalSeedV346(x){return x?.historicalSource==='销售财务助手'&&x?.testPristine===true}function normText(x){return String(x)}
+function isDefaultQuoteSeedOnly(a){return a.length===0}function historicalSeedsV33(){return [{"id":2025122301},{"id":2026011201},{"id":2026012601},{"id":2026012701},{"id":2026020401},{"id":2026030601},{"id":2026041701},{"id":2026052601},{"id":2026052701},{"id":2026061201},{"id":2026072801},{"id":2026082701},{"id":2026091101}]}function isPristineHistoricalSeedV346(x){return x?.historicalSource==='销售财务助手'&&x?.testPristine===true}function normText(x){return String(x)}
 function normSpec(x){return String(x)};`;
 const api=new Function('ls',pre+helpers+'return {cloudSafePlanV362,cloudConflictReasonV362,saveCloudBaselineV364};')(storage);
 let checks=0;
@@ -50,4 +50,17 @@ test('historical snapshot not auto inserted',()=>{storage.setItem('snap',JSON.st
 test('product local vs cloud based on baseline',()=>{api.saveCloudBaselineV364(st([a],[{id:'p',price:100}]),'t');let p=api.cloudSafePlanV362(st([a],[{id:'p',price:100}]),st([a],[{id:'p',price:120}]));return !p.conflicts.length&&p.state.products[0].price===120});
 test('pristine legacy seed replaced with authoritative cloud order',()=>{const seed={...a,historicalSource:'销售财务助手',testPristine:true,paid:0};const p=api.cloudSafePlanV362(st([seed]),st([a]));return !p.conflicts.length&&p.state.orders[0].paid===2500});
 test('modified legacy seed remains blocked',()=>{const seed={...a,historicalSource:'销售财务助手',testPristine:false,paid:0};const p=api.cloudSafePlanV362(st([seed]),st([a]));return p.conflicts.length===1});
+test('all 13 untouched old local seeds safely bootstrap 24 remote orders',()=>{
+ const ids=[2025122301,2026011201,2026012601,2026012701,2026020401,2026030601,2026041701,2026052601,2026052701,2026061201,2026072801,2026082701,2026091101];
+ const old=ids.map(id=>({...a,id,historicalSource:'销售财务助手',testPristine:true,paid:100}));
+ const real=ids.map(id=>({...a,id,paid:2500})).concat(Array.from({length:11},(_,i)=>({...a,id:'new-'+i})));
+ const p=api.cloudSafePlanV362(st(old),st(real));return p.bootstrap&&p.state.orders.length===24&&!p.conflicts.length
+});
+test('one edited seed prevents unconditional 13-to-24 bootstrap',()=>{
+ const ids=[2025122301,2026011201,2026012601,2026012701,2026020401,2026030601,2026041701,2026052601,2026052701,2026061201,2026072801,2026082701,2026091101];
+ const old=ids.map(id=>({...a,id,historicalSource:'销售财务助手',testPristine:true,paid:100}));
+ old[0].testPristine=false;
+ const real=ids.map(id=>({...a,id,paid:2500})).concat(Array.from({length:11},(_,i)=>({...a,id:'new-'+i})));
+ const p=api.cloudSafePlanV362(st(old),st(real));return !p.bootstrap&&p.conflicts.length>0
+});
 console.log('OK: '+checks+' behavior tests, '+scripts.length+' JS syntax blocks, staging safety checks');
