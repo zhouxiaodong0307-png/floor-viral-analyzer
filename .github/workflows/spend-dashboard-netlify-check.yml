@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
       - run: npm install --no-audit --no-fund
       - run: npm run build
       - name: Verify production HTML
@@ -47,5 +47,5 @@ jobs:
           grep -q '"version": "1.5.6"' package.json
           grep -q 'version: "1.5.6"' netlify/functions/health.mjs
           grep -q "spend-dashboard-v1.5.6-netlify" public/index.html
-          grep -q 'name: "spend-dashboard-sync"' netlify/functions/sync.mjs
-          grep -q 'region: "ap-southeast-1"' netlify/functions/sync.mjs
+          grep -q 'STORE_NAME = "spend-dashboard-sync"' netlify/functions/sync.mjs
+          grep -q 'REGION = "ap-southeast-1"' netlify/functions/sync.mjs
