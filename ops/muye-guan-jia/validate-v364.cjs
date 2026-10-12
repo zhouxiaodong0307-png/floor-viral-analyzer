@@ -94,6 +94,7 @@ const official24={orders:[...pristine13.map(x=>({...x,historicalSource:'official
 const pristineLocal={orders:pristine13};
 test('real 13 legacy records recognized',()=>pristine13.every(x=>historyApi.isPristineHistoricalSeedV346(x)));
 test('real legacy 13-to-24 strictly passes',()=>historyApi.isPristineHistoryOnlyV366(pristineLocal,official24));
+test('real legacy 13-to-25 preserves additional cloud order',()=>historyApi.isPristineHistoryOnlyV366(pristineLocal,{orders:[...official24.orders,{id:'new-test-25'}]}));
 test('edited payment stops replace',()=>{
  const changed=structuredClone(pristineLocal);changed.orders[0].paid+=10;
  return !historyApi.isPristineHistoryOnlyV366(changed,official24)
@@ -108,10 +109,28 @@ test('nonlegacy order IDs stop replace',()=>{
  const changed=structuredClone(pristineLocal);changed.orders[0].id=123456;
  return !historyApi.isPristineHistoryOnlyV366(changed,official24)
 });
-assert.match(html,/if\(!isPristineHistoryOnlyV366\(local,remote\)\)[\s\S]{0,200}throw new Error/,'manual recovery must reject edited cache');
+assert.match(html,/if\(!isPristineHistoryOnlyV366\(local,remote\)\)\{/,'manual recovery must reject edited cache');
+assert.match(html,/throw new Error\('本机13笔中仅 '/,'manual recovery must explain nonpristine records');
+const verifyCloudSource=sliceBetween('function verifyOwnerCloud24V367(remote){','async function safeRestoreFromCloudV367()');
+const verifyCloud=new Function('normalizeBusinessStateLike',verifyCloudSource+'return verifyOwnerCloud24V367;')(x=>x);
+const sampleCloud={orders:Array.from({length:25},(_,i)=>({
+ id:'cloud-'+i,
+ ...(i<17?{costSnapshot:{cost:100,profit:200}}:{}),
+ ...(i<13?{paymentHistory:[{amount:10}]}:{})
+})),products:Array.from({length:4},(_,i)=>({id:i})),quotes:Array.from({length:34},(_,i)=>({id:i}))};
+test('V371 cloud 25 recovery validation accepts intact 24 baseline plus new order',()=>verifyCloud(sampleCloud).orders.length===25);
+test('V371 cloud 24 baseline still accepted',()=>verifyCloud({...sampleCloud,orders:sampleCloud.orders.slice(0,24)}).orders.length===24);
+test('V371 cloud 23 missing order rejected',()=>{assert.throws(()=>verifyCloud({...sampleCloud,orders:sampleCloud.orders.slice(0,23)}));return true});
+test('V371 duplicate cloud order ID rejected',()=>{const orders=structuredClone(sampleCloud.orders);orders[24].id=orders[0].id;assert.throws(()=>verifyCloud({...sampleCloud,orders}));return true});
+test('V371 missing historical snapshot rejected',()=>{const orders=structuredClone(sampleCloud.orders);delete orders[0].costSnapshot;assert.throws(()=>verifyCloud({...sampleCloud,orders}));return true});
+test('V371 missing payment event rejected',()=>{const orders=structuredClone(sampleCloud.orders);delete orders[0].paymentHistory;assert.throws(()=>verifyCloud({...sampleCloud,orders}));return true});
+test('V371 missing product baseline rejected',()=>{assert.throws(()=>verifyCloud({...sampleCloud,products:sampleCloud.products.slice(0,3)}));return true});
 assert.match(html,/countMismatch&&!cloudReadOnly&&!cloudConflict&&cloudStatusOkay!==false/,'conflict status must not be masked');
 assert.match(html,/fetch\(url,\{method:method,cache:'no-store'/,'cloud reads must bypass stale cache');
-assert.equal(version.version,'370','staging version must be 370');
+assert.equal(version.version,'371','staging version must be 371');
+assert.match(html,/Number\(cloudRemoteOrderCount\)>=24&&all\.length===13/,'recovery entry must support 25+ cloud orders');
+assert.match(html,/cloudRemoteOrderCount=remote\.orders\.length/,'post-recovery count must reflect current cloud');
+assert.match(html,/从云端安全恢复当前云端订单（自动备份本机）/,'recovery button must be dynamic');
 assert.match(html,/<details id="dataSyncAdvancedV370" class="data-sync-advanced">/);
 assert.match(html,/authCardV370\.style\.display=needsCloudLogin\?'block':'none'/);
 assert.match(html,/<button id="restoreFromCloudV367"/);
