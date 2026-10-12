@@ -4016,32 +4016,7 @@ input,select,button{min-height:44px} .internal-access-btn{min-height:auto}
 #quote .measure-card-v273 .measure-row.stair-row .stair-fields input[type="number"]{-moz-appearance:textfield!important;appearance:textfield!important}
 #quote .measure-card-v273 .measure-row.stair-row .stair-fields input[type="number"]::-webkit-inner-spin-button,#quote .measure-card-v273 .measure-row.stair-row .stair-fields input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none!important;appearance:none!important;display:none!important;margin:0!important}
 #quote .measure-card-v273 .measure-row.stair-row .stair-fields input:focus,#quote .measure-card-v273 .measure-row.stair-row .stair-fields input:focus-visible{outline:1px solid #a5aab2!important;outline-offset:0!important;box-shadow:none!important;border-color:#a5aab2!important}
-</style><style id="v337-title-tap-access">.business-title-access{touch-action:manipulation!important;cursor:pointer!important}</style>
-<style id="v374-ipad-both-orientations-content-width">
-/* V374: iPad/touch-tablet responsive width, portrait AND landscape.
-   Scope ONLY horizontal page gutters; preserve mobile, desktop, print,
-   component sizes, modal widths, calculations, data and all scripts. */
-@media screen and (min-width:700px) and (max-width:1400px) and (any-pointer:coarse) {
-  body > .app {
-    width:100%!important;
-    max-width:none!important;
-    padding-left:clamp(12px,1.6vw,22px)!important;
-    padding-right:clamp(12px,1.6vw,22px)!important;
-    margin-left:auto!important;
-    margin-right:auto!important;
-  }
-  body > .app > nav.client-nav,
-  body > .app > nav.internal-nav {
-    padding-left:clamp(8px,.75vw,12px)!important;
-    padding-right:clamp(8px,.75vw,12px)!important;
-  }
-  body > .app > section {
-    margin-left:clamp(8px,.75vw,12px)!important;
-    margin-right:clamp(8px,.75vw,12px)!important;
-  }
-}
-</style>
-</body></html>`}
+</style><style id="v337-title-tap-access">.business-title-access{touch-action:manipulation!important;cursor:pointer!important}</style></body></html>`}
 async function loadExternalScript(src,globalName){
   if(globalName&&window[globalName])return true;
   return new Promise((resolve,reject)=>{let s=document.createElement('script');s.src=src;s.onload=()=>resolve(true);s.onerror=reject;document.head.appendChild(s)});
@@ -10251,4 +10226,30 @@ body .app #quote details.quote-compact-details.quote-entry-optional:not(.quote-c
  #quote .measure-card-v273 .measure-row .mexpr{text-overflow:clip!important}
 }
 </style>
+
+<style id="v374-ipad-both-orientations-content-width">
+/* V374: iPad/touch-tablet responsive width, portrait AND landscape.
+   Scope ONLY horizontal page gutters; preserve mobile, desktop, print,
+   component sizes, modal widths, calculations, data and all scripts. */
+@media screen and (min-width:700px) and (max-width:1400px) and (any-pointer:coarse) {
+  body > .app {
+    width:100%!important;
+    max-width:none!important;
+    padding-left:clamp(12px,1.6vw,22px)!important;
+    padding-right:clamp(12px,1.6vw,22px)!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+  body > .app > nav.client-nav,
+  body > .app > nav.internal-nav {
+    padding-left:clamp(8px,.75vw,12px)!important;
+    padding-right:clamp(8px,.75vw,12px)!important;
+  }
+  body > .app > section {
+    margin-left:clamp(8px,.75vw,12px)!important;
+    margin-right:clamp(8px,.75vw,12px)!important;
+  }
+}
+</style>
+
 </body></html>
