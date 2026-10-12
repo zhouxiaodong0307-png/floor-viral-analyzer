@@ -25,7 +25,7 @@ async function smoke(browser,name,url){
       const isolated=await page.evaluate(()=>({url:SUPABASE_URL,write:FLOOR_SYNC_WRITE_RELEASED_V363}));
       assert.equal(isolated.url,'','test must never connect to production database');
       assert.equal(isolated.write,false,'test must never write production data');
-    }else { assert.equal(title,'木业管家 V382','production V382 baseline before promotion'); assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','production Mac recovery guard must initialize'); }
+    }else { assert.equal(title,'木业管家 V383','production V383 before V384 promotion'); assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','production Mac recovery guard must initialize'); }
     console.log('PASS',name,'main JS initialized',title);
     // V382: empty brand-new quote must have no pre-created measurement row.
     // Preserve previously saved/restoreable measurements: do not clear browser storage on production.
