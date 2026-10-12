@@ -27,6 +27,18 @@ async function smoke(browser,name,url){
       assert.equal(isolated.write,false,'test must never write production data');
     }else { assert.equal(title,'木业管家 V382','production V380 after promotion'); assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','production Mac recovery guard must initialize'); }
     console.log('PASS',name,'main JS initialized',title);
+    // V382: empty brand-new quote must have no pre-created measurement row.
+    // Preserve previously saved/restoreable measurements: do not clear browser storage on production.
+    if(name==='staging'){
+      const before=await page.locator('#measureRows > .measure-row').count();
+      // Fresh isolated browser context has no stored quote and must start empty.
+      assert.equal(before,0,'V382: initial area entry must be hidden until category click');
+      await page.locator('#quote .measure-quick button').first().click();
+      assert.equal(await page.locator('#measureRows > .measure-row').count(),1,'V382: category click must insert one row');
+      await page.locator('#measureRows .measure-delete').first().click();
+      assert.equal(await page.locator('#measureRows > .measure-row').count(),0,'V382: deleting final row remains empty');
+      console.log('PASS staging V382 no default measurement; category adds; delete returns to empty');
+    }
     // This legacy V58 control is deliberately CSS-hidden in both current layouts.
     if(await page.locator('#statsToggle').isVisible())
       await pass('business stats',()=>page.locator('#statsToggle').click(),()=>page.locator('#statsCards').evaluate(el=>!el.classList.contains('collapsed')));
