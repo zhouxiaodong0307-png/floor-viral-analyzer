@@ -15,7 +15,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Generate isolated V373 candidate
-        run: node ops/muye-guan-jia/repair-v373.cjs staging
       - name: Validate complete HTML and isolated migration safety
         run: node ops/muye-guan-jia/validate-v364.cjs
