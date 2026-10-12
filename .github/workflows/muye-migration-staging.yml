@@ -3,6 +3,8 @@ on:
   push:
     branches: [wood-floor-migration-v345-validation]
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -19,3 +21,13 @@ jobs:
         run: node ops/muye-guan-jia/repair-v373.cjs staging
       - name: Validate complete HTML and isolated migration safety
         run: node ops/muye-guan-jia/validate-v364.cjs
+      - name: Publish validated candidate only to isolated test branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add floor-assistant-v285/index.html floor-assistant-v285/version.json ops/muye-guan-jia/validate-v364.cjs
+          git diff --cached --check
+          if ! git diff --cached --quiet; then
+            git commit -m "test(muye): V373 verified Mac recovery candidate"
+            git push origin HEAD:wood-floor-migration-v345-validation
+          fi
