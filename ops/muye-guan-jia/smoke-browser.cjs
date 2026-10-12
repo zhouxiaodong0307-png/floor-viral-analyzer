@@ -60,10 +60,10 @@ async function smoke(browser,name,url){
     if(name==='staging'){
       const ui=await page.locator('#dataSyncPanel').evaluate(el=>{
         const panel=el.querySelector('.data-sync-popover'), grid=el.querySelector('#dataSyncAdvancedV370 .data-sync-advanced-content');
-        return {width:panel.getBoundingClientRect().width,columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,maxHeight:getComputedStyle(panel).maxHeight,scroll:panel.scrollHeight,client:panel.clientHeight,actions:grid.querySelectorAll('button').length};
+        return {width:panel.getBoundingClientRect().width,display:getComputedStyle(grid).display,maxHeight:getComputedStyle(panel).maxHeight,scroll:panel.scrollHeight,client:panel.clientHeight,actions:grid.querySelectorAll('button').length};
       });
       assert.ok(ui.width>=330,'responsive panel '+JSON.stringify(ui));
-      assert.equal(ui.columns,1,'single-column narrow phone panel');
+      assert.equal(ui.display,'block','daily controls and legacy tools use compact vertical groups');
       assert.ok(ui.client<=800,'bounded scrollable panel');
       assert.ok(ui.actions>=8,'all original maintenance actions preserved');
       console.log('PASS responsive sync panel',JSON.stringify(ui));
