@@ -99,7 +99,7 @@ async function check(browser,url,w,h,touch,title,kind){
  try{
    // Post-release acceptance: both public endpoints must run the same V376 layout.
    for(const [w,h,label] of tabletSizes){
-     const candidate=await check(browser,stageUrl,w,h,true,'木业管家 V377','tablet');
+     const candidate=await check(browser,stageUrl,w,h,true,'木业管家 V378','tablet');
      const live=await check(browser,prodUrl,w,h,true,'木业管家 V377','baseline-tablet');
      const landscape=w>h;
      for(const state of [candidate]){
@@ -117,7 +117,7 @@ async function check(browser,url,w,h,touch,title,kind){
    }
    // iPhone + desktop retain exactly the previous page width, regardless of test updates.
    for(const [w,h,touch,label] of [[390,844,true,'iphone'],[1200,900,false,'desktop-small'],[1440,900,false,'desktop-wide']]){
-     const a=await check(browser,stageUrl,w,h,touch,'木业管家 V377',label);
+     const a=await check(browser,stageUrl,w,h,touch,'木业管家 V378',label);
      const b=await check(browser,prodUrl,w,h,touch,'木业管家 V377',label);
      for(const field of ['app','header','nav','section','quoteBox']){
        assert.ok(Math.abs(a[field].x-b[field].x)<=2,label+' '+field+' left layout changed');
