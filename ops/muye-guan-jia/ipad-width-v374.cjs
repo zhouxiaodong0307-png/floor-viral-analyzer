@@ -97,31 +97,34 @@ async function check(browser,url,w,h,touch,title,kind){
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  try{
+   // Post-release acceptance: both public endpoints must run the same V375 layout.
    for(const [w,h,label] of tabletSizes){
-     const old=await check(browser,prodUrl,w,h,true,'木业管家 V374','baseline-tablet');
-     const now=await check(browser,stageUrl,w,h,true,'木业管家 V375','tablet');
+     const candidate=await check(browser,stageUrl,w,h,true,'木业管家 V375','tablet');
+     const live=await check(browser,prodUrl,w,h,true,'木业管家 V375','tablet');
      const landscape=w>h;
-     assert.equal(now.outerPad,landscape?12:14,label+' outer card spacing');
-     assert.equal(now.measurePad,landscape?10:12,label+' inner measure spacing');
-     assert.equal(now.navPad,6,label+' nav spacing');
-     assert.equal(now.sectionMargin,6,label+' section spacing');
-     assert.ok(now.quoteBox.width>=old.quoteBox.width+3,label+' quote card does not widen');
-     assert.ok(now.measure.width>=old.measure.width+10,label+' measure card does not widen');
-     assert.ok(now.measure.x<old.measure.x,label+' measure content left gutter unchanged');
-     assert.ok(now.scrollWidth<=Math.max(w+2,old.scrollWidth+2),label+' horizontal overflow increased');
-     console.log('PASS compact',label,'outer',old.outerPad,'→',now.outerPad,
-       'measure',old.measurePad,'→',now.measurePad,'measure width gain',Math.round(now.measure.width-old.measure.width));
+     for(const state of [candidate,live]){
+       assert.equal(state.outerPad,landscape?12:14,label+' outer card spacing');
+       assert.equal(state.measurePad,landscape?10:12,label+' measure spacing');
+       assert.equal(state.navPad,6,label+' nav spacing');
+       assert.equal(state.sectionMargin,6,label+' section spacing');
+       assert.ok(state.scrollWidth<=w+2,label+' horizontal scroll');
+     }
+     for(const field of ['header','nav','section','quoteBox','measure']){
+       assert.ok(Math.abs(candidate[field].x-live[field].x)<=2,label+' left differs on '+field);
+       assert.ok(Math.abs(candidate[field].right-live[field].right)<=2,label+' right differs on '+field);
+     }
+     console.log('PASS live responsive',label,w+'x'+h,'outer',live.outerPad,'measure',live.measurePad);
    }
    // iPhone + desktop retain exactly the previous page width, regardless of test updates.
    for(const [w,h,touch,label] of [[390,844,true,'iphone'],[1200,900,false,'desktop-small'],[1440,900,false,'desktop-wide']]){
      const a=await check(browser,stageUrl,w,h,touch,'木业管家 V375',label);
-     const b=await check(browser,prodUrl,w,h,touch,'木业管家 V374',label);
+     const b=await check(browser,prodUrl,w,h,touch,'木业管家 V375',label);
      for(const field of ['app','header','nav','section','quoteBox']){
        assert.ok(Math.abs(a[field].x-b[field].x)<=2,label+' '+field+' left layout changed');
        assert.ok(Math.abs(a[field].right-b[field].right)<=2,label+' '+field+' right layout changed');
      }
      console.log('PASS unchanged baseline',label,w+'x'+h);
    }
-   console.log('OK V375: 9 touch-tablet viewports with V374 side-by-side widths, 4 customer + 3 backstage routes each, 3 unchanged non-tablet viewports');
+   console.log('OK V375: 9 touch-tablet viewports verified on both V375 live endpoints, 4 customer + 3 backstage routes each, 3 unchanged non-tablet viewports');
  }finally{await browser.close()}
 })().catch(e=>{console.error('FAIL V375',e);process.exitCode=1});
