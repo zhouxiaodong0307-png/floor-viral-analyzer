@@ -14,6 +14,7 @@ const end=verified.indexOf('function isPristineHistoryOnlyV366(',start);
 assert.ok(start>0&&end>start);
 const guard=verified.slice(start,end);
 assert.ok(guard.includes('V371_VERIFIED_MAC_ORDER_HASHES_V372')&&guard.includes('function isVerifiedV371MacBackupOnlyV372('));
+function replaceOneOrAlready(str,before,after){if(str.includes(before))return replaceOne(str,before,after);if(str.includes(after))return str;throw Error('validator mismatch: '+before)}
 function replaceOne(str,before,after){const first=str.indexOf(before);assert.ok(first>=0,'missing anchor: '+before);
 assert.equal(str.indexOf(before,first+before.length),-1,'duplicate anchor: '+before);
 return str.slice(0,first)+after+str.slice(first+before.length)}
@@ -48,15 +49,15 @@ fs.writeFileSync(manifestFile,JSON.stringify(m,null,2)+'\n');
 if(mode==='staging'){
  const file='ops/muye-guan-jia/validate-v364.cjs';
  let val=fs.readFileSync(file,'utf8');
- val=replaceOne(val,"assert.equal(version.version,'372','staging version must be 372');",
+ val=replaceOneOrAlready(val,"assert.equal(version.version,'372','staging version must be 372');",
  "assert.equal(version.version,'373','staging version must be 373');");
- val=replaceOne(val,"assert.match(html,/plan.reason==='verified-v371-mac-backup'/,'V372 auto restore requires exact verified reason');",
+ val=replaceOneOrAlready(val,"assert.match(html,/plan.reason==='verified-v371-mac-backup'/,'V372 auto restore requires exact verified reason');",
  "assert.doesNotMatch(html,/plan.reason==='verified-v371-mac-backup'/,'V373 restores only after explicit user confirmation');");
- val=replaceOne(val,"assert.match(html,/恢复后数据签名校验失败/,'V372 restore must verify complete signature');",
+ val=replaceOneOrAlready(val,"assert.match(html,/恢复后数据签名校验失败/,'V372 restore must verify complete signature');",
  "assert.match(html,/恢复后完整校验失败/,'V373 manual restore verifies full signature');");
- val=replaceOne(val,"assert.match(html,/本机回退快照保存失败，已阻止自动恢复/,'V372 restore must fail closed on backup failure');",
+ val=replaceOneOrAlready(val,"assert.match(html,/本机回退快照保存失败，已阻止自动恢复/,'V372 restore must fail closed on backup failure');",
  "assert.match(html,/本机回退快照保存失败，恢复已停止/,'V373 backup failure stops restore');");
- val=replaceOne(val,"assert.match(html,/if\\(st!=='complete'\\)return '待补成本'/,'V372 incomplete cost cannot display fabricated accurate profit');",
+ val=replaceOneOrAlready(val,"assert.match(html,/if\\(st!=='complete'\\)return '待补成本'/,'V372 incomplete cost cannot display fabricated accurate profit');",
  "assert.match(html,/if\\(st==='missing'\\)return '待补成本'/,'V373 leaves V371 profit calculation unchanged');");
  new vm.Script(val);
  fs.writeFileSync(file,val);
