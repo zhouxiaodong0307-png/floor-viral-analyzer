@@ -5991,6 +5991,8 @@ body .app #quote [data-ratio-for="measureLoss"].ratio-manual{
   min-height:var(--v387-deposit-badge-height,30px)!important;
   max-height:var(--v387-deposit-badge-height,30px)!important;
   border-radius:var(--v387-deposit-badge-radius,7px)!important;
+  background:var(--v387-deposit-badge-bg,#111)!important;
+  border-color:var(--v387-deposit-badge-border,#4a4a4a)!important;
   padding:var(--v387-deposit-badge-padding,0px 8px)!important;
   font-size:var(--v387-deposit-badge-font,14px)!important;
   font-weight:var(--v387-deposit-badge-weight,400)!important;
@@ -6014,6 +6016,8 @@ body .app #quote [data-ratio-for="measureLoss"] .ratio-manual-input{
      '--v387-deposit-badge-width':rect.width+'px',
      '--v387-deposit-badge-height':rect.height+'px',
      '--v387-deposit-badge-radius':cs.borderRadius,
+     '--v387-deposit-badge-bg':cs.backgroundColor,
+     '--v387-deposit-badge-border':cs.borderColor,
      '--v387-deposit-badge-padding':cs.padding,
      '--v387-deposit-badge-font':cs.fontSize,
      '--v387-deposit-badge-weight':cs.fontWeight,
@@ -6021,9 +6025,12 @@ body .app #quote [data-ratio-for="measureLoss"] .ratio-manual-input{
    };
    for(var name in values){if(loss.style.getPropertyValue(name)!==values[name])loss.style.setProperty(name,values[name])}
  }
+ var attempts=0;
  function start(){
-   matchDepositBadge();
    var deposit=document.querySelector('#quote [data-ratio-for="depositRate"].ratio-manual');
+   var loss=document.querySelector('#quote [data-ratio-for="measureLoss"].ratio-manual');
+   if((!deposit||!loss)&&attempts++<60){requestAnimationFrame(start);return}
+   matchDepositBadge();
    if(deposit&&window.ResizeObserver)new ResizeObserver(matchDepositBadge).observe(deposit);
    window.addEventListener('resize',matchDepositBadge,{passive:true});
    document.getElementById('depositRate')?.addEventListener('input',matchDepositBadge,{passive:true});
