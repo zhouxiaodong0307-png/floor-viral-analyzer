@@ -111,6 +111,46 @@ test('nonlegacy order IDs stop replace',()=>{
 assert.match(html,/if\(!isPristineHistoryOnlyV366\(local,remote\)\)[\s\S]{0,200}throw new Error/,'manual recovery must reject edited cache');
 assert.match(html,/countMismatch&&!cloudReadOnly&&!cloudConflict&&cloudStatusOkay!==false/,'conflict status must not be masked');
 assert.match(html,/fetch\(url,\{method:method,cache:'no-store'/,'cloud reads must bypass stale cache');
-assert.equal(version.version,'368','staging version must be 368');
+assert.equal(version.version,'369','staging version must be 369');
 
 console.log('OK: '+checks+' behavior tests, '+scripts.length+' JS syntax blocks, staging safety checks');
+
+const authSource=sliceBetween('async function floorAuthToken(grantType,credentials){','function checkAuthMigrationReadinessV349(){');
+const authStorage=new Map();
+const authLocalStorage={
+ getItem:k=>authStorage.get(k)??null,
+ setItem:(k,v)=>authStorage.set(k,String(v)),
+ removeItem:k=>authStorage.delete(k)
+};
+let fakeAuthFetch=async()=>{throw new Error('offline')};
+const authApi=new Function('ls','mockFetch',String.raw\`
+ const localStorage=ls;
+ const FLOOR_AUTH_URL='https://example.invalid',FLOOR_AUTH_PUBLIC_KEY='public-key',FLOOR_AUTH_MODE='password';
+ const FLOOR_AUTH_STORAGE_V363='floor_authenticated_session_v363';
+ let floorAuthSessionV350=null;
+ const fetch=(...args)=>mockFetch(...args);
+ function floorAuthMessageV350(){}
+ function floorAuthConfigured(){return true}
+ \`+authSource.replace("const FLOOR_AUTH_STORAGE_V363='floor_authenticated_session_v363';",'')+
+ 'return {restore:floorAuthRestoreV363,ensure:ensureFloorCloudAuthV363,getSession:()=>floorAuthSessionV350,setSession:v=>floorAuthSessionV350=v};'
+)(authLocalStorage,(...args)=>fakeAuthFetch(...args));
+const validSaved={access_token:'expired',refresh_token:'valid-refresh',expires_at:1,user_id:'owner'};
+const key='floor_authenticated_session_v363';
+(async()=>{
+ authStorage.set(key,JSON.stringify(validSaved));
+ await authApi.restore();
+ assert.equal(authApi.getSession().refresh_token,'valid-refresh','offline must retain in-memory login');
+ assert.ok(authStorage.has(key),'offline must retain saved login');
+ let offlineError=false;try{await authApi.ensure()}catch(_){offlineError=true}
+ assert.ok(offlineError&&authStorage.has(key),'offline retry must not erase login');
+ fakeAuthFetch=async()=>({ok:true,status:200,json:async()=>({access_token:'fresh-access',refresh_token:'new-refresh',expires_in:3600,user:{id:'owner'}})});
+ assert.equal(await authApi.ensure(),'fresh-access','network recovery should refresh without password');
+ assert.equal(JSON.parse(authStorage.get(key)).refresh_token,'new-refresh','new session must persist');
+ authStorage.set(key,JSON.stringify(validSaved));authApi.setSession(null);
+ fakeAuthFetch=async()=>({ok:false,status:400,json:async()=>({error:'invalid_grant'})});
+ await authApi.restore();
+ assert.equal(authApi.getSession(),null,'invalid refresh token must invalidate login');
+ assert.ok(!authStorage.has(key),'invalid token must clear saved login');
+ process.stdout.write('PASS remembered login offline, reconnect, revoked token\n');
+})().catch(e=>{console.error(e);process.exitCode=1});
+
