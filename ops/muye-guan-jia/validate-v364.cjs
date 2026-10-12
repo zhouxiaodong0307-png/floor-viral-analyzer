@@ -127,7 +127,8 @@ test('V371 missing payment event rejected',()=>{const orders=structuredClone(sam
 test('V371 missing product baseline rejected',()=>{assert.throws(()=>verifyCloud({...sampleCloud,products:sampleCloud.products.slice(0,3)}));return true});
 assert.match(html,/countMismatch&&!cloudReadOnly&&!cloudConflict&&cloudStatusOkay!==false/,'conflict status must not be masked');
 assert.match(html,/fetch\(url,\{method:method,cache:'no-store'/,'cloud reads must bypass stale cache');
-assert.equal(version.version,'373','staging version must be 373');
+assert.equal(version.version,'374','staging version must be 374');
+assert.match(html,/id="v374-ipad-both-orientations-content-width"/,'V374 iPad CSS missing');
 assert.match(html,/Number\(cloudRemoteOrderCount\)>=24&&all\.length===13/,'recovery entry must support 25+ cloud orders');
 assert.match(html,/cloudRemoteOrderCount=remote\.orders\.length/,'post-recovery count must reflect current cloud');
 assert.match(html,/从云端安全恢复当前云端订单（自动备份本机）/,'recovery button must be dynamic');

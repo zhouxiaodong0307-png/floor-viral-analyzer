@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/muye-browser-smoke.yml'
       - 'ops/muye-guan-jia/smoke-browser.cjs'
+      - 'ops/muye-guan-jia/ipad-width-v374.cjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -23,6 +24,8 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Test real Render staging and production navigation without credentials or writes
         run: node ops/muye-guan-jia/smoke-browser.cjs
+      - name: Verify iPad portrait and landscape width and unchanged phone and desktop layouts
+        run: node ops/muye-guan-jia/ipad-width-v374.cjs
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
