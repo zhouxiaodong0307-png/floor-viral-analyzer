@@ -100,7 +100,7 @@ async function check(browser,url,w,h,touch,title,kind){
    // Post-release acceptance: both public endpoints must run the same V376 layout.
    for(const [w,h,label] of tabletSizes){
      const candidate=await check(browser,stageUrl,w,h,true,'木业管家 V376','tablet');
-     const live=await check(browser,prodUrl,w,h,true,'木业管家 V375','baseline-tablet');
+     const live=await check(browser,prodUrl,w,h,true,'木业管家 V376','baseline-tablet');
      const landscape=w>h;
      for(const state of [candidate]){
        assert.equal(state.outerPad,9,label+' outer card spacing');
@@ -110,15 +110,15 @@ async function check(browser,url,w,h,touch,title,kind){
        assert.ok(state.scrollWidth<=w+2,label+' horizontal scroll');
      }
      for(const field of ['header','nav','section','quoteBox','measure']){
-       assert.ok(candidate[field].x<=live[field].x+2,label+' candidate should have no larger left gutter '+field);
-       assert.ok(candidate[field].right>=live[field].right-2,label+' candidate should have no larger right gutter '+field);
+       assert.ok(Math.abs(candidate[field].x-live[field].x)<=2,label+' same left gutter '+field);
+       assert.ok(Math.abs(candidate[field].right-live[field].right)<=2,label+' same right gutter '+field);
      }
      console.log('PASS live responsive',label,w+'x'+h,'outer',live.outerPad,'measure',live.measurePad);
    }
    // iPhone + desktop retain exactly the previous page width, regardless of test updates.
    for(const [w,h,touch,label] of [[390,844,true,'iphone'],[1200,900,false,'desktop-small'],[1440,900,false,'desktop-wide']]){
      const a=await check(browser,stageUrl,w,h,touch,'木业管家 V376',label);
-     const b=await check(browser,prodUrl,w,h,touch,'木业管家 V375',label);
+     const b=await check(browser,prodUrl,w,h,touch,'木业管家 V376',label);
      for(const field of ['app','header','nav','section','quoteBox']){
        assert.ok(Math.abs(a[field].x-b[field].x)<=2,label+' '+field+' left layout changed');
        assert.ok(Math.abs(a[field].right-b[field].right)<=2,label+' '+field+' right layout changed');
