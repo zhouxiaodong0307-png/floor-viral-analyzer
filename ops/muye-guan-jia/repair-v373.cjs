@@ -36,7 +36,7 @@ if(mode==='staging'){
 assert.ok(!html.includes("plan.reason==='verified-v371-mac-backup'"),'do not enable automatic replacement');
 assert.ok(html.includes('本机回退快照保存失败，恢复已停止'),'local rollback snapshot must fail closed');
 assert.ok(html.includes('恢复后完整校验失败'),'verify all records after restore');
-const scripts=[...html.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script>/gi)].filter(m=>!/\\bsrc\\s*=/.test(m[1]));
+const scripts=[...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)].filter(m=>!/\bsrc\s*=/.test(m[1]));
 assert.equal(scripts.length,18,'all inline JS must remain');
 scripts.forEach((m,i)=>new vm.Script(m[2],{filename:'inline-'+i+'.js'}));
 assert.match(html,/const APP_VERSION='373'/);
