@@ -3,6 +3,8 @@ on:
   push:
     branches: [wood-floor-migration-v345-validation]
     paths:
+      - 'floor-assistant-v285/index.html'
+      - 'floor-assistant-v285/version.json'
       - '.github/workflows/muye-browser-smoke.yml'
       - 'ops/muye-guan-jia/smoke-browser.cjs'
       - 'ops/muye-guan-jia/ipad-width-v374.cjs'
