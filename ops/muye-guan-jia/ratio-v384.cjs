@@ -41,6 +41,25 @@ const {chromium}=require('playwright');
       return {step:range.step,range:range.value,manual:manual?.value,saved:snapshot.fields?.measureLoss};
     });
     assert.deepEqual(persistence,{step:'0.1',range:'5.3',manual:'5.3',saved:'5.3'},label+' loss editor and autosave '+JSON.stringify(persistence));
+    // V386: badge/input geometry stays constant through rapid fractional updates.
+    const badgeTest=await page.evaluate(()=>{
+      const range=document.getElementById('measureLoss');
+      const badge=document.querySelector('[data-ratio-for="measureLoss"]');
+      const input=badge.querySelector('.ratio-manual-input');
+      const widths=[],labels=[];
+      for(let i=0;i<80;i++){
+        range.value=String((i%2?19.9:0.1));
+        range.dispatchEvent(new Event('input',{bubbles:true}));
+        widths.push(input.getBoundingClientRect().width);
+        labels.push(badge.dataset.ratioText);
+      }
+      return {widthMin:Math.min(...widths),widthMax:Math.max(...widths),
+        cssContain:getComputedStyle(badge).contain,labels:labels.slice(-2),
+        badgeWidth:badge.getBoundingClientRect().width};
+    });
+    assert.ok(badgeTest.widthMax-badgeTest.widthMin<.1,label+' loss manual input reflows '+JSON.stringify(badgeTest));
+    assert.ok(badgeTest.cssContain.includes('paint'),label+' paint containment missing');
+    assert.deepEqual(badgeTest.labels,['0.1%','19.9%'],label+' display updated');
     let deposit=await track('depositRate',[0,.25,.5,.75,1]);
     assert.deepEqual(deposit,[25,50,75,100],label+' deposit finger tracking '+deposit);
     assert.ok(!errs.some(x=>/SyntaxError|TypeError|ReferenceError/.test(x)),label+' errors '+errs.join('|'));
