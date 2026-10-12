@@ -63,4 +63,54 @@ test('one edited seed prevents unconditional 13-to-24 bootstrap',()=>{
  const real=ids.map(id=>({...a,id,paid:2500})).concat(Array.from({length:11},(_,i)=>({...a,id:'new-'+i})));
  const p=api.cloudSafePlanV362(st(old),st(real));return !p.bootstrap&&p.conflicts.length>0
 });
+
+// V368 regression: verify the *actual* historical-seed detector, not the simplified merge-test stub.
+const sliceBetween=(left,right)=>{
+ const start=html.indexOf(left),end=html.indexOf(right,start+left.length);
+ assert.ok(start>=0&&end>start,'missing source boundary '+left);
+ return html.slice(start,end);
+};
+const seedSource=sliceBetween('function historicalSeedsV33()','function migrateHistoricalOrdersV33()');
+const signatureSource=sliceBetween('function stableSignatureValue(v)','function signatureEntityArray(');
+const pristineSource=sliceBetween('function isPristineHistoricalSeedV346(','function previewMigrationImportV344(');
+const historyOnlySource=sliceBetween('function isPristineHistoryOnlyV366(','function cloudSafePlanV362(');
+const historyApi=new Function(
+ 'const costTotal=b=>Object.values(b).reduce((n,x)=>n+(Number(x)||0),0);'+
+ 'const isProfitKnown=o=>o.profitKnown===true||o.costStatus==="complete";'+
+ 'const lockCompletedCostSnapshot=o=>{o.costSnapshot={lockedAt:new Date().toISOString(),totalCost:o.cost}};'+
+ 'const normalizeDeletedMap=v=>{const a={orders:{},costs:{},products:{},quotes:{}};for(const k of Object.keys(a))a[k]=v?.[k]||{};return a};'+
+ 'const normalizeBusinessStateLike=v=>({orders:v?.orders||[],costs:v?.costs||[],products:v?.products||[],quotes:v?.quotes||[],deleted:normalizeDeletedMap(v?.deleted)});'+
+ 'const isDefaultQuoteSeedOnly=v=>!v.length;'+seedSource+signatureSource+pristineSource+historyOnlySource+
+ 'return {historicalSeedsV33,isPristineHistoricalSeedV346,isPristineHistoryOnlyV366,costTotal,isProfitKnown}'
+)();
+const pristine13=historyApi.historicalSeedsV33().map(o=>{
+ const x={...o,cust:'未命名客户',opener:'',price:0,project:'',status:'已完成',completedAt:o.date,
+ balance:0,paymentMode:'normal',paymentPlan:null,historicalSource:'销售财务助手'};
+ x.cost=historyApi.costTotal(x.costBreakdown);x.profit=x.sales-x.cost;
+ x.margin=historyApi.isProfitKnown(x)&&x.sales?x.profit/x.sales*100:0;
+ return x;
+});
+const official24={orders:[...pristine13.map(x=>({...x,historicalSource:'official',cust:'客户',paid:x.paid+1})),...Array.from({length:11},(_,i)=>({id:2000000000+i}))]};
+const pristineLocal={orders:pristine13};
+test('real 13 legacy records recognized',()=>pristine13.every(x=>historyApi.isPristineHistoricalSeedV346(x)));
+test('real legacy 13-to-24 strictly passes',()=>historyApi.isPristineHistoryOnlyV366(pristineLocal,official24));
+test('edited payment stops replace',()=>{
+ const changed=structuredClone(pristineLocal);changed.orders[0].paid+=10;
+ return !historyApi.isPristineHistoryOnlyV366(changed,official24)
+});
+test('edited profit or cost stops replace',()=>{
+ const changed=structuredClone(pristineLocal);changed.orders[4].cost+=100;
+ return !historyApi.isPristineHistoryOnlyV366(changed,official24)
+});
+test('extra local products stop replace',()=>!historyApi.isPristineHistoryOnlyV366({...pristineLocal,products:[{id:1}]},official24));
+test('local deletion markers stop replace',()=>!historyApi.isPristineHistoryOnlyV366({...pristineLocal,deleted:{orders:{'extra':Date.now()}}},official24));
+test('nonlegacy order IDs stop replace',()=>{
+ const changed=structuredClone(pristineLocal);changed.orders[0].id=123456;
+ return !historyApi.isPristineHistoryOnlyV366(changed,official24)
+});
+assert.match(html,/if\(!isPristineHistoryOnlyV366\(local,remote\)\)[\s\S]{0,200}throw new Error/,'manual recovery must reject edited cache');
+assert.match(html,/countMismatch&&!cloudReadOnly&&!cloudConflict&&cloudStatusOkay!==false/,'conflict status must not be masked');
+assert.match(html,/fetch\(url,\{method:method,cache:'no-store'/,'cloud reads must bypass stale cache');
+assert.equal(version.version,'368','staging version must be 368');
+
 console.log('OK: '+checks+' behavior tests, '+scripts.length+' JS syntax blocks, staging safety checks');
