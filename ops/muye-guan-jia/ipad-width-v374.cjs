@@ -96,7 +96,7 @@ async function check(browser,url,w,h,touch,title,kind){
    // iPhone + desktop retain exactly the previous page width, regardless of test updates.
    for(const [w,h,touch,label] of [[390,844,true,'iphone'],[1200,900,false,'desktop-small'],[1440,900,false,'desktop-wide']]){
      const a=await check(browser,stageUrl,w,h,touch,'木业管家 V374',label);
-     const b=await check(browser,prodUrl,w,h,touch,'木业管家 V373',label);
+     const b=await check(browser,prodUrl,w,h,touch,'木业管家 V374',label);
      for(const field of ['app','header','nav','section','quoteBox']){
        assert.ok(Math.abs(a[field].x-b[field].x)<=2,label+' '+field+' left layout changed');
        assert.ok(Math.abs(a[field].right-b[field].right)<=2,label+' '+field+' right layout changed');
