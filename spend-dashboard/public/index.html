@@ -169,6 +169,31 @@ button:focus-visible,.tab:focus-visible,.close:focus-visible{outline:3px solid r
  .topbar .headActions>.syncBtn{width:27px;min-width:27px}
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Apple system-color consistency pass: neutral surfaces, semantic accents. */
+:root{--bg:#f5f5f7;--card:#ffffff;--ink:#1c1c1e;--muted:#8e8e93;--line:#e5e5ea;--blue:#007aff;--purple:#5856d6;--green:#34c759;--amber:#ff9500;--red:#ff3b30;--cyan:#5ac8fa;--shadow:0 1px 8px rgba(0,0,0,.025)}
+body{background:#f5f5f7;color:#1c1c1e}
+.logo{background:#007aff;box-shadow:none}
+.btn.primary,.statusBtn.sel{background:#007aff;border-color:#007aff;box-shadow:none}
+.tabs{background:#e9e9ed}.tab.active{color:#1c1c1e}
+.kpi,.kpi:nth-child(1),.kpi:nth-child(2),.kpi:nth-child(3),.kpi:nth-child(4),.card,.financeMetric,.structureCard,.paceMetric,.importReportCard{background:#fff;box-shadow:0 1px 8px rgba(0,0,0,.025)}
+.kpi,.card{border-color:#e8e8ed}
+.kValue,.cardTitle,.metricAmount,.sumValue,.financeMetricValue,.paceValue{color:#1c1c1e}
+.kLabel,.kSub,.cardHint,.financeMetricLabel,.sumLabel,.paceLabel{color:#8e8e93}
+.mBar,.fill{background:#007aff}
+.track,.splitTrack{background:#e9e9ed}
+.syncDot.on,.dot{background:#34c759}
+.syncDot.on{box-shadow:0 0 0 3px rgba(52,199,89,.12)}
+.notice,.insightBox,.recurringManageNotice,.snapshotNotice,.qualityIntro{background:#f5f5f7;border-color:#e5e5ea}
+.tag.personal,.tag.good,.recurringStatus.on,.qualityGood{background:#eaf8ee;color:#248a42}
+.tag.pending,.tag.warn{background:#fff4e5;color:#a56700}
+.tag.refund,.tag.expense{background:#fff0ee;color:#bb3028}
+.tag.transfer{background:#edf5ff;color:#0066cc}
+.tag.business{background:#f2f2f7;color:#636366}
+.rankBadge,.pinBadge{box-shadow:none}
+.modalBack{background:rgba(28,28,30,.34)}
+.cloudState,.cloudNote{border-color:#e5e5ea}
+@media(hover:hover){.btn.primary:hover{background:#0069d9;border-color:#0069d9}}
 </style>
 </head>
 <body>
