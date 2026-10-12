@@ -42,6 +42,18 @@ async function smoke(browser,name,url){
     await pass('manual order toggle',()=>page.locator('#orderManagerToggle').click(),()=>page.locator('#orderManagerContent').evaluate(el=>!el.classList.contains('collapsed')));
     await pass('cloud panel toggle',()=>page.locator('#dataSyncPanel > summary').click(),()=>page.locator('#dataSyncPanel').evaluate(el=>el.open));
     await pass('advanced sync panel toggle',()=>page.locator('#dataSyncAdvancedV370 > summary').click(),()=>page.locator('#dataSyncAdvancedV370').evaluate(el=>el.open));
+    if(name==='staging'){
+      const ui=await page.locator('#dataSyncPanel').evaluate(el=>{
+        const panel=el.querySelector('.data-sync-popover'), grid=el.querySelector('#dataSyncAdvancedV370 .data-sync-advanced-content');
+        return {width:panel.getBoundingClientRect().width,columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,maxHeight:getComputedStyle(panel).maxHeight,scroll:panel.scrollHeight,client:panel.clientHeight,actions:grid.querySelectorAll('button').length};
+      });
+      assert.ok(ui.width>=500,'wide responsive panel '+JSON.stringify(ui));
+      assert.equal(ui.columns,2,'two-column maintenance grid');
+      assert.ok(ui.client<=800,'bounded scrollable panel');
+      assert.ok(ui.actions>=8,'all original maintenance actions preserved');
+      console.log('PASS responsive sync panel',JSON.stringify(ui));
+    }
+
     await pass('finance page',()=>page.locator('#navFinance').click(),()=>page.locator('#finance').evaluate(el=>!el.classList.contains('hide')));
     await pass('cost page',()=>page.locator('#navCost').click(),()=>page.locator('#tools').evaluate(el=>!el.classList.contains('hide')));
     await pass('back to customer',()=>page.locator('#internalExitBtn').click(),()=>page.locator('body').evaluate(el=>!el.classList.contains('internal-business')));
