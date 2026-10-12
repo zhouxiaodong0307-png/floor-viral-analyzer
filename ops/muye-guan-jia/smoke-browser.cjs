@@ -25,7 +25,7 @@ async function smoke(browser,name,url){
       const isolated=await page.evaluate(()=>({url:SUPABASE_URL,write:FLOOR_SYNC_WRITE_RELEASED_V363}));
       assert.equal(isolated.url,'','test must never connect to production database');
       assert.equal(isolated.write,false,'test must never write production data');
-    }else { assert.equal(title,'木业管家 V381','production V380 after promotion'); assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','production Mac recovery guard must initialize'); }
+    }else { assert.equal(title,'木业管家 V382','production V382 baseline before promotion'); assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','production Mac recovery guard must initialize'); }
     console.log('PASS',name,'main JS initialized',title);
     // V382: empty brand-new quote must have no pre-created measurement row.
     // Preserve previously saved/restoreable measurements: do not clear browser storage on production.
@@ -38,6 +38,23 @@ async function smoke(browser,name,url){
       await page.locator('#measureRows .measure-delete').first().click();
       assert.equal(await page.locator('#measureRows > .measure-row').count(),0,'V382: deleting final row remains empty');
       console.log('PASS staging V382 no default measurement; category adds; delete returns to empty');
+      // V383 regression: old V381/V382 snapshots can carry one blank placeholder.
+      const seed=async(measures)=>{await page.evaluate(ms=>{
+        localStorage.setItem('floor_last_quote_state_v1',JSON.stringify({
+          version:2,fields:{area:'55',price:'100',species:'柚木'},measures:ms,
+          extras:[],manualOverrides:{area:true,install:false}
+        }));
+      },measures);await page.reload({waitUntil:'domcontentloaded'});};
+      await seed([{kind:'area',floor:'1楼',name:'',expr:''}]);
+      assert.equal(await page.locator('#measureRows > .measure-row').count(),0,'V383: blank historical placeholder should not render');
+      assert.equal(await page.locator('#area').inputValue(),'55','V383: preserve quote area without measurement rows');
+      await seed([{kind:'area',name:'',expr:''},{kind:'area',floor:'1楼',name:'客餐厅',expr:'300×400'}]);
+      assert.equal(await page.locator('#measureRows > .measure-row').count(),1,'V383: preserve filled historical row only');
+      assert.equal(await page.locator('#measureRows .mexpr').inputValue(),'300×400','V383: keep entered dimensions');
+      assert.equal(await page.locator('#area').inputValue(),'55','V383: keep manually set area');
+      await page.evaluate(()=>localStorage.removeItem('floor_last_quote_state_v1'));
+      await page.reload({waitUntil:'domcontentloaded'});
+      console.log('PASS staging V383 blank legacy rows filtered, filled rows and quote values retained');
     }
     // This legacy V58 control is deliberately CSS-hidden in both current layouts.
     if(await page.locator('#statsToggle').isVisible())
