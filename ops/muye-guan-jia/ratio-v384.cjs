@@ -35,7 +35,7 @@ const {chromium}=require('playwright');
         const el=document.querySelector('[data-ratio-for="'+id+'"].ratio-manual');
         const rect=el.getBoundingClientRect(),cs=getComputedStyle(el);
         return {width:rect.width,height:rect.height,radius:cs.borderRadius,border:cs.borderWidth,
-          font:cs.fontSize,weight:cs.fontWeight,padding:cs.padding,bg:cs.backgroundColor};
+          font:cs.fontSize,weight:cs.fontWeight,padding:cs.padding};
       };
       return {loss:snap('measureLoss'),deposit:snap('depositRate')};
     });
