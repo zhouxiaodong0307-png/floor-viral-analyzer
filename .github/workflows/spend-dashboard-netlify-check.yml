@@ -18,9 +18,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: npm
-          cache-dependency-path: spend-dashboard/package-lock.json
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
       - name: Verify production HTML
         run: |
           grep -q "const APP_VERSION='1.5.6'" public/index.html
