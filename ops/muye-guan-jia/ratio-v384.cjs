@@ -29,6 +29,18 @@ const {chromium}=require('playwright');
       },{id,values});
       return result;
     };
+    // V387: verify exact parity of the displayed loss and deposit percentage cards.
+    const getBadge=()=>page.evaluate(()=>{
+      const snap=id=>{
+        const el=document.querySelector('[data-ratio-for="'+id+'"].ratio-manual');
+        const rect=el.getBoundingClientRect(),cs=getComputedStyle(el);
+        return {width:rect.width,height:rect.height,radius:cs.borderRadius,border:cs.borderWidth,
+          font:cs.fontSize,weight:cs.fontWeight,padding:cs.padding,bg:cs.backgroundColor};
+      };
+      return {loss:snap('measureLoss'),deposit:snap('depositRate')};
+    });
+    const badge=await getBadge();
+    assert.deepEqual(badge.loss,badge.deposit,label+' loss/deposit badge dimensions mismatch '+JSON.stringify(badge));
     let loss=await track('measureLoss',[0,.25,.5,.75,1]);
     assert.deepEqual(loss,[5,10,15,20],label+' loss finger tracking '+loss);
     // V385: loss uses 0.1%, not coarse 1% snapping. Preserve the exact manual editor value.
