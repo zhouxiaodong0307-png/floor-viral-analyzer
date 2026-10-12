@@ -189,7 +189,7 @@ const v372TestSource=v372Source.replace(
  "return V371_VERIFIED_MAC_ORDER_HASHES_V372[String(record.id)]||'not-known';"
 );
 const v372Api=new Function(
- 'const normalizeBusinessStateLike=v=>({orders:v?.orders||[],costs:v?.costs||[],products:v?.products||[],quotes:v?.quotes||[],deleted:{orders:{},costs:{},products:{},quotes:{},...(v?.deleted||{})}};'+
+ 'const normalizeBusinessStateLike=v=>({orders:v?.orders||[],costs:v?.costs||[],products:v?.products||[],quotes:v?.quotes||[],deleted:{orders:{},costs:{},products:{},quotes:{},...(v?.deleted||{})}});'+
  'const isDefaultQuoteSeedOnly=v=>!v.length;'+
  'const stableSignatureValue=v=>v;'+
  v372VerifySource+v372TestSource+
