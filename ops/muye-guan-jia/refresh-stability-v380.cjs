@@ -13,10 +13,11 @@ const cases=[
   {label:'iPad Pro landscape',width:1366,height:1024,touch:true,tablet:true},
   {label:'Mac',width:1440,height:900,touch:false,tablet:false}
 ];
+const allCases=[target,'https://muye-guan-jia.onrender.com/'].flatMap((url,i)=>cases.map(item=>({...item,url,label:(i?'production ':'staging ')+item.label})));
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  try{
-  for(const item of cases){
+  for(const item of allCases){
    const context=await browser.newContext({viewport:{width:item.width,height:item.height},hasTouch:item.touch,isMobile:false,deviceScaleFactor:2,locale:'zh-CN',acceptDownloads:false});
    const page=await context.newPage();
    const errors=[];
@@ -39,7 +40,7 @@ const cases=[
    });
    try{
     for(let i=0;i<3;i++){
-      let res=i===0?await page.goto(target,{waitUntil:'domcontentloaded',timeout:120000}):await page.reload({waitUntil:'domcontentloaded',timeout:120000});
+      let res=i===0?await page.goto(item.url,{waitUntil:'domcontentloaded',timeout:120000}):await page.reload({waitUntil:'domcontentloaded',timeout:120000});
       assert.ok(res&&res.status()<400,item.label+' navigation HTTP');
       await page.waitForFunction(()=>document.documentElement.classList.contains('muye-ui-ready')&&typeof show==='function',{timeout:20000});
       await page.waitForTimeout(250);
