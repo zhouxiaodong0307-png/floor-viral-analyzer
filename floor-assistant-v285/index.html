@@ -5991,8 +5991,6 @@ body .app #quote [data-ratio-for="measureLoss"].ratio-manual{
   min-height:var(--v387-deposit-badge-height,30px)!important;
   max-height:var(--v387-deposit-badge-height,30px)!important;
   border-radius:var(--v387-deposit-badge-radius,7px)!important;
-  background:var(--v387-deposit-badge-bg,#111)!important;
-  border-color:var(--v387-deposit-badge-border,#4a4a4a)!important;
   padding:var(--v387-deposit-badge-padding,0px 8px)!important;
   font-size:var(--v387-deposit-badge-font,14px)!important;
   font-weight:var(--v387-deposit-badge-weight,400)!important;
@@ -6016,17 +6014,12 @@ body .app #quote [data-ratio-for="measureLoss"] .ratio-manual-input{
      '--v387-deposit-badge-width':rect.width+'px',
      '--v387-deposit-badge-height':rect.height+'px',
      '--v387-deposit-badge-radius':cs.borderRadius,
-     '--v387-deposit-badge-bg':cs.backgroundColor,
-     '--v387-deposit-badge-border':cs.borderColor,
      '--v387-deposit-badge-padding':cs.padding,
      '--v387-deposit-badge-font':cs.fontSize,
      '--v387-deposit-badge-weight':cs.fontWeight,
      '--v387-deposit-badge-leading':cs.lineHeight
    };
    for(var name in values){if(loss.style.getPropertyValue(name)!==values[name])loss.style.setProperty(name,values[name])}
-   // Stronger legacy theme selectors override CSS variables; copy the reference paint directly.
-   if(loss.style.getPropertyValue('background-color')!==cs.backgroundColor)loss.style.setProperty('background-color',cs.backgroundColor,'important');
-   if(loss.style.getPropertyValue('border-color')!==cs.borderColor)loss.style.setProperty('border-color',cs.borderColor,'important');
  }
  var attempts=0;
  function start(){
