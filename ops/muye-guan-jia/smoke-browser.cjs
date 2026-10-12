@@ -20,12 +20,12 @@ async function smoke(browser,name,url){
     assert.equal(await page.locator('#quote').count(),1);
     const title=await page.title();
     if(name==='staging'){
-      assert.equal(title,'木业管家 V378','staging must serve actual V375 code');
+      assert.equal(title,'木业管家 V379','staging must serve actual V375 code');
       assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','staging recovery guard must initialize');
       const isolated=await page.evaluate(()=>({url:SUPABASE_URL,write:FLOOR_SYNC_WRITE_RELEASED_V363}));
       assert.equal(isolated.url,'','test must never connect to production database');
       assert.equal(isolated.write,false,'test must never write production data');
-    }else { assert.equal(title,'木业管家 V377','production must serve V375'); assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','production Mac recovery guard must initialize'); }
+    }else { assert.equal(title,'木业管家 V379','production must serve V375'); assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','production Mac recovery guard must initialize'); }
     console.log('PASS',name,'main JS initialized',title);
     // This legacy V58 control is deliberately CSS-hidden in both current layouts.
     if(await page.locator('#statsToggle').isVisible())
