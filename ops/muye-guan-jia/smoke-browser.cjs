@@ -348,12 +348,69 @@ async function measurementArchiveRegression(browser){
   }finally{await context.close()}
 }
 
+
+async function focusWithoutShadowV402(browser,width,height){
+  const context=await browser.newContext({viewport:{width,height},hasTouch:true,isMobile:true,deviceScaleFactor:2,locale:'zh-CN'});
+  const page=await context.newPage();
+  const errors=[];page.on('pageerror',e=>errors.push(String(e)));
+  try{
+    await page.goto('https://muye-guan-jia-migration-test.onrender.com/',{waitUntil:'domcontentloaded',timeout:120000});
+    await page.waitForFunction(()=>typeof addMeasureRow==='function'&&document.querySelector('#quote .measure-card-v273'));
+    await page.evaluate(()=>{
+      clearQuoteInputs();
+      addMeasureRow('房间1','325×430');
+    });
+    const input=page.locator('#quote .measure-row:not(.stair-row) .mexpr').last();
+    const name=page.locator('#quote .measure-row:not(.stair-row) .mname').last();
+    const symbols=page.locator('#quote .measure-row:not(.stair-row) .measure-inline-symbol');
+    const probe=()=>page.evaluate(()=>{
+      const wrap=document.querySelector('#quote .measure-row:not(.stair-row) .measure-input-wrap');
+      const input=wrap.querySelector('.mexpr'),style=getComputedStyle(wrap),rect=wrap.getBoundingClientRect();
+      return {focused:wrap.matches(':focus-within'),active:document.activeElement===input,
+        shadow:style.boxShadow,outline:style.outlineStyle,border:style.borderTopWidth,
+        borderColor:style.borderTopColor,transition:style.transitionDuration,
+        highlight:getComputedStyle(input).webkitTapHighlightColor,
+        width:rect.width,height:rect.height,value:input.value,inputMode:input.inputMode};
+    });
+    const baseline=await probe();
+    for(let i=0;i<4;i++){
+      await name.tap();
+      await input.tap();
+      const focused=await probe();
+      assert.equal(focused.focused,true,'V402 compound field should be focused');
+      assert.equal(focused.active,true,'V402 actual input should take focus');
+      assert.equal(focused.shadow,'none','V402 focus must not create background shadow');
+      assert.equal(focused.outline,'none','V402 focus must not create doubled outline');
+      assert.equal(focused.transition,'0s','V402 focus must not animate shadow');
+      assert.equal(focused.border,baseline.border,'V402 border thickness must stay fixed');
+      assert.ok(Math.abs(focused.width-baseline.width)<1,'V402 focus must not resize wrapper');
+      assert.ok(Math.abs(focused.height-baseline.height)<1,'V402 focus must not resize wrapper height');
+      assert.equal(focused.inputMode,'decimal','V401 numeric keypad must remain');
+      assert.ok(focused.highlight==='rgba(0, 0, 0, 0)'||focused.highlight==='transparent','V402 tap highlight must be transparent '+focused.highlight);
+    }
+    // Verify symbol buttons still insert into the active field and recalculate.
+    await symbols.nth(1).tap();
+    const last=await page.evaluate(()=>{
+      const input=document.querySelector('#quote .measure-row:not(.stair-row) .mexpr');
+      return {value:input.value,valid:parseMeasureExpr(input.value),hasBoxShadow:getComputedStyle(input.closest('.measure-input-wrap')).boxShadow};
+    });
+    assert.ok(last.value.includes('+'),'V402 + button must still insert');
+    assert.equal(last.hasBoxShadow,'none','V402 buttons must not re-create focus shadow');
+    assert.ok(Number.isFinite(last.valid),'V402 area calculation remains valid');
+    assert.ok(!errors.some(x=>/SyntaxError|TypeError|ReferenceError/.test(x)),'V402 unexpected page error: '+errors.join('; '));
+    console.log('PASS V402 focus without shadow, size stability, tapping 4x, symbol insertion',width+'x'+height);
+  }catch(err){await page.screenshot({path:'/tmp/muye-v402-shadow-'+width+'.png',fullPage:true}).catch(()=>{});throw err}
+  finally{await context.close()}
+}
+
 (async()=>{
   const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
   try{
     await smoke(browser,'staging','https://muye-guan-jia-migration-test.onrender.com/');
     await contractRegression(browser);
     await measurementArchiveRegression(browser);
+    await focusWithoutShadowV402(browser,390,844);
+    await focusWithoutShadowV402(browser,820,1180);
     await smoke(browser,'production-readonly','https://muye-guan-jia.onrender.com/');
   }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
