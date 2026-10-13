@@ -266,6 +266,26 @@ async function measurementArchiveRegression(browser){
     assert.equal(afterReload.status.rowCount,10,'reload must preserve all 10 rooms');
     assert.deepEqual(afterReload.status.floors,['2楼','3楼','4楼']);
     assert.equal(afterReload.state,true,'local cloud state serialization must preserve raw expression');
+
+    const edited=await page.evaluate(id=>{
+      const before=orders().find(x=>String(x.id)===String(id));
+      const oldDate=before.date;
+      openOrderEdit(id);
+      const editing=document.getElementById('orderEditModal');
+      const modalOpened=!editing.classList.contains('hide');
+      document.getElementById('eCust').value='别墅量房档案回归（已编辑）';
+      saveOrderEdit();
+      const latest=orders().find(x=>String(x.id)===String(id));
+      return {modalOpened,updated:latest?.cust==='别墅量房档案回归（已编辑）',
+        rows:latest?.measureSnapshot?.rows?.length||0,floors:latest?.measureSnapshot?.floors?.map(x=>x.name)||[],
+        expression:latest?.measureSnapshot?.rows?.[0]?.expr,oldDate};
+    },id);
+    assert.equal(edited.modalOpened,true,'existing order editor must open');
+    assert.equal(edited.updated,true,'existing order edit must commit');
+    assert.equal(edited.rows,10,'editing normal order fields must not lose archived rooms');
+    assert.deepEqual(edited.floors,['2楼','3楼','4楼']);
+    assert.equal(edited.expression,'655x170+895x120');
+    
     // Legacy manual orders without snapshots should not show fabricated measurements.
     const legacy=await page.evaluate(()=>orderRowDetailHtml({id:9913922,cust:'历史订单',date:'2026/1/1',status:'进行中',sales:100,paid:0,products:[]}));
     assert.ok(!legacy.includes('order-measure-archive'),'legacy order must not invent survey records');
