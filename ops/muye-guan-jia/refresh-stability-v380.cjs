@@ -55,7 +55,10 @@ const allCases=[target,'https://muye-guan-jia.onrender.com/'].flatMap((url,i)=>c
           await page.waitForLoadState('domcontentloaded',{timeout:15000}).catch(()=>{});
         }
       }
-      assert.equal(state.version,item.url===target?'V404':'V404',item.label+' version');
+      const versionRes=await context.request.get(new URL('version.json?check='+Date.now(),item.url).toString());
+      assert.ok(versionRes.ok(),item.label+' version file missing');
+      const expectedVersion=String((await versionRes.json()).version);
+      assert.equal(state.version,'V'+expectedVersion,item.label+' version');
       assert.equal(state.stylesAfterHead,0,item.label+' late styles');
       assert.ok(state.cssGuard,item.label+' first-paint guard');
       assert.ok(state.frames.length>0,item.label+' no frame samples');
