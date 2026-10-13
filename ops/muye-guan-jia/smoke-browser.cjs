@@ -199,11 +199,111 @@ async function contractRegression(browser){
   finally{await context.close()}
 }
 
+
+async function measurementArchiveRegression(browser){
+  const context=await browser.newContext({viewport:{width:390,height:844},locale:'zh-CN'});
+  const page=await context.newPage();const errors=[];
+  page.on('pageerror',e=>errors.push(String(e)));
+  page.on('dialog',d=>d.type()==='prompt'?d.accept('0'):d.accept());
+  try{
+    const response=await page.goto('https://muye-guan-jia-migration-test.onrender.com/',{waitUntil:'domcontentloaded'});
+    assert.ok(response?.ok(),'V400 isolated staging not reachable');
+    await page.waitForFunction(()=>typeof window.muyeMeasureArchiveStatusV400==='function'&&typeof confirmCurrentQuote==='function');
+    const result=await page.evaluate(()=>{
+      const measure=[
+       {floor:'2楼',name:'过道',expr:'655x170+895x120'},
+       {floor:'2楼',name:'房间1',expr:'325x430'},
+       {floor:'2楼',name:'房间2',expr:'325x380'},
+       {floor:'3楼',name:'房间1',expr:'135x170+320x268'},
+       {floor:'3楼',name:'房间2',expr:'325x376+60x105'},
+       {floor:'3楼',name:'房间3',expr:'316x330'},
+       {floor:'3楼',name:'房间4',expr:'355x345+210x100'},
+       {floor:'3楼',name:'过道',expr:'120x390'},
+       {floor:'3楼',name:'客餐厅',expr:'350x460'},
+       {floor:'4楼',name:'房间1',expr:'300x340'}
+      ];
+      const config={
+        version:2,measureFloors:['2楼','3楼','4楼'],activeMeasureFloor:'3楼',
+        fields:{cust:'别墅量房档案回归',species:'缅甸柚木',spec:'740×115×17',price:'300',measureLoss:'5',depositRate:'50',paymentMode:'normal'},
+        measures:measure.map(x=>({...x,kind:'area'})),extras:[],manualOverrides:{area:false,install:false}
+      };
+      applyQuoteDraft(config);
+      const quoted=calc();
+      const prevCount=orders().length;
+      const created=confirmCurrentQuote(true);
+      const id=window.currentQuoteOrderId;
+      const o=orders().find(x=>String(x.id)===String(id));
+      const m=o?.measureSnapshot;
+      return {created,id,oldCount:prevCount,newCount:orders().length,
+        floors:m?.floors?.map(x=>x.name),rows:m?.rows?.map(x=>({floor:x.floor,name:x.name,expr:x.expr,area:x.area})),
+        measured:m?.measuredArea,quotedArea:o?.area,quotedTotal:o?.sales,
+        areaBefore:quoted.area,orderHtml:o?orderRowDetailHtml(o):'',cloudData:currentBusinessState().orders.some(x=>String(x.id)===String(id)&&x.measureSnapshot?.rows?.length===10)};
+    });
+    assert.equal(result.created,true,'V400 quote conversion failed');
+    assert.equal(result.newCount,result.oldCount+1,'must create exactly one order');
+    assert.deepEqual(result.floors,['2楼','3楼','4楼'],'must preserve 2-4 floors without fabricating first floor');
+    assert.equal(result.rows.length,10,'must preserve all ten original room entries');
+    assert.equal(result.rows[0].expr,'655x170+895x120','must preserve original calculation formula');
+    assert.equal(result.rows[3].name,'房间1','duplicate room names across floors are valid');
+    assert.ok(Math.abs(result.measured-130.16)<0.02,'room area total '+result.measured);
+    assert.equal(result.cloudData,true,'JSON cloud payload must include archive');
+    assert.ok(result.orderHtml.includes('量房明细')&&result.orderHtml.includes('2楼')&&result.orderHtml.includes('4楼'),'order must display archived measurement');
+    const id=result.id;
+    const afterClear=await page.evaluate(id=>{
+      clearQuoteInputs();
+      const o=orders().find(x=>String(x.id)===String(id));
+      return {exists:!!o?.measureSnapshot,rooms:o?.measureSnapshot?.rows?.length,
+        html:orderRowDetailHtml(o),quoteRows:document.querySelectorAll('#measureRows .measure-row').length};
+    },id);
+    assert.equal(afterClear.quoteRows,0,'quote clear must still clear quote');
+    assert.equal(afterClear.rooms,10,'quote clear must not delete archived order record');
+    assert.ok(afterClear.html.includes('过道'),'room lookup must survive quote clear');
+    await page.reload({waitUntil:'domcontentloaded'});
+    const afterReload=await page.evaluate(id=>{
+      const o=orders().find(x=>String(x.id)===String(id));
+      return {status:muyeMeasureArchiveStatusV400(id),html:o?orderRowDetailHtml(o):'',state:JSON.stringify(currentBusinessState()).includes('655x170+895x120')};
+    },id);
+    assert.equal(afterReload.status.rowCount,10,'reload must preserve all 10 rooms');
+    assert.deepEqual(afterReload.status.floors,['2楼','3楼','4楼']);
+    assert.equal(afterReload.state,true,'local cloud state serialization must preserve raw expression');
+    // Legacy manual orders without snapshots should not show fabricated measurements.
+    const legacy=await page.evaluate(()=>orderRowDetailHtml({id:9913922,cust:'历史订单',date:'2026/1/1',status:'进行中',sales:100,paid:0,products:[]}));
+    assert.ok(!legacy.includes('order-measure-archive'),'legacy order must not invent survey records');
+    // Stairway and manual quote-area overrides require separate measurement and billing amounts.
+    const stair=await page.evaluate(()=>{
+      applyQuoteDraft({version:2,measureFloors:['2楼'],activeMeasureFloor:'2楼',
+       fields:{cust:'楼梯明细回归',species:'柚木',spec:'910×125×18',price:'300',area:'100',measureLoss:'5',depositRate:'50',paymentMode:'normal'},
+       measures:[{kind:'stair',floor:'2楼',name:'楼梯A',width:'120',depth:'30',count:'12',riser:'18',platform:'120x100'}],
+       extras:[],manualOverrides:{area:true,install:false}});
+      const pre=calc();
+      const made=confirmCurrentQuote(true),id=window.currentQuoteOrderId;
+      const order=orders().find(x=>String(x.id)===String(id));
+      return {made,quotedArea:pre.area,rows:order?.measureSnapshot?.rows,
+        measured:order?.measureSnapshot?.measuredArea,manual:order?.measureSnapshot?.manuallyAdjustedArea,
+        details:order?orderRowDetailHtml(order):''};
+    });
+    assert.equal(stair.made,true,'stair quote conversion failed');
+    assert.equal(stair.rows.length,1,'one stair must be archived');
+    assert.equal(stair.rows[0].width,'120','must store staircase original dimensions');
+    assert.equal(stair.rows[0].platform,'120x100','must store staircase platform expression');
+    assert.ok(Math.abs(stair.measured-8.112)<0.001,'stair area must follow quote logic');
+    assert.equal(stair.quotedArea,100,'manual quoted area must remain authoritative');
+    assert.equal(stair.manual,true,'manual area override must be recorded, not overwritten');
+    assert.ok(stair.details.includes('100.00㎡'),'manual billed source must be visible alongside raw survey');
+    assert.ok(!errors.some(e=>/SyntaxError|TypeError|ReferenceError/.test(e)),'runtime errors '+errors.join('; '));
+    console.log('PASS V400 2F-4F 10 rooms, stair archive, original formulas, quote clear, reload, manual overrides, legacy compatibility and cloud serialization');
+  }catch(e){
+    await page.screenshot({path:'/tmp/muye-survey-v400.png',fullPage:true}).catch(()=>{});
+    console.error('FAIL V400 measurement archive',String(e),errors);throw e;
+  }finally{await context.close()}
+}
+
 (async()=>{
   const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
   try{
     await smoke(browser,'staging','https://muye-guan-jia-migration-test.onrender.com/');
     await contractRegression(browser);
+    await measurementArchiveRegression(browser);
     await smoke(browser,'production-readonly','https://muye-guan-jia.onrender.com/');
   }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
