@@ -546,7 +546,7 @@ async function orderDetailRegressionV404(browser){
       assert.ok((await page.locator('.m404-page').innerText()).includes('尚无逐笔收款记录'),'V404 never invents payment history');
       await page.locator('[data-tab="info"]').click();
       assert.ok((await page.locator('.m404-page').innerText()).includes('交货信息'),'V404 other details');
-      await page.locator('.m404-more-btn').click();
+      await page.locator('.m404-dots').click();
       assert.equal(await page.locator('.m404-action-menu button').count(),3,'V404 legacy actions retained');
       await page.evaluate(()=>{window.__v404ActionId=null;window.recordPayment=function(id){window.__v404ActionId=id}});
       await page.locator('.m404-pay-btn').click();
