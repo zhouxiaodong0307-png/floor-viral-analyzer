@@ -62,6 +62,66 @@ const URL='https://muye-guan-jia-migration-test.onrender.com/';
    });
    assert.ok(menuAlignment.menuTop>=menuAlignment.topY-4&&menuAlignment.menuTop<menuAlignment.buttonBottom+55,'More should open near top-right '+JSON.stringify(menuAlignment));
    assert.equal(await page.evaluate(()=>JSON.stringify(orders()[0])),value.order,'UI tests must not mutate orders');
+   // The shared app style once added 14px horizontal section margins: every card must now align with tabs.
+   const align=await page.evaluate(()=>{
+     const rect=sel=>{const x=document.querySelector(sel).getBoundingClientRect();return{x:x.x,right:x.right,width:x.width}};
+     document.querySelector('#muyeOrderDetailV404 .m404-dots').click();
+     document.querySelector('#muyeOrderDetailV404 [data-tab="items"]').click();
+     return {tabs:rect('#muyeOrderDetailV404 .m404-tabs'),overview:rect('#muyeOrderDetailV404 .m404-overview'),items:rect('#muyeOrderDetailV404 .m404-items-card'),money:rect('#muyeOrderDetailV404 .m404-money'),overviewCells:[...document.querySelectorAll('#muyeOrderDetailV404 .m404-overview-grid>div')].map(x=>x.getBoundingClientRect().width)};
+   });
+   for(const name of ['overview','items','money']){
+     assert.ok(Math.abs(align[name].x-align.tabs.x)<=1.5&&Math.abs(align[name].right-align.tabs.right)<=1.5,'card must align with tabs '+name+' '+JSON.stringify(align));
+   }
+   assert.equal(align.overviewCells.length,3,'three overview metrics');
+   assert.ok(align.overviewCells.every(w=>Math.abs(w-align.overviewCells[0])<=1.5),'equal thirds '+JSON.stringify(align));
+   if(width===375){
+     // Use only synthetic browser-local data; never call cloud APIs or production persistence.
+     await page.evaluate(()=>{
+       const o=orders()[0];
+       localStorage.setItem('floor_orders_v3',JSON.stringify([o]));
+       window.orders=()=>JSON.parse(localStorage.getItem('floor_orders_v3')||'[]');
+       window.muyeOrderDetailV404.refresh();
+     });
+     await page.locator('#muyeOrderDetailV404 [data-m404="profit"]').click();
+     assert.equal(await page.locator('#muyeProfitEditorV407:not([hidden]) #m407-profit-input').count(),1,'profit input opens');
+     await page.locator('#m407-profit-input').fill('-125.50');
+     await page.locator('#muyeProfitEditorV407 [data-profit-action="save"]').click();
+     let state=await page.evaluate(()=>{
+       const x=orders()[0];return{manual:x.manualProfitV407?.amount,costStatus:x.costStatus,sales:calcOrderFinalAmount(x),paid:x.paid,known:isProfitKnown(x),profit:orderAccurateProfit(x),cost:orderRecordedCost(x),eventCount:x.eventHistory?.length||0,shown:document.querySelector('#muyeOrderDetailV404 [data-m404="profit"]')?.textContent||''};
+     });
+     assert.equal(state.manual,-125.5,'manual profit persists in order record');
+     assert.equal(state.known,false,'incomplete costs cannot become statistically accurate from override');
+     assert.equal(state.profit,-125.5,'profit evaluator honors explicitly entered value');
+     assert.equal(state.cost,0,'actual cost cannot be silently edited');
+     assert.equal(state.sales,34125,'manual profit cannot change sales');
+     assert.equal(state.paid,0,'manual profit cannot change received money');
+     assert.ok(state.eventCount>=1&&state.shown.includes('手动'),'manual adjustment requires audit and label');
+     await page.reload({waitUntil:'domcontentloaded'});
+     await page.waitForFunction(()=>window.muyeOrderDetailV404Ready===true,{timeout:20000});
+     await page.evaluate(()=>window.muyeOrderDetailV404.open(999995406));
+     assert.equal(await page.evaluate(()=>orders().find(x=>x.id===999995406)?.manualProfitV407?.amount),-125.5,'manual profit must survive reload');
+     await page.locator('#muyeOrderDetailV404 [data-m404="profit"]').click();
+     await page.locator('#muyeProfitEditorV407 [data-profit-action="restore"]').click();
+     assert.equal(await page.evaluate(()=>orders().find(x=>x.id===999995406)?.manualProfitV407===undefined),true,'restore automatic profit removes only manual override');
+     assert.ok((await page.locator('#muyeOrderDetailV404 [data-m404="profit"]').innerText()).includes('待补成本'),'unknown profit restored to pending cost');
+     const snap=await page.evaluate(()=>{
+       const arr=orders();arr[0].costStatus='complete';arr[0].profitKnown=true;arr[0].costBreakdown={floor:24000,install:0,batten:0,skirt:0,material:0,freight:0,remove:0,other:0};
+       localStorage.setItem('floor_orders_v3',JSON.stringify(arr));window.muyeOrderDetailV404.refresh();
+       return {profit:orderAccurateProfit(orders()[0]),known:isProfitKnown(orders()[0])};
+     });
+     assert.equal(snap.profit,10125,'auto accurate profit should equal sale minus real cost');
+     assert.equal(snap.known,true);
+     await page.locator('#muyeOrderDetailV404 [data-m404="profit"]').click();
+     await page.locator('#m407-profit-input').fill('12000.25');
+     await page.locator('#muyeProfitEditorV407 [data-profit-action="save"]').click();
+     const final=await page.evaluate(()=>{const o=orders()[0];return{manual:o.manualProfitV407.amount,shown:orderAccurateProfit(o),known:isProfitKnown(o),cost:orderRecordedCost(o),sales:calcOrderFinalAmount(o)}});
+     assert.equal(final.manual,12000.25);
+     assert.equal(final.shown,12000.25);
+     assert.equal(final.known,true);
+     assert.equal(final.cost,24000);
+     assert.equal(final.sales,34125);
+   }
+
    assert.equal(errors.length,0,'page errors: '+errors.join(' | '));
    console.log('PASS V407 order-details responsive, editfocus and no mutation',width,JSON.stringify(layout.buttons));
    await ctx.close();
