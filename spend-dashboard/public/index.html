@@ -215,6 +215,13 @@ body{background:#f5f5f7;color:#1c1c1e}
  .topbar .headActions>.btn{padding:7px 5px}
  .topbar .headActions>.syncBtn{min-width:26px;padding:7px 6px}
 }
+
+/* Header controls: content-sized at every viewport, including desktop-mode iPad/iPhone. */
+.topbar .headActions{gap:6px;flex:0 0 auto}
+.topbar .headActions>.btn{width:max-content;flex:0 0 auto;padding-inline:10px}
+.topbar .yearSel{box-sizing:border-box;appearance:none;-webkit-appearance:none;width:76px;min-width:76px;max-width:76px;padding:8px 21px 8px 9px;font-size:13px;line-height:1.2;letter-spacing:0;background-color:#fff;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%233c3c43' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5-5 5 5M7 14l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center;background-size:11px 11px}
+@media(max-width:820px){.topbar .headActions{gap:4px}.topbar .headActions>.btn{padding-inline:6px}.topbar .yearSel{width:69px;min-width:69px;max-width:69px;padding:7px 18px 7px 6px;font-size:12px;background-position:right 4px center;background-size:10px 10px}}
+@media(max-width:390px){.topbar .yearSel{width:67px;min-width:67px;max-width:67px;padding-right:18px;padding-left:5px}}
 </style>
 </head>
 <body>
