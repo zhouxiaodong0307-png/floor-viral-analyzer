@@ -128,7 +128,7 @@ test('V371 missing payment event rejected',()=>{const orders=structuredClone(sam
 test('V371 missing product baseline rejected',()=>{assert.throws(()=>verifyCloud({...sampleCloud,products:sampleCloud.products.slice(0,3)}));return true});
 assert.match(html,/countMismatch&&!cloudReadOnly&&!cloudConflict&&cloudStatusOkay!==false/,'conflict status must not be masked');
 assert.match(html,/fetch\(url,\{method:method,cache:'no-store'/,'cloud reads must bypass stale cache');
-assert.equal(version.version,'403','staging version must be V403');
+assert.equal(version.version,'404','staging version must be V404');
 assert.ok(html.indexOf('id="v374-ipad-both-orientations-content-width"') < html.indexOf("</head><body>"),"iPad critical CSS must be in head");
 
 
