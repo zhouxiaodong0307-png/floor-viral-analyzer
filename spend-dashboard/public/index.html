@@ -64,7 +64,7 @@
  .topbar .brandTitle{font-size:clamp(12px,3.4vw,17px);letter-spacing:-.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .topbar>.grow{display:none}
  .topbar>.headActions{display:flex;flex:0 0 auto;width:auto;min-width:0;align-items:center;gap:4px}
- .topbar .yearSel{width:66px;min-width:0;max-width:66px;padding:7px 15px 7px 5px;border-radius:9px;font-size:12px}
+ 
  .topbar .headActions>.btn{min-width:0;padding:8px 6px;font-size:11px;border-radius:9px}
  .topbar .headActions>.syncBtn{display:inline-flex;align-items:center;justify-content:center;width:31px;min-width:31px;padding:8px 0}
  .topbar .headActions #backupBtn{display:inline-flex;align-items:center;justify-content:center}
@@ -74,7 +74,7 @@
  .topbar .brandTitle{font-size:12px}
  .topbar .headActions{gap:3px}
  .topbar .headActions>.btn{font-size:10px;padding:7px 4px}
- .topbar .yearSel{width:60px;max-width:60px;font-size:11px}
+ 
  .topbar .headActions>.syncBtn{width:27px;min-width:27px}
 }
 
@@ -155,7 +155,7 @@ button:focus-visible,.tab:focus-visible,.close:focus-visible{outline:3px solid r
  .topbar .headActions{gap:4px}
  .topbar .headActions>.btn{font-size:11px;padding:8px 5px;border-radius:9px}
  .topbar .headActions>.syncBtn{width:30px;min-width:30px}
- .topbar .yearSel{width:63px;max-width:63px;font-size:12px;padding:7px 14px 7px 5px}
+ 
  .tabs{margin:12px 0;gap:2px}
  .tab{padding:9px 12px;font-size:12px}
  .card,.kpi{padding:14px;border-radius:16px}
@@ -165,7 +165,7 @@ button:focus-visible,.tab:focus-visible,.close:focus-visible{outline:3px solid r
 @media(max-width:390px){
  .topbar .brandTitle{font-size:12px}
  .topbar .headActions>.btn{font-size:10px;padding:7px 4px}
- .topbar .yearSel{width:60px;max-width:60px;font-size:11px}
+ 
  .topbar .headActions>.syncBtn{width:27px;min-width:27px}
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
@@ -195,50 +195,29 @@ body{background:#f5f5f7;color:#1c1c1e}
 .cloudState,.cloudNote{border-color:#e5e5ea}
 @media(hover:hover){.btn.primary:hover{background:#0069d9;border-color:#0069d9}}
 
-/* Mobile year picker: reserve a full native spinner gutter, prevent text overlap. */
+/* Single source of truth for year picker. Native select stays fully interactive. */
+.topbar .headActions{align-items:center;gap:6px;flex:0 0 auto}
+.topbar .headActions>.btn{display:inline-flex;align-items:center;justify-content:center;height:38px;min-height:38px;box-sizing:border-box;flex:0 0 auto;width:max-content;padding-inline:10px;line-height:20px}
+.topbar .headActions>.syncBtn{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.topbar .yearPicker{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:4px;flex:0 0 auto;width:max-content;height:38px;min-height:38px;box-sizing:border-box;padding:0 9px;border:1px solid #dedee3;border-radius:11px;background:#fff;color:#1c1c1e;white-space:nowrap;cursor:pointer;user-select:none;-webkit-user-select:none;transition:border-color .16s,box-shadow .16s}
+.topbar .yearPicker #yearDisplay{font-size:13px;line-height:20px;font-weight:610;letter-spacing:0;font-variant-numeric:tabular-nums;pointer-events:none}
+.topbar .yearPicker .yearChevron{width:10px;height:10px;flex:0 0 10px;color:#3c3c43;pointer-events:none}
+.topbar .yearPicker select.yearSel{position:absolute;inset:0;display:block;width:100%;min-width:0;max-width:none;height:100%;margin:0;padding:0;border:0;border-radius:inherit;opacity:0;appearance:none;-webkit-appearance:none;background:none;box-shadow:none;cursor:pointer;font-size:16px}
+.topbar .yearPicker:hover{border-color:#c9c9d0}
+.topbar .yearPicker:focus-within{border-color:#007aff;box-shadow:0 0 0 3px rgba(0,122,255,.12)}
 @media(max-width:820px){
- .topbar .yearSel{width:74px;max-width:74px;min-width:74px;padding:7px 25px 7px 7px;font-size:12px;letter-spacing:0;box-sizing:border-box;appearance:none;-webkit-appearance:none;background-color:#fff;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%233c3c43' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5-5 5 5M7 14l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 7px center;background-size:12px 12px}
-}
-@media(max-width:390px){.topbar .yearSel{width:69px;max-width:69px;min-width:69px;padding-right:22px;padding-left:5px;background-position:right 5px center}}
-
-/* Compact intrinsic-width header controls; preserve readable year and sync status. */
-@media(max-width:820px){
- .topbar .headActions{gap:5px;flex:0 0 auto}
- .topbar .yearSel{width:68px;max-width:68px;min-width:68px;padding:7px 20px 7px 7px;background-position:right 5px center;background-size:10px 10px}
- .topbar .headActions>.btn{width:auto;flex:0 0 auto;min-width:0;padding:8px 9px;white-space:nowrap}
- .topbar .headActions>.syncBtn{width:auto;min-width:28px;padding:8px 9px;gap:5px}
- .topbar .syncBtn .syncText{display:none}
+ .topbar .headActions{gap:4px}
+ .topbar .headActions>.btn{height:34px;min-height:34px;line-height:18px;padding-inline:6px}
+ .topbar .headActions>.syncBtn{gap:5px}
+ .topbar .yearPicker{height:34px;min-height:34px;padding:0 7px;gap:4px;border-radius:9px}
+ .topbar .yearPicker #yearDisplay{font-size:12px;line-height:18px}
+ .topbar .yearPicker .yearChevron{width:9px;height:9px;flex-basis:9px}
 }
 @media(max-width:390px){
  .topbar .headActions{gap:3px}
- .topbar .yearSel{width:65px;max-width:65px;min-width:65px;padding:7px 18px 7px 5px;background-position:right 4px center}
- .topbar .headActions>.btn{padding:7px 5px}
- .topbar .headActions>.syncBtn{min-width:26px;padding:7px 6px}
+ .topbar .headActions>.btn{padding-inline:5px}
+ .topbar .yearPicker{padding-inline:6px;gap:3px}
 }
-
-/* Header controls: content-sized at every viewport, including desktop-mode iPad/iPhone. */
-.topbar .headActions{gap:6px;flex:0 0 auto}
-.topbar .headActions>.btn{width:max-content;flex:0 0 auto;padding-inline:10px}
-.topbar .yearSel{box-sizing:border-box;appearance:none;-webkit-appearance:none;width:76px;min-width:76px;max-width:76px;padding:8px 21px 8px 9px;font-size:13px;line-height:1.2;letter-spacing:0;background-color:#fff;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%233c3c43' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5-5 5 5M7 14l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center;background-size:11px 11px}
-@media(max-width:820px){.topbar .headActions{gap:4px}.topbar .headActions>.btn{padding-inline:6px}.topbar .yearSel{width:69px;min-width:69px;max-width:69px;padding:7px 18px 7px 6px;font-size:12px;background-position:right 4px center;background-size:10px 10px}}
-@media(max-width:390px){.topbar .yearSel{width:67px;min-width:67px;max-width:67px;padding-right:18px;padding-left:5px}}
-
-/* Align year selector and adjacent status / backup buttons on one baseline. */
-.topbar .headActions{align-items:center}
-.topbar .yearSel,.topbar .headActions>.btn{height:38px;min-height:38px;box-sizing:border-box;vertical-align:middle;line-height:20px}
-.topbar .headActions>.btn{display:inline-flex;align-items:center;justify-content:center}
-.topbar .headActions>.syncBtn{display:inline-flex;align-items:center;justify-content:center;gap:6px}
-@media(max-width:820px){.topbar .yearSel,.topbar .headActions>.btn{height:34px;min-height:34px;line-height:18px}}
-
-/* Final compact year control: text and chevron visually grouped. */
-.topbar .yearSel{width:64px;min-width:64px;max-width:64px;padding:0 17px 0 7px;background-position:right 4px center;background-size:10px 10px;letter-spacing:0;font-variant-numeric:tabular-nums}
-@media(max-width:820px){.topbar .yearSel{width:61px;min-width:61px;max-width:61px;padding:0 16px 0 5px;background-position:right 3px center;background-size:9px 9px}}
-@media(max-width:390px){.topbar .yearSel{width:60px;min-width:60px;max-width:60px;padding:0 16px 0 4px;background-position:right 3px center}}
-
-/* Year label and chevron: remove remaining spacer without clipping digits. */
-.topbar .yearSel{width:60px;min-width:60px;max-width:60px;padding:0 13px 0 5px;background-position:right 2px center;background-size:9px 9px;font-size:12px}
-@media(max-width:820px){.topbar .yearSel{width:57px;min-width:57px;max-width:57px;padding:0 12px 0 4px;background-position:right 1px center;background-size:9px 9px;font-size:12px}}
-@media(max-width:390px){.topbar .yearSel{width:57px;min-width:57px;max-width:57px;padding:0 12px 0 4px;background-position:right 1px center}}
 </style>
 </head>
 <body>
@@ -247,7 +226,7 @@ body{background:#f5f5f7;color:#1c1c1e}
     <div class="brand"><div class="logo">¥</div><div class="brandText"><div class="brandTitle">个人消费看板</div><div class="brandSub" id="rangeText">读取数据中…</div></div></div>
     <div class="grow"></div>
     <div class="privacy"><span class="dot"></span>本地解析 · Netlify 加密云同步</div>
-    <div class="headActions"><select id="yearSel" class="select yearSel"></select><button class="btn syncBtn" id="syncBtn"><span class="syncDot" id="syncDot"></span><span class="syncText" id="syncText">云同步</span></button><button class="btn" id="backupBtn">导出备份</button><button class="btn primary" id="importBtn">导入账单</button></div>
+    <div class="headActions"><div class="yearPicker"><span id="yearDisplay" aria-hidden="true">2026</span><svg class="yearChevron" width="10" height="10" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="m2.5 4.5 3.5 3 3.5-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><select id="yearSel" class="select yearSel" aria-label="选择年份"></select></div><button class="btn syncBtn" id="syncBtn"><span class="syncDot" id="syncDot"></span><span class="syncText" id="syncText">云同步</span></button><button class="btn" id="backupBtn">导出备份</button><button class="btn primary" id="importBtn">导入账单</button></div>
   </div>
 
   <div class="tabs" id="tabs">
@@ -428,7 +407,7 @@ function maxDataDate(){return allTx.map(x=>x.time).filter(Boolean).sort().at(-1)
 function parseDate(s){const d=new Date(String(s).replace(' ','T')+'+08:00');return isNaN(d)?null:d}
 function monthOf(tx){return String(tx.time).slice(0,7)}
 function getYears(){return [...new Set(allTx.map(x=>String(x.time).slice(0,4)).filter(x=>x.length===4&&[...x].every(ch=>ch>='0'&&ch<='9')))].sort((a,b)=>Number(b)-Number(a))}
-function refreshYears(){const ys=getYears(), sel=document.getElementById('yearSel'); const old=currentYear||sel.value; sel.innerHTML=ys.map(y=>`<option>${y}</option>`).join(''); currentYear=ys.includes(String(old))?String(old):(ys[0]||String(new Date().getFullYear())); sel.value=currentYear}
+function refreshYears(){const ys=getYears(), sel=document.getElementById('yearSel'); const old=currentYear||sel.value; sel.innerHTML=ys.map(y=>`<option>${y}</option>`).join(''); currentYear=ys.includes(String(old))?String(old):(ys[0]||String(new Date().getFullYear())); sel.value=currentYear;document.getElementById('yearDisplay').textContent=currentYear}
 function summarize(){
  buildRefundIndex();
  viewTx=allTx.filter(t=>sameYear(t,currentYear)).map(withEval);
@@ -667,7 +646,7 @@ function generateCloudPass(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',a=ne
 async function exportBackup(){const blob=new Blob([JSON.stringify({version:7,exportedAt:new Date().toISOString(),transactions:allTx,settings:normalizeSettingsState(settings)},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='个人消费看板备份_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 async function importBackup(file){const d=JSON.parse(await file.text());if(!Array.isArray(d.transactions))throw new Error('备份格式错误');await dbReplaceAll(d.transactions);allTx=await dbAll();if(d.settings)settings=normalizeSettingsState(d.settings);settings.updatedAt=Date.now();localStorage.setItem('spend_settings_v1',JSON.stringify(settings));refreshYears();summarize();queueCloudSync()}
 async function init(){await openDB();allTx=await dbAll();if(!allTx.length&&PRELOAD.length){await dbPutMany(PRELOAD);allTx=await dbAll()}await ensureUpgradeSnapshot();if(!PRELOAD.length){const r=document.getElementById('resetBtn');if(r)r.style.display='none'}syncLast=localStorage.getItem('spend_sync_last_v1')||'';syncRevision=Number(localStorage.getItem('spend_sync_revision_v1')||0);refreshYears();summarize();wire();updateSyncModal();if(syncPass)cloudSync(false).catch(()=>{})}
-function wire(){document.getElementById('tabs').onclick=e=>{const b=e.target.closest('.tab');if(b)showTab(b.dataset.tab)};document.getElementById('yearSel').onchange=e=>{currentYear=e.target.value;summarize()};['searchInput','catFilter','platformFilter','statusFilter'].forEach(id=>document.getElementById(id).addEventListener(id==='searchInput'?'input':'change',renderDetails));document.getElementById('manageRecurringBtn').onclick=()=>{renderRecurringManager(window.__recurringSnapshot||[]);showModal('recurringModal')};document.getElementById('qualityBtn').onclick=()=>{renderQualityManager(window.__qualitySnapshot||[]);showModal('qualityModal')};document.getElementById('snapshotBtn').onclick=async()=>{await renderSnapshotManager();showModal('snapshotModal')};document.getElementById('addMerchantBtn').onclick=()=>{document.getElementById('merchantInput').value='';renderMerchantManaged();renderMerchantSuggestions();showModal('merchantModal')};document.getElementById('merchantInput').addEventListener('input',renderMerchantSuggestions);document.getElementById('merchantInput').addEventListener('keydown',e=>{if(e.key==='Enter')addPinnedMerchant()});document.getElementById('saveMerchantPin').onclick=addPinnedMerchant;document.getElementById('syncBtn').onclick=()=>{updateSyncModal();showModal('syncModal')};document.getElementById('connectSync').onclick=()=>connectCloud().catch(()=>{});document.getElementById('syncNow').onclick=()=>cloudSync(true).catch(()=>{});document.getElementById('disconnectSync').onclick=disconnectCloud;document.getElementById('generateSyncCode').onclick=generateCloudPass;document.getElementById('toggleSyncCode').onclick=()=>{const i=document.getElementById('syncCode');i.type=i.type==='password'?'text':'password';document.getElementById('toggleSyncCode').textContent=i.type==='password'?'显示':'隐藏'};
+function wire(){document.getElementById('tabs').onclick=e=>{const b=e.target.closest('.tab');if(b)showTab(b.dataset.tab)};document.getElementById('yearSel').onchange=e=>{currentYear=e.target.value;document.getElementById('yearDisplay').textContent=currentYear;summarize()};['searchInput','catFilter','platformFilter','statusFilter'].forEach(id=>document.getElementById(id).addEventListener(id==='searchInput'?'input':'change',renderDetails));document.getElementById('manageRecurringBtn').onclick=()=>{renderRecurringManager(window.__recurringSnapshot||[]);showModal('recurringModal')};document.getElementById('qualityBtn').onclick=()=>{renderQualityManager(window.__qualitySnapshot||[]);showModal('qualityModal')};document.getElementById('snapshotBtn').onclick=async()=>{await renderSnapshotManager();showModal('snapshotModal')};document.getElementById('addMerchantBtn').onclick=()=>{document.getElementById('merchantInput').value='';renderMerchantManaged();renderMerchantSuggestions();showModal('merchantModal')};document.getElementById('merchantInput').addEventListener('input',renderMerchantSuggestions);document.getElementById('merchantInput').addEventListener('keydown',e=>{if(e.key==='Enter')addPinnedMerchant()});document.getElementById('saveMerchantPin').onclick=addPinnedMerchant;document.getElementById('syncBtn').onclick=()=>{updateSyncModal();showModal('syncModal')};document.getElementById('connectSync').onclick=()=>connectCloud().catch(()=>{});document.getElementById('syncNow').onclick=()=>cloudSync(true).catch(()=>{});document.getElementById('disconnectSync').onclick=disconnectCloud;document.getElementById('generateSyncCode').onclick=generateCloudPass;document.getElementById('toggleSyncCode').onclick=()=>{const i=document.getElementById('syncCode');i.type=i.type==='password'?'text':'password';document.getElementById('toggleSyncCode').textContent=i.type==='password'?'显示':'隐藏'};
  const openImp=()=>showModal('importModal');document.getElementById('importBtn').onclick=openImp;document.getElementById('chooseFiles').onclick=()=>document.getElementById('fileInput').click();document.getElementById('fileInput').onchange=e=>importFiles([...e.target.files]);
  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeModal(b.dataset.close));document.querySelectorAll('.modalBack').forEach(m=>m.onclick=e=>{if(e.target===m)closeModal(m.id)});
  const dz=document.getElementById('dropZone');['dragenter','dragover'].forEach(x=>dz.addEventListener(x,e=>{e.preventDefault();dz.classList.add('drag')}));['dragleave','drop'].forEach(x=>dz.addEventListener(x,e=>{e.preventDefault();dz.classList.remove('drag')}));dz.addEventListener('drop',e=>importFiles([...e.dataTransfer.files]));
