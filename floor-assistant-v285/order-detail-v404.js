@@ -35,7 +35,7 @@
  function openProfitEditor(){
   const o=order();if(!o)return;
   const v=manualProfit(o);
-  const estimate=calcOrderFinalAmount(o)-orderRecordedCost(o);
+  const estimate=typeof accurateProfitOriginal==='function'?accurateProfitOriginal(o):(calcOrderFinalAmount(o)-orderRecordedCost(o));
   const known=isProfitKnown(o);
   profitEditor.hidden=false;
   profitEditor.innerHTML=`<div class="m407-profit-scrim" data-profit-action="cancel"></div>
@@ -55,7 +55,7 @@
  function commitProfitEditor(restore){
   const o=order();if(!o)return;
   const raw=profitEditor.querySelector('#m407-profit-input')?.value?.trim()||'';
-  if(!restore&&(!/^-?(?:\\d+)(?:\\.\\d{1,2})?$/.test(raw)||!Number.isFinite(Number(raw))||Math.abs(Number(raw))>1e12)){
+  if(!restore&&(!/^-?(?:\d+)(?:\.\d{1,2})?$/.test(raw)||!Number.isFinite(Number(raw))||Math.abs(Number(raw))>1e12)){
    const input=profitEditor.querySelector('#m407-profit-input');if(input){input.setCustomValidity('请输入有效金额，最多两位小数');input.reportValidity();input.setCustomValidity('');}return;
   }
   const amount=restore?null:Number(Number(raw).toFixed(2));
