@@ -9,11 +9,12 @@ const version=JSON.parse(fs.readFileSync(path.join(root,'floor-assistant-v285/ve
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'floor-assistant-v285/manifest.webmanifest'),'utf8'));
 const scripts=[...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)].filter(m=>!/\bsrc\s*=/.test(m[1]));
 for(let i=0;i<scripts.length;i++)new vm.Script(scripts[i][2],{filename:'inline-'+i+'.js'});
-assert.equal(scripts.length,20,'unexpected inline script count');
+assert.equal(scripts.length,21,'unexpected inline script count');
 assert.equal(html.match(/const APP_VERSION='(\d+)'/)[1],version.version);
-assert.equal(version.cloudSync,'isolated','staging cloud must remain isolated');
+assert.equal(version.cloudSync,'disabled','staging cloud must remain isolated');
 assert.match(html,/const SUPABASE_URL='';/);
-assert.match(html,/const SUPABASE_KEY='';/);
+assert.match(html,/const FLOOR_AUTH_URL='';/);
+assert.match(html,/const FLOOR_AUTH_MODE='disabled';/);
 assert.match(html,/const FLOOR_SYNC_WRITE_RELEASED_V363=false/);
 assert.ok(manifest.icons.length>=1);
 assert.match(html,/cloudBaselineV364/);
