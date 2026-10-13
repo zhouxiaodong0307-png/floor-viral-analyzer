@@ -114,3 +114,39 @@ body.m404-detail-open{overflow:hidden!important}
 @media(min-width:690px){#muyeOrderDetailV404 .m404-shell{height:min(910px,95dvh);border-radius:23px;border:1px solid #e8e9ed}}
 @media(max-width:370px){#muyeOrderDetailV404 .m404-scroll{padding-left:11px;padding-right:11px}#muyeOrderDetailV404 .m404-bottom{padding-left:11px;padding-right:11px}#muyeOrderDetailV404 .m404-overview-grid>div{padding-left:8px;padding-right:8px}#muyeOrderDetailV404 .m404-overview-grid b{font-size:16px}#muyeOrderDetailV404 .m404-tabs button{font-size:11px}#muyeOrderDetailV404 .m404-line{gap:8px}#muyeOrderDetailV404 .m404-kind-icon{width:40px;height:40px;flex-basis:40px}#muyeOrderDetailV404 .m404-line-end b{font-size:14px}}
 @media(prefers-reduced-motion:reduce){#muyeOrderDetailV404 *{scroll-behavior:auto!important;transition:none!important}}
+/* V406: compact, plain-text, editable, responsive order detail. */
+#muyeOrderDetailV404 .m404-shell{max-width:900px}
+#muyeOrderDetailV404 .m404-topbar{grid-template-columns:44px minmax(0,1fr) 60px;padding-left:10px;padding-right:10px}
+#muyeOrderDetailV404 .m404-dots{width:60px;font-size:14px;font-weight:720}
+#muyeOrderDetailV404 .m404-scroll{padding:8px 10px 12px}
+#muyeOrderDetailV404 .m404-card{padding:13px 13px;margin-bottom:10px;border-radius:17px}
+#muyeOrderDetailV404 .m404-overview{padding:14px 13px}
+#muyeOrderDetailV404 .m404-overview-grid{margin-top:13px;padding:12px 1px}
+#muyeOrderDetailV404 .m404-overview-grid>div{padding-left:10px;padding-right:10px}
+#muyeOrderDetailV404 .m404-overview-grid b{font-size:clamp(14px,3.8vw,19px)}
+#muyeOrderDetailV404 .m404-tabs{margin-bottom:10px}
+#muyeOrderDetailV404 .m404-items-card{padding:13px}
+#muyeOrderDetailV404 .m404-line{gap:9px;padding:11px 1px}
+#muyeOrderDetailV404 .m404-main{gap:2px}
+#muyeOrderDetailV404 .m404-main b{font-size:14px}
+#muyeOrderDetailV404 .m404-main span,#muyeOrderDetailV404 .m404-main small{font-size:12px}
+#muyeOrderDetailV404 .m404-line-end b{font-size:15px}
+#muyeOrderDetailV404 .m404-add-row{padding:11px 0}
+#muyeOrderDetailV404 .m404-finance-card{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:10px}
+#muyeOrderDetailV404 .m404-finance-card>div{padding:11px 5px;gap:7px;min-width:0}
+#muyeOrderDetailV404 .m404-finance-card span{font-size:11px}
+#muyeOrderDetailV404 .m404-finance-card strong{font-size:clamp(11px,3.1vw,16px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.3px;font-variant-numeric:tabular-nums}
+#muyeOrderDetailV404 .m404-bottom{padding:9px 10px calc(env(safe-area-inset-bottom,0px) + 10px)}
+#muyeOrderDetailV404 .m404-bottom-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#muyeOrderDetailV404 .m404-bottom-actions button{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 5px}
+#muyeOrderDetailV404 .m404-action-menu{right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 109px)}
+#muyeOrderDetailV404 .m406-tappable{cursor:pointer;touch-action:manipulation}
+#muyeOrderDetailV404 .m406-tappable:focus-visible{outline:2px solid #2876e8;outline-offset:2px;border-radius:5px}
+#muyeOrderDetailV404 .m404-cust>div>.m406-tappable{padding:1px 0}
+#muyeOrderDetailV404 .m404-key-row.m406-tappable{min-height:31px;align-items:center}
+#muyeOrderDetailV404 .m404-pay-tiles>div{min-width:0}
+@media(min-width:690px){#muyeOrderDetailV404 .m404-shell{height:min(930px,96dvh)}#muyeOrderDetailV404 .m404-scroll{padding-left:14px;padding-right:14px}}
+@media(max-width:370px){#muyeOrderDetailV404 .m404-scroll{padding-left:7px;padding-right:7px}#muyeOrderDetailV404 .m404-card{padding-left:10px;padding-right:10px}#muyeOrderDetailV404 .m404-bottom{padding-left:7px;padding-right:7px}#muyeOrderDetailV404 .m404-finance-card>div{padding-left:3px;padding-right:3px}#muyeOrderDetailV404 .m404-overview-grid>div{padding:0 5px}}
+
+/* V406: top-right More popover belongs to the header action. */
+#muyeOrderDetailV404 .m404-action-menu{top:calc(env(safe-area-inset-top,0px) + 58px);bottom:auto;right:11px;max-height:min(55dvh,360px);overflow:auto}

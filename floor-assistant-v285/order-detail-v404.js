@@ -1,4 +1,4 @@
-/* 木业管家 V404 · iOS-style order detail · view-only UI layer.
+/* 木业管家 V406 · iOS-style order detail · view-only UI layer.
    Uses existing order business functions and stored order/measurement records. */
 (function(){
  'use strict';
@@ -19,7 +19,16 @@
  const dateValue=x=>{if(!x)return'—';let v=String(x);return v.includes('T')?v.substring(0,16).replace('T',' '):v};
  const statusText=o=>typeof businessOrderStatus==='function'?businessOrderStatus(o).label:(isCompleted(o)?'已完成':'进行中');
  const cardTitle=s=>`<h3 class="m404-section-title">${s}</h3>`;
- const keyValue=(label,value,cls='')=>`<div class="m404-key-row ${cls}"><span>${E(label)}</span><strong>${value}</strong></div>`;
+ const fieldForLabel=label=>({
+ '产品金额':'product','其他销售项目':'sales','项目原价':'eSales','优惠金额':'eDiscount',
+ '其他加价':'eSurcharge','最终成交额':'eSales','其他成交额调整':'eSales',
+ '退板 / 退款':'refund','交货日期':'eDeliveryDue','交货状态':'eDeliveryDue',
+ '开单日期':'eOrderDate','开单人':'eOpener','产品':'product','付款方式':'eSales',
+ '已记录成本':'eFloorCostTotal','项目地址':'eCust','地板':'eFloorCostTotal',
+ '安装':'eInstallCostTotal','龙骨':'eBattenCostTotal','踢脚线':'eSkirtCostTotal',
+ '辅料':'eMaterialCostTotal','运输':'eFreightCostTotal','拆除':'eRemoveCostTotal','其他':'eCostStatus'
+ }[label]||'eSales');
+ const keyValue=(label,value,cls='')=>`<div class="m404-key-row m406-tappable ${cls}" data-m404="editfocus" data-target="${fieldForLabel(label)}" role="button" tabindex="0" aria-label="编辑${E(label)}"><span>${E(label)}</span><strong>${value}</strong></div>`;
  function floorIcon(){return '<span class="m404-kind-icon m404-wood" aria-hidden="true"></span>';}
  function feeIcon(){return '<span class="m404-kind-icon m404-fee" aria-hidden="true">✦</span>';}
  function itemsPage(o){
@@ -27,8 +36,8 @@
   const discount=Math.max(0,N(o.discountAmount)),surcharge=Math.max(0,N(o.surchargeAmount!=null?o.surchargeAmount:o.additionalAmount));
   const refunds=typeof orderReturnTotal==='function'?N(orderReturnTotal(o)):0;
   const final=calcOrderFinalAmount(o),difference=final-(original-discount+surcharge-refunds);
-  const products=ps.map(p=>`<div class="m404-line m404-product">${floorIcon()}<div class="m404-main"><b>${E(p.species||'木地板')}</b><span>${E(p.spec||'规格未填')}</span><small>实际 ${A(p.area)}㎡${Math.abs(N(p.billArea)-N(p.area))>.0001?' · 计价 '+A(p.billArea)+'㎡':''}</small></div><div class="m404-line-end"><b>${M(p.subtotal)}</b><span>${M(p.price)}/㎡</span></div></div>`).join('');
-  const sales=ss.map(x=>`<div class="m404-line">${feeIcon()}<div class="m404-main"><b>${E(x.name||'其他销售项目')}</b><span>${A(x.qty)}${E(x.unit||'项')} · ${M(x.price)}/${E(x.unit||'项')}</span></div><div class="m404-line-end"><b>${M(x.subtotal)}</b></div></div>`).join('');
+  const products=ps.map((p,i)=>`<div class="m404-line m404-product m406-tappable" data-m404="editfocus" data-target="product" data-index="${i}" role="button" tabindex="0" aria-label="编辑${E(p.species||'地板')}产品"><div class="m404-main"><b>${E(p.species||'木地板')}</b><span>${E(p.spec||'规格未填')}</span><small>实际 ${A(p.area)}㎡${Math.abs(N(p.billArea)-N(p.area))>.0001?' · 计价 '+A(p.billArea)+'㎡':''}</small></div><div class="m404-line-end"><b>${M(p.subtotal)}</b><span>${M(p.price)}/㎡</span></div></div>`).join('');
+  const sales=ss.map((x,i)=>`<div class="m404-line m406-tappable" data-m404="editfocus" data-target="sales" data-index="${i}" role="button" tabindex="0" aria-label="编辑${E(x.name||'销售项目')}"><div class="m404-main"><b>${E(x.name||'其他销售项目')}</b><span>${A(x.qty)}${E(x.unit||'项')} · ${M(x.price)}/${E(x.unit||'项')}</span></div><div class="m404-line-end"><b>${M(x.subtotal)}</b></div></div>`).join('');
   const paid=orderPaidValue(o),due=calcOrderReceivable(o),st=orderCostStatus(o),known=isProfitKnown(o),cost=orderRecordedCost(o),prof=known?orderAccurateProfit(o):null;
   return `<section class="m404-card m404-items-card">${cardTitle('项目明细')}${products||'<div class="m404-empty">暂无产品资料</div>'}${sales}<button type="button" class="m404-add-row" data-m404="edit">＋ <span>编辑或添加销售项目</span><span>›</span></button></section>
   <section class="m404-card m404-money">${cardTitle('金额汇总')}<div class="m404-key-list">
@@ -39,12 +48,15 @@
     ${Math.abs(difference)>.01?keyValue('其他成交额调整',(difference>0?'+ ':'− ')+M(Math.abs(difference))):''}
     ${keyValue('最终成交额',M(final),'m404-final')}
   </div></section>
-  <section class="m404-finance-card"><div><span>已收</span><strong>${M(paid)}</strong></div><div class="m404-highlight"><span>待收</span><strong>${M(due)}</strong></div><div><span>成本</span><strong class="${st!=='complete'?'m404-red':''}">${st==='missing'?'待补':M(cost)}</strong></div></section>
-  <div class="m404-compact-info"><span>利润 ${known?M(prof):'待补成本'}</span><span>毛利率 ${known&&final>0?(prof/final*100).toFixed(1)+'%':'—'}</span></div>`;
+  <section class="m404-finance-card m406-four">
+    <div class="m406-tappable" data-m404="editfocus" data-target="ePaid" role="button" tabindex="0" aria-label="编辑已收"><span>已收</span><strong>${M(paid)}</strong></div>
+    <div class="m404-highlight m406-tappable" data-m404="pay" role="button" tabindex="0" aria-label="查看待收并收款"><span>待收</span><strong>${M(due)}</strong></div>
+    <div class="m406-tappable" data-m404="editfocus" data-target="eFloorCostTotal" role="button" tabindex="0" aria-label="编辑成本"><span>成本</span><strong class="${st!=='complete'?'m404-red':''}">${st==='missing'?'待补':M(cost)}</strong></div>
+    <div class="m406-tappable" data-m404="editfocus" data-target="eCostStatus" role="button" tabindex="0" aria-label="查看利润并编辑成本"><span>利润</span><strong>${known?M(prof):'待补成本'}</strong></div></section>`;
  }
  function paymentsPage(o){
   const hist=Array.isArray(o.paymentHistory)?o.paymentHistory:[],paid=orderPaidValue(o),due=calcOrderReceivable(o);
-  const rows=hist.slice().reverse().map(x=>`<div class="m404-payment"><div><b>${E(x.type||'收款')}</b><span>${E(dateValue(x.date))}</span></div><strong>${M(x.amount)}</strong></div>`).join('');
+  const rows=hist.slice().reverse().map(x=>`<div class="m404-payment m406-tappable" data-m404="editfocus" data-target="ePaid" role="button" tabindex="0" aria-label="查看收款编辑"><div><b>${E(x.type||'收款')}</b><span>${E(dateValue(x.date))}</span></div><strong>${M(x.amount)}</strong></div>`).join('');
   const untracked=hist.reduce((n,x)=>n+N(x.amount),0),unmatched=Math.abs(paid-untracked)>.01;
   const returns=typeof orderReturnHistory==='function'?orderReturnHistory(o):[];
   return `<section class="m404-card">${cardTitle('收款概况')}<div class="m404-pay-tiles"><div><span>订单金额</span><b>${M(calcOrderFinalAmount(o))}</b></div><div><span>已收</span><b>${M(paid)}</b></div><div><span>待收</span><b>${M(due)}</b></div></div></section>
@@ -88,12 +100,12 @@
   const tabs=[['items','项目明细'],['payments','收款记录'],['measure','量房明细'],['info','其他信息']];
   let content=state.tab==='items'?itemsPage(o):state.tab==='payments'?paymentsPage(o):state.tab==='measure'?measurePage(o):infoPage(o);
   const due=calcOrderReceivable(o),showPay=due>.005;
-  root.innerHTML=`<div class="m404-backdrop" data-m404="close"></div><div class="m404-shell"><header class="m404-topbar"><button type="button" class="m404-back" data-m404="close" aria-label="返回订单管理">‹</button><strong>订单详情</strong><button type="button" class="m404-dots" data-m404="more" aria-label="更多订单操作" aria-expanded="${state.menu}">···</button></header>
-  <div class="m404-scroll"><section class="m404-card m404-overview"><div class="m404-overview-top"><div class="m404-cust"><h2>${E(o.cust||'未命名客户')}</h2><div>${E(species)} <span>·</span> ${E(o.date||'—')}</div></div><span class="m404-status ${isCompleted(o)?'done':''}">${E(statusText(o))}</span></div><div class="m404-overview-grid"><div><span>总金额</span><b>${M(calcOrderFinalAmount(o))}</b></div><div><span>面积</span><b>${A(actualArea(o))}㎡</b></div><div><span>开单人</span><b>${E(o.opener||'未填写')}</b></div></div></section>
+  root.innerHTML=`<div class="m404-backdrop" data-m404="close"></div><div class="m404-shell"><header class="m404-topbar"><button type="button" class="m404-back" data-m404="close" aria-label="返回订单管理">‹</button><strong>订单详情</strong><button type="button" class="m404-dots" data-m404="more" aria-label="更多订单操作" aria-expanded="${state.menu}">更多</button></header>
+  <div class="m404-scroll"><section class="m404-card m404-overview"><div class="m404-overview-top"><div class="m404-cust"><h2 class="m406-tappable" data-m404="editfocus" data-target="eCust" role="button" tabindex="0" aria-label="编辑客户">${E(o.cust||'未命名客户')}</h2><div><span class="m406-tappable" data-m404="editfocus" data-target="product" role="button" tabindex="0">${E(species)}</span> <span>·</span> <span class="m406-tappable" data-m404="editfocus" data-target="eOrderDate" role="button" tabindex="0">${E(o.date||'—')}</span></div></div><span data-m404="editfocus" data-target="ePaid" role="button" tabindex="0" class="m404-status m406-tappable ${isCompleted(o)?'done':''}">${E(statusText(o))}</span></div><div class="m404-overview-grid"><div class="m406-tappable" role="button" tabindex="0" data-m404="editfocus" data-target="eSales"><span>总金额</span><b>${M(calcOrderFinalAmount(o))}</b></div><div class="m406-tappable" role="button" tabindex="0" data-m404="editfocus" data-target="productArea"><span>面积</span><b>${A(actualArea(o))}㎡</b></div><div class="m406-tappable" role="button" tabindex="0" data-m404="editfocus" data-target="eOpener"><span>开单人</span><b>${E(o.opener||'未填写')}</b></div></div></section>
   <nav class="m404-tabs" role="tablist" aria-label="订单信息分类">${tabs.map(([key,title])=>`<button type="button" role="tab" data-m404="tab" data-tab="${key}" aria-selected="${key===state.tab}" class="${key===state.tab?'selected':''}">${title}</button>`).join('')}</nav>
   <div class="m404-page" role="tabpanel">${content}</div><div class="m404-bottom-space"></div></div>
-  <div class="m404-bottom"><div class="m404-bottom-actions"><button type="button" class="m404-more-btn" data-m404="more" aria-expanded="${state.menu}"><strong>···</strong><small>更多</small></button><button type="button" class="m404-edit-btn" data-m404="edit">编辑</button><button type="button" class="m404-pay-btn" data-m404="pay" ${showPay?'':'disabled'}>${showPay?'收款':'已收齐'}</button></div><button type="button" class="m404-contract-btn" data-m404="contract">合同发送</button>
-  ${state.menu?`<div class="m404-action-menu"><button data-m404="settlement">结算清单</button>${isCompleted(o)?'<button data-m404="reopen">恢复进行中</button>':'<button data-m404="settle">结清完成</button><button data-m404="refund">退板 / 退款</button>'}</div>`:''}</div></div>`;
+  <div class="m404-bottom"><div class="m404-bottom-actions"><button type="button" class="m404-edit-btn" data-m404="edit">编辑</button><button type="button" class="m404-pay-btn" data-m404="pay" ${showPay?'':'disabled'}>${showPay?'收款':'已收齐'}</button></div><button type="button" class="m404-contract-btn" data-m404="contract">合同发送</button>
+  </div>${state.menu?`<div class="m404-action-menu"><button data-m404="settlement">结算清单</button>${isCompleted(o)?'<button data-m404="reopen">恢复进行中</button>':'<button data-m404="settle">结清完成</button><button data-m404="refund">退板 / 退款</button>'}</div>`:''}</div>`;
   const next=root.querySelector('.m404-scroll');if(next)next.scrollTop=resetScroll?0:scrollY;
  }
  function open(id){
@@ -105,10 +117,38 @@
   render(true);
  }
  function close(){state.id=null;state.menu=false;root.classList.remove('visible');root.setAttribute('aria-hidden','true');document.body.classList.remove('m404-detail-open');root.innerHTML='';if(originalFocus&&originalFocus.isConnected&&typeof originalFocus.focus==='function'){try{originalFocus.focus({preventScroll:true})}catch(e){}}}
- function invoke(action,id){
+ function focusOrderField(target,index){
+  const found=order();if(!found)return;
+  const trueId=found.id;
+  if(target==='refund'){openReturnRefund(trueId);return;}
+  openOrderEdit(trueId);
+  const modal=document.getElementById('orderEditModal');
+  if(!modal||modal.classList.contains('hide'))return;
+  let el=null;
+  if(target==='product'||target==='productArea'){
+    const row=modal.querySelectorAll('#editProductRows [data-product-row]')[Number(index)||0]||modal.querySelector('#editProductRows [data-product-row]');
+    el=row?.querySelector(target==='productArea'?'[data-field="area"]':'[data-field="species"]')||row?.querySelector('input');
+  }else if(target==='sales'){
+    const panel=document.getElementById('editSalesPanel');
+    if(panel?.classList.contains('hide')&&typeof toggleEditSalesPanel==='function')toggleEditSalesPanel();
+    const row=modal.querySelectorAll('#editSalesRows [data-sales-row]')[Number(index)||0];
+    el=row?.querySelector('[data-sales-field="name"]')||row?.querySelector('input')||document.getElementById('editSalesToggle');
+  }else{
+    el=document.getElementById(target)||document.getElementById('eSales');
+  }
+  if(!el)return;
+  requestAnimationFrame(()=>{
+    if(!el.isConnected)return;
+    try{el.scrollIntoView({block:'center',behavior:'instant'});}catch(_){}
+    if(el.matches('input:not([readonly]),textarea,select'))try{el.focus({preventScroll:true});}catch(_){el.focus();}
+    else if(el.matches('button'))try{el.focus({preventScroll:true});}catch(_){}
+  });
+ }
+ function invoke(action,id,target,index){
   try{
    const found=order();if(!found)return;id=found.id;
-   if(action==='edit')openOrderEdit(id);
+   if(action==='editfocus')focusOrderField(target,index);
+   else if(action==='edit')openOrderEdit(id);
    else if(action==='pay'&&calcOrderReceivable(order())>.005)recordPayment(id);
    else if(action==='contract'){close();sendOrderContract(id);}
    else if(action==='settlement')openSettlementList(id);
@@ -125,8 +165,10 @@
   if(action==='tab'){state.tab=btn.dataset.tab;state.menu=false;render(true);return;}
   if(action==='floor'){const f=Number(btn.dataset.floor);state.expandedFloors.has(f)?state.expandedFloors.delete(f):state.expandedFloors.add(f);render(false);return;}
   if(action==='more'){state.menu=!state.menu;render(false);return;}
-  state.menu=false;invoke(action,id);render(false);
+  state.menu=false;invoke(action,id,btn.dataset.target,btn.dataset.index);
+  if(!['edit','editfocus','contract','settlement','refund','pay'].includes(action))render(false);
  });
+ root.addEventListener('keydown',ev=>{if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('[role="button"][data-m404]')){ev.preventDefault();ev.target.click();}});
  document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&state.id&&!document.querySelector('.modal-mask:not(.hide)'))close();});
  const oldToggle=window.toggleOrderRowDetail;
  window.toggleOrderRowDetail=function(id){if(!document.getElementById('muyeOrderDetailV404'))return oldToggle.call(this,id);open(id);};
