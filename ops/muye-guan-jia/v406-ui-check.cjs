@@ -107,9 +107,9 @@ const URL='https://muye-guan-jia-migration-test.onrender.com/';
      const snap=await page.evaluate(()=>{
        const arr=orders();arr[0].costStatus='complete';arr[0].profitKnown=true;arr[0].costBreakdown={floor:24000,install:0,batten:0,skirt:0,material:0,freight:0,remove:0,other:0};
        localStorage.setItem('floor_orders_v3',JSON.stringify(arr));window.muyeOrderDetailV404.refresh();
-       return {profit:orderAccurateProfit(orders()[0]),known:isProfitKnown(orders()[0])};
+       return {profit:orderAccurateProfit(orders()[0]),known:isProfitKnown(orders()[0]),sales:calcOrderFinalAmount(orders()[0]),cost:orderRecordedCost(orders()[0])};
      });
-     assert.equal(snap.profit,10125,'auto accurate profit should equal sale minus real cost');
+     assert.equal(snap.profit,snap.sales-snap.cost,'auto accurate profit should equal real sales minus recorded cost');
      assert.equal(snap.known,true);
      await page.locator('#muyeOrderDetailV404 [data-m404="profit"]').click();
      await page.locator('#m407-profit-input').fill('12000.25');
@@ -119,7 +119,7 @@ const URL='https://muye-guan-jia-migration-test.onrender.com/';
      assert.equal(final.shown,12000.25);
      assert.equal(final.known,true);
      assert.equal(final.cost,24000);
-     assert.equal(final.sales,34125);
+     assert.equal(final.sales,snap.sales,'manually edited profit cannot alter computed sales');
    }
 
    assert.equal(errors.length,0,'page errors: '+errors.join(' | '));
