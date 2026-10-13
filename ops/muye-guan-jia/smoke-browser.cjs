@@ -160,6 +160,40 @@ async function contractRegression(browser){
     assert.equal(after.manualSaved,false,'explicit regenerated contract must clear manual version');
     assert.ok(!after.html.includes(manual),'confirmed regenerate must replace manual content');
     assert.ok(!errors.some(x=>/SyntaxError|TypeError|ReferenceError/.test(x)),'page errors '+JSON.stringify(errors));
+    
+    const quotePaper=await page.evaluate(()=>{
+      window.currentContractOrderId=null;window.currentQuoteOrderId=null;
+      for(const [id,val] of Object.entries({cust:'报价备注回归客户',species:'缅甸柚木',spec:'740×115×17',area:'20',price:'300',quoteNote:'地板备注：不同批次须先确认颜色与拼接方向。'}))
+        document.getElementById(id).value=val;
+      const q=calc();if(q.total<=0)throw Error('报价金额未建立');
+      generateContract('paper');
+      const first=document.getElementById('contractPreview').textContent.includes('不同批次须先确认颜色');
+      toggleContractFullEdit();
+      document.querySelector('#contractPreview .contract-account').textContent+=' 纸质合同专项人工补充条款。';
+      toggleContractFullEdit();
+      generateContract('paper');
+      const saved=document.getElementById('contractPreview').textContent.includes('纸质合同专项人工补充条款');
+      generateContract('electronic');
+      const isolated=!document.getElementById('contractPreview').textContent.includes('纸质合同专项人工补充条款');
+      return {first,saved,isolated,total:q.total};
+    });
+    assert.equal(quotePaper.first,true,'quote remark must appear on fresh paper contract');
+    assert.equal(quotePaper.saved,true,'paper contract full edit must reopen from local quote draft');
+    assert.equal(quotePaper.isolated,true,'paper manual edit must not leak into electronic contract');
+    page.on('dialog',d=>d.type()==='prompt'?d.accept('0'):d.accept());
+    const conversion=await page.evaluate(()=>{
+      window.currentContractOrderId=null;window.currentQuoteOrderId=null;
+      const ok=confirmCurrentQuote(true);
+      const id=window.currentQuoteOrderId;
+      const o=orders().find(x=>String(x.id)===String(id));
+      if(ok&&o)sendOrderContract(id);
+      return {ok:!!ok,note:o?.quoteNote||'',contract:document.getElementById('contractPreview').textContent,total:o?.sales||0};
+    });
+    assert.equal(conversion.ok,true,'actual quote to order conversion must succeed');
+    assert.ok(conversion.note.includes('不同批次须先确认颜色'),'actual quote remark must persist on converted order');
+    assert.ok(conversion.contract.includes('不同批次须先确认颜色'),'actual quote remark must appear when contract is sent later');
+    console.log('PASS V399 real quote-to-order remark and paper/electronic draft separation');
+    
     console.log('PASS V399 order remark, edited contract saved/reopened/reloaded, per-order isolation, safe regeneration');
   }catch(e){await page.screenshot({path:'/tmp/muye-contract-v399.png',fullPage:true}).catch(()=>{});console.error('V399 contract regression failed',String(e),errors);throw e}
   finally{await context.close()}
