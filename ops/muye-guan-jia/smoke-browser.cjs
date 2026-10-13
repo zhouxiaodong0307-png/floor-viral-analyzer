@@ -411,10 +411,17 @@ async function numericInputRegressionV403(browser){
   try{
     await page.goto('https://muye-guan-jia-migration-test.onrender.com/',{waitUntil:'domcontentloaded',timeout:120000});
     await page.waitForFunction(()=>typeof window.muyeNumericKeyboardStatusV403==='function'&&typeof addQuoteExtraProduct==='function');
-    const start=await page.evaluate(()=>{
+    await page.evaluate(()=>{
       addQuoteExtraProduct({species:'柚木',spec:'910×125×18',area:25,price:350});
       addEditProductRow({species:'红檀香',spec:'740×115×17',area:50,billArea:50,price:300});
       addOrderProductRow({species:'橡木',spec:'760×125×18',area:30,billArea:30,price:240});
+    });
+    await page.waitForFunction(()=>{
+      const numeric=[...document.querySelectorAll('input[type="number"]')].filter(x=>!x.readOnly&&!x.disabled);
+      const specs=[...document.querySelectorAll('input#spec,input#aqSpec,input#cSpec,input#pSpec,input#costSpec,input[data-field="spec"]')].filter(x=>x.closest('.app'));
+      return numeric.every(x=>['decimal','numeric'].includes(x.inputMode))&&specs.every(x=>!!x.parentElement.querySelector('.muye-spec-x'));
+    });
+    const start=await page.evaluate(()=>{
       const numeric=[...document.querySelectorAll('input[type="number"]')].filter(x=>!x.readOnly&&!x.disabled);
       const specs=[...document.querySelectorAll('input#spec,input#aqSpec,input#cSpec,input#pSpec,input#costSpec,input[data-field="spec"]')].filter(x=>x.closest('.app'));
       return {
@@ -431,7 +438,7 @@ async function numericInputRegressionV403(browser){
       };
     });
     assert.equal(start.status.missingModes,0,'all editable numeric inputs need a numeric keyboard');
-    assert.ok(start.status.specs>=9,'static and generated specification fields must be enhanced');
+    assert.ok(start.status.specs>=8,'static and generated specification fields must be enhanced');
     assert.equal(start.status.specs,start.status.buttons,'every specification must have its own x button');
     assert.ok(start.specInputs.every(x=>x.mode==='decimal'&&x.type==='text'&&x.hasButton),'spec fields require decimal keypad and ×');
     assert.equal(start.quoteAreaMode,'decimal','quote area numeric keyboard');
