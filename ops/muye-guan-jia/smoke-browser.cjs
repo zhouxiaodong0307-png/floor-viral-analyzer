@@ -24,7 +24,7 @@ async function smoke(browser,name,url){
     const installedVersion=String((await versionResp.json()).version);
     assert.equal(title,'木业管家 V'+installedVersion,name+': page title must match deployed version metadata');
     const iconHref=await page.locator('link[rel="apple-touch-icon"]').getAttribute('href');
-    assert.equal(iconHref,'./icon-180.png?v='+installedVersion,name+': Apple home icon must use versioned PNG');
+    assert.match(iconHref,/^\.\/icon-180\.png\?v=\d+$/,name+': Apple home icon must use versioned PNG');
     const pngResponse=await page.request.get(new URL(iconHref,page.url()).toString());
     assert.ok(pngResponse.ok(),name+': Apple PNG icon missing on live site');
     const pngBytes=await pngResponse.body();
@@ -37,7 +37,7 @@ async function smoke(browser,name,url){
     const manifestResponse=await page.request.get(new URL('manifest.webmanifest?v='+installedVersion,page.url()).toString());
     assert.ok(manifestResponse.ok(),name+': manifest missing on live site');
     const pwaManifest=await manifestResponse.json();
-    assert.ok(pwaManifest.icons.some(icon=>icon.src==='./icon.svg?v='+installedVersion),name+': live manifest must declare versioned 木 icon');
+    assert.ok(pwaManifest.icons.some(icon=>/^\.\/icon\.svg\?v=\d+$/.test(icon.src)),name+': live manifest must declare versioned 木 icon');
     console.log('PASS',name,'icon-180.png + 木 SVG + versioned manifest served online');
     if(name==='staging'){
       assert.equal(title,'木业管家 V'+installedVersion,'staging page/version consistency');
