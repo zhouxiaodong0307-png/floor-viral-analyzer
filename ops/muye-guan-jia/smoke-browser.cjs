@@ -209,6 +209,35 @@ async function measurementArchiveRegression(browser){
     const response=await page.goto('https://muye-guan-jia-migration-test.onrender.com/',{waitUntil:'domcontentloaded'});
     assert.ok(response?.ok(),'V400 isolated staging not reachable');
     await page.waitForFunction(()=>typeof window.muyeMeasureArchiveStatusV400==='function'&&typeof confirmCurrentQuote==='function');
+
+    const numericKeyboard=await page.evaluate(()=>{
+      clearQuoteInputs();
+      const row=addMeasureRow('测试房间','325','2楼');
+      const dimension=row.querySelector('.mexpr');
+      const expectedInputType=dimension.type==='text'&&dimension.inputMode==='decimal';
+      insertMeasureSymbol('×',dimension,{start:3,end:3});dimension.value+='430';
+      insertMeasureSymbol('+',dimension,{start:7,end:7});dimension.value+='60×100';
+      const formula=dimension.value,calculated=parseMeasureExpr(formula);
+      const stairs=addStairMeasureRow('2楼');
+      const platform=stairs.querySelector('.stair-platform');
+      platform.value='120';
+      insertMeasureSymbol('×',platform,{start:3,end:3});platform.value+='100';
+      const platformResult=parsePlatformArea(platform.value);
+      const stairOther=[...stairs.querySelectorAll('.stair-width,.stair-depth,.stair-riser')].every(x=>x.inputMode==='decimal');
+      const numeric={expectedInputType,platformInputMode:platform.inputMode,platformType:platform.type,formula,calculated,platformFormula:platform.value,platformResult,stairOther};
+      clearQuoteInputs();
+      return numeric;
+    });
+    assert.equal(numericKeyboard.expectedInputType,true,'dimension requires text type + decimal keypad');
+    assert.equal(numericKeyboard.platformInputMode,'decimal','stair platform requires decimal keypad');
+    assert.equal(numericKeyboard.platformType,'text','platform formula cannot use type=number');
+    assert.equal(numericKeyboard.stairOther,true,'other stair dimensions retain decimal keypad');
+    assert.equal(numericKeyboard.formula,'325×430+60×100','× and + buttons must remain functional');
+    assert.ok(Math.abs(numericKeyboard.calculated-14.575)<0.0001,'room formula calculation remains correct');
+    assert.equal(numericKeyboard.platformFormula,'120×100','platform × remains functional');
+    assert.ok(Math.abs(numericKeyboard.platformResult-1.2)<0.00001,'platform calculation remains correct');
+    console.log('PASS V401 iPhone numeric keypad hints, dynamic room and stair fields, ×/+ formula entry');
+
     const result=await page.evaluate(()=>{
       const measure=[
        {floor:'2楼',name:'过道',expr:'655x170+895x120'},
