@@ -128,7 +128,10 @@ test('V371 missing payment event rejected',()=>{const orders=structuredClone(sam
 test('V371 missing product baseline rejected',()=>{assert.throws(()=>verifyCloud({...sampleCloud,products:sampleCloud.products.slice(0,3)}));return true});
 assert.match(html,/countMismatch&&!cloudReadOnly&&!cloudConflict&&cloudStatusOkay!==false/,'conflict status must not be masked');
 assert.match(html,/fetch\(url,\{method:method,cache:'no-store'/,'cloud reads must bypass stale cache');
-assert.equal(version.version,'404','staging version must be V404');
+assert.equal(version.channel,'staging','staging version file must identify the staging channel');
+assert.match(html,/<link rel="apple-touch-icon" sizes="180x180" href="\.\/icon-180\.png\?v=\d+"/,'iOS PNG icon must be explicit');
+assert.ok(fs.statSync(path.join(root,'floor-assistant-v285/icon-180.png')).size>500,'iOS PNG icon must be present and nonempty');
+assert.ok(manifest.icons.some(i=>String(i.src).startsWith('./icon.svg?v=')),'PWA SVG icon must be versioned');
 assert.ok(html.indexOf('id="v374-ipad-both-orientations-content-width"') < html.indexOf("</head><body>"),"iPad critical CSS must be in head");
 
 
