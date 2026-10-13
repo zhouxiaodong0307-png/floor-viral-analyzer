@@ -14,7 +14,7 @@ const URL='https://muye-guan-jia-migration-test.onrender.com/';
    assert.ok(res&&res.ok(),'test site unavailable');
    await page.waitForFunction(()=>window.muyeOrderDetailV404Ready===true,{timeout:20000});
    const stage=await page.evaluate(()=>({version:APP_VERSION,cloud:SUPABASE_URL,auth:FLOOR_AUTH_URL,mode:FLOOR_AUTH_MODE,write:isCloudWritableRuntime()}));
-   assert.deepEqual(stage,{version:'406',cloud:'',auth:'',mode:'disabled',write:false});
+   assert.deepEqual(stage,{version:'407',cloud:'',auth:'',mode:'disabled',write:false});
    const value=await page.evaluate(()=>{
      const o={id:999995406,cust:'测试专用',date:'2026/10/14',opener:'周潇东',species:'缅甸柚木',area:100,paid:0,costStatus:'missing',status:'进行中',products:[{species:'缅甸柚木',spec:'760×125',area:100,billArea:105,price:300,subtotal:31500}],salesItems:[{name:'安装费',qty:105,unit:'㎡',price:25,subtotal:2625}],measureSnapshot:{floors:[{name:'一楼'},{name:'二楼'}],rows:[{floor:'一楼',name:'客厅',expr:'4.2×3.8',area:15.96},{floor:'二楼',name:'卧室',expr:'3.5×3',area:10.5}]}};
      window.orders=()=>[o];window.muyeOrderDetailV404.open(o.id);
@@ -63,7 +63,7 @@ const URL='https://muye-guan-jia-migration-test.onrender.com/';
    assert.ok(menuAlignment.menuTop>=menuAlignment.topY-4&&menuAlignment.menuTop<menuAlignment.buttonBottom+55,'More should open near top-right '+JSON.stringify(menuAlignment));
    assert.equal(await page.evaluate(()=>JSON.stringify(orders()[0])),value.order,'UI tests must not mutate orders');
    assert.equal(errors.length,0,'page errors: '+errors.join(' | '));
-   console.log('PASS V406 order-details responsive, editfocus and no mutation',width,JSON.stringify(layout.buttons));
+   console.log('PASS V407 order-details responsive, editfocus and no mutation',width,JSON.stringify(layout.buttons));
    await ctx.close();
   }
  }finally{await browser.close();}

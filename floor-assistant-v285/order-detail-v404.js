@@ -1,4 +1,4 @@
-/* 木业管家 V406 · iOS-style order detail · view-only UI layer.
+/* 木业管家 V407 · iOS-style order detail · view-only UI layer.
    Uses existing order business functions and stored order/measurement records. */
 (function(){
  'use strict';
@@ -13,6 +13,76 @@
  const N=x=>Number.isFinite(Number(x))?Number(x):0;
  const M=x=>money(N(x));
  const A=x=>N(x).toLocaleString('zh-CN',{maximumFractionDigits:2});
+ /* Explicit user profit is separate from recorded cost and preserved in each order. */
+ const manualProfit=o=>{
+  const v=o&&o.manualProfitV407;
+  if(!v||typeof v!=='object'||v.amount===null||v.amount===undefined||String(v.amount).trim()==='')return null;
+  const n=Number(v.amount);
+  return Number.isFinite(n)?n:null;
+ };
+ const accurateProfitOriginal=window.orderAccurateProfit;
+ const profitDisplayOriginal=window.profitDisplay;
+ if(typeof accurateProfitOriginal==='function'){
+  window.orderAccurateProfit=function(o){const v=manualProfit(o);return v===null?accurateProfitOriginal(o):v};
+ }
+ if(typeof profitDisplayOriginal==='function'){
+  window.profitDisplay=function(o){const v=manualProfit(o);return v===null?profitDisplayOriginal(o):money(v)};
+ }
+ const profitEditor=document.createElement('div');
+ profitEditor.id='muyeProfitEditorV407';profitEditor.hidden=true;
+ document.body.appendChild(profitEditor);
+ function closeProfitEditor(){profitEditor.hidden=true;profitEditor.innerHTML='';}
+ function openProfitEditor(){
+  const o=order();if(!o)return;
+  const v=manualProfit(o);
+  const estimate=calcOrderFinalAmount(o)-orderRecordedCost(o);
+  const known=isProfitKnown(o);
+  profitEditor.hidden=false;
+  profitEditor.innerHTML=`<div class="m407-profit-scrim" data-profit-action="cancel"></div>
+  <div class="m407-profit-sheet" role="dialog" aria-modal="true" aria-labelledby="m407-profit-title">
+    <h3 id="m407-profit-title">编辑订单利润</h3>
+    <div class="m407-profit-context">订单成交额 ${M(calcOrderFinalAmount(o))} · 已记录成本 ${M(orderRecordedCost(o))}</div>
+    <label for="m407-profit-input">手动利润（元）</label>
+    <input id="m407-profit-input" type="number" inputmode="decimal" step="0.01" placeholder="输入利润，可输入负数" value="${v===null?(known?estimate.toFixed(2):''):v.toFixed(2)}">
+    <p>修改利润不会改变成交金额、收款或真实成本明细。${known?'手动利润将用于统计，差额请自行核对成本。':'此订单成本尚未完整，手动利润会显示在订单中，但暂不计入准确利润统计。'}</p>
+    <div class="m407-profit-buttons"><button type="button" data-profit-action="restore" class="m407-profit-restore" ${v===null?'disabled':''}>恢复自动</button><button type="button" data-profit-action="cancel">取消</button><button type="button" data-profit-action="save" class="m407-profit-save">保存</button></div>
+  </div>`;
+  requestAnimationFrame(()=>{
+   const input=profitEditor.querySelector('#m407-profit-input');
+   if(input)try{input.focus({preventScroll:true});input.select()}catch(_){}
+  });
+ }
+ function commitProfitEditor(restore){
+  const o=order();if(!o)return;
+  const raw=profitEditor.querySelector('#m407-profit-input')?.value?.trim()||'';
+  if(!restore&&(!/^-?(?:\\d+)(?:\\.\\d{1,2})?$/.test(raw)||!Number.isFinite(Number(raw))||Math.abs(Number(raw))>1e12)){
+   const input=profitEditor.querySelector('#m407-profit-input');if(input){input.setCustomValidity('请输入有效金额，最多两位小数');input.reportValidity();input.setCustomValidity('');}return;
+  }
+  const amount=restore?null:Number(Number(raw).toFixed(2));
+  const arr=orders(),target=arr.find(x=>String(x.id)===String(o.id));if(!target)return;
+  const before=manualProfit(target);
+  if(restore){if(before===null){closeProfitEditor();return;}delete target.manualProfitV407;}
+  else target.manualProfitV407={amount,updatedAt:new Date().toISOString()};
+  if(typeof appendOrderEvent==='function')appendOrderEvent(target,'利润手动调整',restore?'利润恢复自动计算':'利润 '+(before===null?'原自动值':money(before))+' → '+money(amount));
+  target.updatedAt=new Date().toISOString();
+  if(typeof clearCloudDeleted==='function')clearCloudDeleted('orders',target.id);
+  localStorage.setItem(KEY,JSON.stringify(arr));
+  closeProfitEditor();
+  if(typeof renderOrders==='function')renderOrders();
+  if(typeof updateDash==='function')updateDash();
+  if(state.id)render(false);
+ }
+ profitEditor.addEventListener('click',ev=>{
+  const b=ev.target.closest('[data-profit-action]');if(!b||b.disabled)return;
+  ev.preventDefault();const action=b.dataset.profitAction;
+  if(action==='cancel')closeProfitEditor();
+  else if(action==='save')commitProfitEditor(false);
+  else if(action==='restore')commitProfitEditor(true);
+ });
+ profitEditor.addEventListener('keydown',ev=>{
+  if(ev.key==='Escape'){ev.preventDefault();closeProfitEditor();}
+  else if(ev.key==='Enter'&&ev.target.id==='m407-profit-input'){ev.preventDefault();commitProfitEditor(false);}
+ });
  const order=()=>typeof orders==='function'?orders().find(o=>String(o.id)===String(state.id)):null;
  const actualArea=o=>N(o.area)>0?N(o.area):normalizeOrderProducts(o).reduce((s,p)=>s+N(p.area),0);
  const priceInfo=o=>{const ps=normalizeOrderProducts(o),ss=normalizeSalesItems(o);return {ps,ss,floor:ps.reduce((n,p)=>n+N(p.subtotal),0),extra:ss.reduce((n,x)=>n+N(x.subtotal),0)};};
@@ -38,7 +108,7 @@
   const final=calcOrderFinalAmount(o),difference=final-(original-discount+surcharge-refunds);
   const products=ps.map((p,i)=>`<div class="m404-line m404-product m406-tappable" data-m404="editfocus" data-target="product" data-index="${i}" role="button" tabindex="0" aria-label="编辑${E(p.species||'地板')}产品"><div class="m404-main"><b>${E(p.species||'木地板')}</b><span>${E(p.spec||'规格未填')}</span><small>实际 ${A(p.area)}㎡${Math.abs(N(p.billArea)-N(p.area))>.0001?' · 计价 '+A(p.billArea)+'㎡':''}</small></div><div class="m404-line-end"><b>${M(p.subtotal)}</b><span>${M(p.price)}/㎡</span></div></div>`).join('');
   const sales=ss.map((x,i)=>`<div class="m404-line m406-tappable" data-m404="editfocus" data-target="sales" data-index="${i}" role="button" tabindex="0" aria-label="编辑${E(x.name||'销售项目')}"><div class="m404-main"><b>${E(x.name||'其他销售项目')}</b><span>${A(x.qty)}${E(x.unit||'项')} · ${M(x.price)}/${E(x.unit||'项')}</span></div><div class="m404-line-end"><b>${M(x.subtotal)}</b></div></div>`).join('');
-  const paid=orderPaidValue(o),due=calcOrderReceivable(o),st=orderCostStatus(o),known=isProfitKnown(o),cost=orderRecordedCost(o),prof=known?orderAccurateProfit(o):null;
+  const paid=orderPaidValue(o),due=calcOrderReceivable(o),st=orderCostStatus(o),known=isProfitKnown(o),cost=orderRecordedCost(o),manual=manualProfit(o),prof=(known||manual!==null)?orderAccurateProfit(o):null;
   return `<section class="m404-card m404-items-card">${cardTitle('项目明细')}${products||'<div class="m404-empty">暂无产品资料</div>'}${sales}<button type="button" class="m404-add-row" data-m404="edit">＋ <span>编辑或添加销售项目</span><span>›</span></button></section>
   <section class="m404-card m404-money">${cardTitle('金额汇总')}<div class="m404-key-list">
     ${keyValue('产品金额',M(floor))}${keyValue('其他销售项目',M(extra))}
@@ -52,7 +122,7 @@
     <div class="m406-tappable" data-m404="editfocus" data-target="ePaid" role="button" tabindex="0" aria-label="编辑已收"><span>已收</span><strong>${M(paid)}</strong></div>
     <div class="m404-highlight m406-tappable" data-m404="pay" role="button" tabindex="0" aria-label="查看待收并收款"><span>待收</span><strong>${M(due)}</strong></div>
     <div class="m406-tappable" data-m404="editfocus" data-target="eFloorCostTotal" role="button" tabindex="0" aria-label="编辑成本"><span>成本</span><strong class="${st!=='complete'?'m404-red':''}">${st==='missing'?'待补':M(cost)}</strong></div>
-    <div class="m406-tappable" data-m404="editfocus" data-target="eCostStatus" role="button" tabindex="0" aria-label="查看利润并编辑成本"><span>利润</span><strong>${known?M(prof):'待补成本'}</strong></div></section>`;
+    <div class="m406-tappable" data-m404="profit" role="button" tabindex="0" aria-label="编辑订单利润"><span>利润${manual!==null?' · 手动':''}</span><strong>${prof!==null?M(prof):'待补成本'}</strong></div></section>`;
  }
  function paymentsPage(o){
   const hist=Array.isArray(o.paymentHistory)?o.paymentHistory:[],paid=orderPaidValue(o),due=calcOrderReceivable(o);
@@ -116,7 +186,7 @@
   document.querySelectorAll('.order-entry').forEach(el=>el.classList.remove('is-expanded'));
   render(true);
  }
- function close(){state.id=null;state.menu=false;root.classList.remove('visible');root.setAttribute('aria-hidden','true');document.body.classList.remove('m404-detail-open');root.innerHTML='';if(originalFocus&&originalFocus.isConnected&&typeof originalFocus.focus==='function'){try{originalFocus.focus({preventScroll:true})}catch(e){}}}
+ function close(){closeProfitEditor();state.id=null;state.menu=false;root.classList.remove('visible');root.setAttribute('aria-hidden','true');document.body.classList.remove('m404-detail-open');root.innerHTML='';if(originalFocus&&originalFocus.isConnected&&typeof originalFocus.focus==='function'){try{originalFocus.focus({preventScroll:true})}catch(e){}}}
  function focusOrderField(target,index){
   const found=order();if(!found)return;
   const trueId=found.id;
@@ -147,7 +217,8 @@
  function invoke(action,id,target,index){
   try{
    const found=order();if(!found)return;id=found.id;
-   if(action==='editfocus')focusOrderField(target,index);
+   if(action==='profit')openProfitEditor();
+   else if(action==='editfocus')focusOrderField(target,index);
    else if(action==='edit')openOrderEdit(id);
    else if(action==='pay'&&calcOrderReceivable(order())>.005)recordPayment(id);
    else if(action==='contract'){close();sendOrderContract(id);}
@@ -166,7 +237,7 @@
   if(action==='floor'){const f=Number(btn.dataset.floor);state.expandedFloors.has(f)?state.expandedFloors.delete(f):state.expandedFloors.add(f);render(false);return;}
   if(action==='more'){state.menu=!state.menu;render(false);return;}
   state.menu=false;invoke(action,id,btn.dataset.target,btn.dataset.index);
-  if(!['edit','editfocus','contract','settlement','refund','pay'].includes(action))render(false);
+  if(!['edit','editfocus','profit','contract','settlement','refund','pay'].includes(action))render(false);
  });
  root.addEventListener('keydown',ev=>{if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('[role="button"][data-m404]')){ev.preventDefault();ev.target.click();}});
  document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&state.id&&!document.querySelector('.modal-mask:not(.hide)'))close();});
@@ -174,6 +245,6 @@
  window.toggleOrderRowDetail=function(id){if(!document.getElementById('muyeOrderDetailV404'))return oldToggle.call(this,id);open(id);};
  const oldRender=window.renderOrders;
  window.renderOrders=function(){const ret=oldRender.apply(this,arguments);if(state.id)render(false);return ret;};
- window.muyeOrderDetailV404={open,close,refresh:()=>state.id&&render(false),getStatus:()=>({opened:!!state.id,tab:state.tab,id:state.id})};
+ window.muyeOrderDetailV404={open,close,refresh:()=>state.id&&render(false),getStatus:()=>({opened:!!state.id,tab:state.tab,id:state.id}),profitManual:manualProfit};
  window.muyeOrderDetailV404Ready=true;
 })();
