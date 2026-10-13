@@ -29,6 +29,7 @@ async function smoke(browser,name,url){
       assert.equal(isolated.write,false,'test must never write production data');
     }else { assert.equal(title,'木业管家 V398','production must remain V398 during V399 validation'); assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','production Mac recovery guard must initialize'); }
     console.log('PASS',name,'main JS initialized',title);
+    if(name!=='staging') {console.log('PASS production immutable read-only load check, no UI writes');return;}
     // V382: empty brand-new quote must have no pre-created measurement row.
     // Preserve previously saved/restoreable measurements: do not clear browser storage on production.
     if(name==='staging'){
