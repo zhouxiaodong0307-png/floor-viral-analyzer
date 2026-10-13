@@ -23,6 +23,22 @@ async function smoke(browser,name,url){
     assert.ok(versionResp.ok(),name+': deployed version metadata must load');
     const installedVersion=String((await versionResp.json()).version);
     assert.equal(title,'木业管家 V'+installedVersion,name+': page title must match deployed version metadata');
+    const iconHref=await page.locator('link[rel="apple-touch-icon"]').getAttribute('href');
+    assert.equal(iconHref,'./icon-180.png?v='+installedVersion,name+': Apple home icon must use versioned PNG');
+    const pngResponse=await page.request.get(new URL(iconHref,page.url()).toString());
+    assert.ok(pngResponse.ok(),name+': Apple PNG icon missing on live site');
+    const pngBytes=await pngResponse.body();
+    assert.equal(pngBytes.subarray(0,8).toString('hex'),'89504e470d0a1a0a',name+': Apple icon must actually be PNG');
+    assert.equal(pngBytes.readUInt32BE(16),180,name+': Apple icon width must be 180');
+    assert.equal(pngBytes.readUInt32BE(20),180,name+': Apple icon height must be 180');
+    const svgResponse=await page.request.get(new URL('icon.svg?v='+installedVersion,page.url()).toString());
+    assert.ok(svgResponse.ok(),name+': SVG logo missing on live site');
+    assert.match(await svgResponse.text(),/M460 839V594H67V519/,name+': SVG must show restored 木, not legacy stripes');
+    const manifestResponse=await page.request.get(new URL('manifest.webmanifest?v='+installedVersion,page.url()).toString());
+    assert.ok(manifestResponse.ok(),name+': manifest missing on live site');
+    const pwaManifest=await manifestResponse.json();
+    assert.ok(pwaManifest.icons.some(icon=>icon.src==='./icon.svg?v='+installedVersion),name+': live manifest must declare versioned 木 icon');
+    console.log('PASS',name,'icon-180.png + 木 SVG + versioned manifest served online');
     if(name==='staging'){
       assert.equal(title,'木业管家 V'+installedVersion,'staging page/version consistency');
       assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','staging recovery guard must initialize');
