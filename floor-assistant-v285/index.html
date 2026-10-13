@@ -9676,7 +9676,7 @@ function checkOrderAmountConsistency(order){const finalAmount=calcOrderFinalAmou
       stage2Amount:plan?(+plan.stage2Amount||total*(+plan.stage2Rate||0)/100):total*.5,
       stage3Amount:plan?(+plan.stage3Amount||total*(+plan.stage3Rate||0)/100):total*.1,
       stageRateTotal:plan?(+plan.stage1Rate||0)+(+plan.stage2Rate||0)+(+plan.stage3Rate||0):100,
-      note:o.historyNote||'', orderSalesItems:normalizeSalesItems(o)
+      note:String(o.quoteNote||o.contractNote||o.customerNote||''), orderSalesItems:normalizeSalesItems(o)
     };
   }
   function captureQuoteForContract(){
@@ -9721,7 +9721,7 @@ function checkOrderAmountConsistency(order){const finalAmount=calcOrderFinalAmou
     preview.querySelector('.contract-preview-badge')?.remove();
     const orderNote=String(o.quoteNote||o.contractNote||o.customerNote||'').trim();
     const quoteNoteBlock=preview.querySelector('[data-contract-quote-note]');
-    if(orderNote){const content=escHtml(orderNote).replace(/\r?\n/g,'<br>');if(quoteNoteBlock)quoteNoteBlock.innerHTML=content;else{const payHead=[...preview.querySelectorAll('h3')].find(x=>x.textContent.includes('第九条'));if(payHead){const noteHead=document.createElement('h3');noteHead.textContent='订单备注';const note=document.createElement('p');note.className='contract-text';note.setAttribute('data-contract-quote-note','');note.innerHTML=content;payHead.parentNode.insertBefore(noteHead,payHead);payHead.parentNode.insertBefore(note,payHead)}}}
+    if(!orderNote&&quoteNoteBlock){const title=quoteNoteBlock.previousElementSibling;if(title?.textContent==='报价备注')title.remove();quoteNoteBlock.remove()}if(orderNote){const content=escHtml(orderNote).replace(/\r?\n/g,'<br>');if(quoteNoteBlock)quoteNoteBlock.innerHTML=content;else{const payHead=[...preview.querySelectorAll('h3')].find(x=>x.textContent.includes('第九条'));if(payHead){const noteHead=document.createElement('h3');noteHead.textContent='订单备注';const note=document.createElement('p');note.className='contract-text';note.setAttribute('data-contract-quote-note','');note.innerHTML=content;payHead.parentNode.insertBefore(noteHead,payHead);payHead.parentNode.insertBefore(note,payHead)}}}
     const tbody=preview.querySelector('.contract-table tbody'); if(tbody)tbody.innerHTML=orderContractRows(o);
     const total=calcOrderFinalAmount(o); contractSetTotal(total);
     const hs=[...preview.querySelectorAll('h3')],payHead=hs.find(h=>/第四条/.test(h.textContent||''));
