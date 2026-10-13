@@ -40,11 +40,21 @@ const allCases=[target,'https://muye-guan-jia.onrender.com/'].flatMap((url,i)=>c
    });
    try{
     for(let i=0;i<3;i++){
-      let res=i===0?await page.goto(item.url,{waitUntil:'domcontentloaded',timeout:120000}):await page.reload({waitUntil:'domcontentloaded',timeout:120000});
-      assert.ok(res&&res.status()<400,item.label+' navigation HTTP');
-      await page.waitForFunction(()=>document.documentElement.classList.contains('muye-ui-ready')&&typeof show==='function',{timeout:20000});
-      await page.waitForTimeout(250);
-      const state=await page.evaluate(()=>({frames:window.__v380PaintLog.slice(),app:document.querySelector('.app').getBoundingClientRect().width,scroll:document.documentElement.scrollWidth,stylesAfterHead:Array.from(document.querySelectorAll('style')).filter(x=>x.parentNode!==document.head).length,cssGuard:!!document.getElementById('v380-first-paint-guard'),version:document.querySelector('meta[name="app-version"]')?.content}));
+      let state;
+      for(let attempt=0;attempt<3;attempt++){
+        try{
+          const res=i===0&&attempt===0?await page.goto(item.url,{waitUntil:'domcontentloaded',timeout:120000}):await page.reload({waitUntil:'domcontentloaded',timeout:120000});
+          assert.ok(res&&res.status()<400,item.label+' navigation HTTP');
+          await page.waitForFunction(()=>document.documentElement.classList.contains('muye-ui-ready')&&typeof show==='function',{timeout:20000});
+          await page.waitForTimeout(250);
+          state=await page.evaluate(()=>({frames:window.__v380PaintLog.slice(),app:document.querySelector('.app').getBoundingClientRect().width,scroll:document.documentElement.scrollWidth,stylesAfterHead:Array.from(document.querySelectorAll('style')).filter(x=>x.parentNode!==document.head).length,cssGuard:!!document.getElementById('v380-first-paint-guard'),version:document.querySelector('meta[name="app-version"]')?.content}));
+          break;
+        }catch(e){
+          if(attempt===2||!/execution context was destroyed|navigation|context was destroyed/i.test(String(e)))throw e;
+          console.log('RETRY',item.label,'reload race',attempt+1);
+          await page.waitForLoadState('domcontentloaded',{timeout:15000}).catch(()=>{});
+        }
+      }
       assert.equal(state.version,item.url===target?'V399':'V398',item.label+' version');
       assert.equal(state.stylesAfterHead,0,item.label+' late styles');
       assert.ok(state.cssGuard,item.label+' first-paint guard');
