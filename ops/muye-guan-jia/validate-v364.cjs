@@ -9,7 +9,7 @@ const version=JSON.parse(fs.readFileSync(path.join(root,'floor-assistant-v285/ve
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'floor-assistant-v285/manifest.webmanifest'),'utf8'));
 const scripts=[...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)].filter(m=>!/\bsrc\s*=/.test(m[1]));
 for(let i=0;i<scripts.length;i++)new vm.Script(scripts[i][2],{filename:'inline-'+i+'.js'});
-assert.equal(scripts.length,21,'unexpected inline script count');
+assert.equal(scripts.length,22,'unexpected inline script count');
 assert.equal(html.match(/const APP_VERSION='(\d+)'/)[1],version.version);
 assert.equal(version.cloudSync,'disabled','staging cloud must remain isolated');
 assert.match(html,/const SUPABASE_URL='';/);
@@ -128,7 +128,7 @@ test('V371 missing payment event rejected',()=>{const orders=structuredClone(sam
 test('V371 missing product baseline rejected',()=>{assert.throws(()=>verifyCloud({...sampleCloud,products:sampleCloud.products.slice(0,3)}));return true});
 assert.match(html,/countMismatch&&!cloudReadOnly&&!cloudConflict&&cloudStatusOkay!==false/,'conflict status must not be masked');
 assert.match(html,/fetch\(url,\{method:method,cache:'no-store'/,'cloud reads must bypass stale cache');
-assert.equal(version.version,'399','staging version must be V399');
+assert.equal(version.version,'400','staging version must be V400');
 assert.ok(html.indexOf('id="v374-ipad-both-orientations-content-width"') < html.indexOf("</head><body>"),"iPad critical CSS must be in head");
 
 
