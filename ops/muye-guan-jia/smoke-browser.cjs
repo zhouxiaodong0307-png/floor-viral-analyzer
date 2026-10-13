@@ -217,7 +217,7 @@ async function measurementArchiveRegression(browser){
        {floor:'3楼',name:'房间1',expr:'135x170+320x268'},
        {floor:'3楼',name:'房间2',expr:'325x376+60x105'},
        {floor:'3楼',name:'房间3',expr:'316x330'},
-       {floor:'3楼',name:'房间4',expr:'355x345+210x100'},
+       {floor:'3楼',name:'房间4',expr:'355x345+210x100+331x75'},
        {floor:'3楼',name:'过道',expr:'120x390'},
        {floor:'3楼',name:'客餐厅',expr:'350x460'},
        {floor:'4楼',name:'房间1',expr:'300x340'}
