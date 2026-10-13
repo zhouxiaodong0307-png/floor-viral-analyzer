@@ -222,6 +222,13 @@ body{background:#f5f5f7;color:#1c1c1e}
 .topbar .yearSel{box-sizing:border-box;appearance:none;-webkit-appearance:none;width:76px;min-width:76px;max-width:76px;padding:8px 21px 8px 9px;font-size:13px;line-height:1.2;letter-spacing:0;background-color:#fff;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%233c3c43' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5-5 5 5M7 14l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center;background-size:11px 11px}
 @media(max-width:820px){.topbar .headActions{gap:4px}.topbar .headActions>.btn{padding-inline:6px}.topbar .yearSel{width:69px;min-width:69px;max-width:69px;padding:7px 18px 7px 6px;font-size:12px;background-position:right 4px center;background-size:10px 10px}}
 @media(max-width:390px){.topbar .yearSel{width:67px;min-width:67px;max-width:67px;padding-right:18px;padding-left:5px}}
+
+/* Align year selector and adjacent status / backup buttons on one baseline. */
+.topbar .headActions{align-items:center}
+.topbar .yearSel,.topbar .headActions>.btn{height:38px;min-height:38px;box-sizing:border-box;vertical-align:middle;line-height:20px}
+.topbar .headActions>.btn{display:inline-flex;align-items:center;justify-content:center}
+.topbar .headActions>.syncBtn{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+@media(max-width:820px){.topbar .yearSel,.topbar .headActions>.btn{height:34px;min-height:34px;line-height:18px}}
 </style>
 </head>
 <body>
