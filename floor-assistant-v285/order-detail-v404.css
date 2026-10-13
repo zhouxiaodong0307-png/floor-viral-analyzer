@@ -147,3 +147,6 @@ body.m404-detail-open{overflow:hidden!important}
 #muyeOrderDetailV404 .m404-pay-tiles>div{min-width:0}
 @media(min-width:690px){#muyeOrderDetailV404 .m404-shell{height:min(930px,96dvh)}#muyeOrderDetailV404 .m404-scroll{padding-left:14px;padding-right:14px}}
 @media(max-width:370px){#muyeOrderDetailV404 .m404-scroll{padding-left:7px;padding-right:7px}#muyeOrderDetailV404 .m404-card{padding-left:10px;padding-right:10px}#muyeOrderDetailV404 .m404-bottom{padding-left:7px;padding-right:7px}#muyeOrderDetailV404 .m404-finance-card>div{padding-left:3px;padding-right:3px}#muyeOrderDetailV404 .m404-overview-grid>div{padding:0 5px}}
+
+/* V406: top-right More popover belongs to the header action. */
+#muyeOrderDetailV404 .m404-action-menu{top:calc(env(safe-area-inset-top,0px) + 58px);bottom:auto;right:11px;max-height:min(55dvh,360px);overflow:auto}
