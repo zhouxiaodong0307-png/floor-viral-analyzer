@@ -20,7 +20,7 @@ async function smoke(browser,name,url){
     assert.equal(await page.locator('#quote').count(),1);
     const title=await page.title();
     if(name==='staging'){
-      assert.equal(title,'木业管家 V402','staging must serve actual V402 code');
+      assert.equal(title,'木业管家 V403','staging must serve actual V403 code');
       assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','staging recovery guard must initialize');
       const isolated=await page.evaluate(()=>({url:SUPABASE_URL,authUrl:FLOOR_AUTH_URL,authMode:FLOOR_AUTH_MODE,write:isCloudWritableRuntime()}));
       assert.equal(isolated.url,'','test must never connect to production database');
