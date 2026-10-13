@@ -10814,6 +10814,7 @@ function captureOrderMeasurementV400(q){
     lossRate:Number(q.loss)||0,manuallyAdjustedArea:!!quoteManualInputs.area
   };
 }
+window.captureOrderMeasurementV400=captureOrderMeasurementV400;
 function measureNumV400(v){const n=Number(v);return Number.isFinite(n)?n.toFixed(2):'0.00'}
 function measureSurveyDetailsV400(order){
   const data=order?.measureSnapshot;
