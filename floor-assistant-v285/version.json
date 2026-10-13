@@ -1,6 +1,6 @@
 {
-  "version": "404",
-  "channel": "validation",
+  "version": "405",
+  "channel": "staging",
   "cloudSync": "disabled",
   "builtAt": "2026-10-14"
 }
