@@ -24,7 +24,10 @@ async function check(browser,url,w,h,touch,title,kind){
     const res=await page.goto(url,{waitUntil:'domcontentloaded',timeout:120000});
     assert.ok(res&&res.status()<400,kind+': HTTP error');
     await page.waitForFunction(()=>typeof window.show==='function',{timeout:20000});
-    assert.equal(await page.title(),title,'actual HTML version check '+kind);
+    const versionResponse=await page.request.get(new URL('version.json?check='+Date.now(),page.url()).toString());
+    assert.ok(versionResponse.ok(),kind+' deployed version metadata missing');
+    const actualVersion=String((await versionResponse.json()).version);
+    assert.equal(await page.title(),'木业管家 V'+actualVersion,'actual HTML version check '+kind);
     const snapshot=()=>page.evaluate(()=>{
       const rect=selector=>{
         const el=document.querySelector(selector);
