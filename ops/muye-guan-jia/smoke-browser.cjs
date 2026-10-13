@@ -27,7 +27,7 @@ async function smoke(browser,name,url){
       assert.equal(isolated.authUrl,'','test authentication must be disabled');
       assert.equal(isolated.authMode,'disabled','test must not authenticate');
       assert.equal(isolated.write,false,'test must never write production data');
-    }else { assert.equal(title,'木业管家 V398','production must remain V398 during V399 validation'); assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','production Mac recovery guard must initialize'); }
+    }else { assert.equal(title,'木业管家 V399','production must serve released V399'); assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','production Mac recovery guard must initialize'); }
     console.log('PASS',name,'main JS initialized',title);
     if(name!=='staging') {console.log('PASS production immutable read-only load check, no UI writes');return;}
     // V382: empty brand-new quote must have no pre-created measurement row.
