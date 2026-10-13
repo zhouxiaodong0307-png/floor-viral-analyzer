@@ -55,6 +55,12 @@ const URL='https://muye-guan-jia-migration-test.onrender.com/';
    assert.ok((await page.locator('#muyeOrderDetailV404 .m404-page').innerText()).includes('客厅'),'measurement source must remain real');
    await page.locator('#muyeOrderDetailV404 .m404-dots').click();
    assert.equal(await page.locator('#muyeOrderDetailV404 .m404-action-menu button').count(),3,'more menu must preserve actions');
+   const menuAlignment=await page.evaluate(()=>{
+     const top=document.querySelector('#muyeOrderDetailV404 .m404-dots').getBoundingClientRect();
+     const menu=document.querySelector('#muyeOrderDetailV404 .m404-action-menu').getBoundingClientRect();
+     return {topY:top.y,buttonBottom:top.bottom,menuTop:menu.top,menuBottom:menu.bottom};
+   });
+   assert.ok(menuAlignment.menuTop>=menuAlignment.topY-4&&menuAlignment.menuTop<menuAlignment.buttonBottom+55,'More should open near top-right '+JSON.stringify(menuAlignment));
    assert.equal(await page.evaluate(()=>JSON.stringify(orders()[0])),value.order,'UI tests must not mutate orders');
    assert.equal(errors.length,0,'page errors: '+errors.join(' | '));
    console.log('PASS V406 order-details responsive, editfocus and no mutation',width,JSON.stringify(layout.buttons));
