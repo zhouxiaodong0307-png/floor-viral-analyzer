@@ -1,6 +1,6 @@
 {
-  "version": "387",
-  "channel": "migration-test",
-  "cloudSync": "isolated",
-  "builtAt": "2026-10-12"
+  "version": "388",
+  "channel": "validation",
+  "cloudSync": "disabled",
+  "builtAt": "2026-10-13"
 }
