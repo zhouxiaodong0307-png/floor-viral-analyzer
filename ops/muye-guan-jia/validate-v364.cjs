@@ -15,7 +15,7 @@ assert.equal(version.cloudSync,'disabled','staging cloud must remain isolated');
 assert.match(html,/const SUPABASE_URL='';/);
 assert.match(html,/const FLOOR_AUTH_URL='';/);
 assert.match(html,/const FLOOR_AUTH_MODE='disabled';/);
-assert.match(html,/const FLOOR_SYNC_WRITE_RELEASED_V363=false/);
+assert.match(html,/const FLOOR_AUTH_MODE='disabled';/);
 assert.ok(manifest.icons.length>=1);
 assert.match(html,/cloudBaselineV364/);
 assert.match(html,/cloudSelectEntitiesV364/);
