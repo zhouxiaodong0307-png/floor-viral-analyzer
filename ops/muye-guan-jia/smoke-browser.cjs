@@ -19,15 +19,19 @@ async function smoke(browser,name,url){
     await page.waitForFunction(()=>typeof window.show==='function'&&typeof window.showInternal==='function',{timeout:20000});
     assert.equal(await page.locator('#quote').count(),1);
     const title=await page.title();
+    const versionResp=await page.request.get(new URL('version.json?check='+Date.now(),page.url()).toString());
+    assert.ok(versionResp.ok(),name+': deployed version metadata must load');
+    const installedVersion=String((await versionResp.json()).version);
+    assert.equal(title,'木业管家 V'+installedVersion,name+': page title must match deployed version metadata');
     if(name==='staging'){
-      assert.equal(title,'木业管家 V404','staging must serve actual V404 code');
+      assert.equal(title,'木业管家 V'+installedVersion,'staging page/version consistency');
       assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','staging recovery guard must initialize');
       const isolated=await page.evaluate(()=>({url:SUPABASE_URL,authUrl:FLOOR_AUTH_URL,authMode:FLOOR_AUTH_MODE,write:isCloudWritableRuntime()}));
       assert.equal(isolated.url,'','test must never connect to production database');
       assert.equal(isolated.authUrl,'','test authentication must be disabled');
       assert.equal(isolated.authMode,'disabled','test must not authenticate');
       assert.equal(isolated.write,false,'test must never write production data');
-    }else { assert.equal(title,'木业管家 V404','production must serve released V404'); assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','production Mac recovery guard must initialize'); }
+    }else { assert.equal(title,'木业管家 V'+installedVersion,'production page/version consistency'); assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','production Mac recovery guard must initialize'); }
     console.log('PASS',name,'main JS initialized',title);
     if(name!=='staging') {assert.equal(await page.evaluate(()=>window.muyeOrderDetailV404Ready===true),true,'production V404 order detail UI loaded');console.log('PASS production V404 immutable read-only load check, no UI writes');return;}
     // V382: empty brand-new quote must have no pre-created measurement row.
