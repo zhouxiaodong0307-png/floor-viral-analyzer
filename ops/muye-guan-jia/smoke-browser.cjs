@@ -274,6 +274,7 @@ async function measurementArchiveRegression(browser){
       const editing=document.getElementById('orderEditModal');
       const modalOpened=!editing.classList.contains('hide');
       document.getElementById('eCust').value='别墅量房档案回归（已编辑）';
+      document.getElementById('eOpener').value='测试开单人';
       saveOrderEdit();
       const latest=orders().find(x=>String(x.id)===String(id));
       return {modalOpened,updated:latest?.cust==='别墅量房档案回归（已编辑）',
