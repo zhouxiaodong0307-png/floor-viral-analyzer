@@ -20,7 +20,7 @@ async function smoke(browser,name,url){
     assert.equal(await page.locator('#quote').count(),1);
     const title=await page.title();
     if(name==='staging'){
-      assert.equal(title,'木业管家 V403','staging must serve actual V403 code');
+      assert.equal(title,'木业管家 V404','staging must serve actual V404 code');
       assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','staging recovery guard must initialize');
       const isolated=await page.evaluate(()=>({url:SUPABASE_URL,authUrl:FLOOR_AUTH_URL,authMode:FLOOR_AUTH_MODE,write:isCloudWritableRuntime()}));
       assert.equal(isolated.url,'','test must never connect to production database');
@@ -480,6 +480,67 @@ async function numericInputRegressionV403(browser){
   finally{await context.close()}
 }
 
+
+async function orderDetailRegressionV404(browser){
+  const originalUrl='https://muye-guan-jia-migration-test.onrender.com/';
+  for(const viewport of [{width:320,height:750},{width:375,height:812},{width:390,height:844},{width:430,height:930},{width:768,height:1024},{width:1024,height:768},{width:1280,height:850}]){
+    const context=await browser.newContext({viewport,locale:'zh-CN'});
+    const page=await context.newPage(),errors=[];
+    page.on('pageerror',e=>errors.push(String(e)));
+    page.on('dialog',d=>d.dismiss());
+    try{
+      const response=await page.goto(originalUrl,{waitUntil:'domcontentloaded',timeout:120000});
+      assert.ok(response?.ok(),'V404 staging URL must open');
+      await page.waitForFunction(()=>window.muyeOrderDetailV404Ready===true,{timeout:25000});
+      await page.evaluate(()=>{
+        const sample={id:900044, cust:'测试专用',date:'2026/10/14',opener:'周潇东',species:'缅甸柚木',area:100,
+          status:'进行中',costStatus:'missing',paid:0,finalAmount:34125,
+          products:[{species:'缅甸柚木',spec:'760×125',area:100,billArea:105,price:300,subtotal:31500}],
+          salesItems:[{name:'安装费',qty:105,unit:'㎡',price:25,subtotal:2625}],
+          measureSnapshot:{floors:[{name:'一楼'},{name:'二楼'},{name:'三楼'}],quoteActualArea:100,rows:[
+            {floor:'一楼',name:'客厅',expr:'4.2×3.8',area:15.96},{floor:'一楼',name:'餐厅',expr:'3.6×3.1',area:11.16},
+            {floor:'二楼',name:'主卧',expr:'4.5×3.8',area:17.1},{floor:'二楼',name:'次卧',expr:'4.2×3.6',area:15.12},
+            {floor:'二楼',name:'过道',expr:'1.2×8.2',area:10.34},{floor:'三楼',name:'书房',expr:'4.0×2.8',area:11.2}
+          ]}};
+        window.orders=()=>[sample];
+        window.toggleOrderRowDetail(sample.id);
+      });
+      assert.equal(await page.locator('.muye404-root.visible').count(),1,'V404 details opened');
+      assert.equal(await page.locator('.m404-overview-grid').count(),1,'V404 structured summary');
+      assert.equal(await page.locator('.m404-tabs [role="tab"]').count(),4,'V404 4 tabs');
+      assert.equal(await page.locator('.m404-line').count(),2,'V404 product and installation rows');
+      assert.ok((await page.locator('.m404-page').innerText()).includes('¥34,125'),'V404 final uses real calculation');
+      const metrics=await page.evaluate(()=>{
+        const el=document.querySelector('#muyeOrderDetailV404 .m404-shell'),foot=document.querySelector('.m404-bottom').getBoundingClientRect();
+        return {doc:document.documentElement.scrollWidth,vw:innerWidth,inner:el.scrollWidth,client:el.clientWidth,footer:foot.bottom};
+      });
+      assert.ok(metrics.doc<=viewport.width+1&&metrics.inner<=metrics.client+1,'V404 no horizontal overflow '+JSON.stringify(metrics));
+      assert.ok(metrics.footer<=viewport.height+1,'V404 actions remain within viewport');
+      await page.locator('[data-tab="measure"]').click();
+      assert.equal(await page.locator('.m404-floor').count(),3,'V404 exact three measured floors');
+      assert.equal(await page.locator('.m404-room').count(),6,'V404 exact six measured rooms');
+      assert.ok((await page.locator('.m404-measure-total').innerText()).includes('80.88'),'V404 must sum actual stored areas, not mockup 82.12');
+      await page.locator('.m404-floor-head').first().click();
+      assert.equal(await page.locator('.m404-room').count(),4,'V404 floor collapse works');
+      await page.locator('[data-tab="payments"]').click();
+      assert.ok((await page.locator('.m404-page').innerText()).includes('尚无逐笔收款记录'),'V404 never invents payment history');
+      await page.locator('[data-tab="info"]').click();
+      assert.ok((await page.locator('.m404-page').innerText()).includes('交货信息'),'V404 other details');
+      await page.locator('.m404-more-btn').click();
+      assert.equal(await page.locator('.m404-action-menu button').count(),3,'V404 legacy actions retained');
+      await page.evaluate(()=>{window.__v404ActionId=null;window.recordPayment=function(id){window.__v404ActionId=id}});
+      await page.locator('.m404-pay-btn').click();
+      assert.equal(await page.evaluate(()=>window.__v404ActionId),900044,'V404 numeric order ID preserved');
+      if(viewport.width===375)await page.screenshot({path:'/tmp/muye-v404-375.png',fullPage:true});
+      await page.locator('.m404-back').click();
+      assert.equal(await page.locator('.muye404-root.visible').count(),0,'V404 back closes full-screen detail');
+      assert.equal(errors.length,0,'V404 no unexpected JS errors '+errors.join('; '));
+      console.log('PASS V404 real staging browser four tabs, stored areas, numeric IDs, actions and responsive',viewport.width+'x'+viewport.height);
+    }catch(e){await page.screenshot({path:'/tmp/muye-v404-fail-'+viewport.width+'.png',fullPage:true}).catch(()=>{});throw e}
+    finally{await context.close()}
+  }
+}
+
 (async()=>{
   const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
   try{
@@ -489,6 +550,7 @@ async function numericInputRegressionV403(browser){
     await focusWithoutShadowV402(browser,390,844);
     await focusWithoutShadowV402(browser,820,1180);
     await numericInputRegressionV403(browser);
+    await orderDetailRegressionV404(browser);
     await smoke(browser,'production-readonly','https://muye-guan-jia.onrender.com/');
   }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
