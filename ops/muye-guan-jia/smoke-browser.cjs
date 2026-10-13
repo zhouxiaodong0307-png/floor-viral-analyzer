@@ -403,6 +403,76 @@ async function focusWithoutShadowV402(browser,width,height){
   finally{await context.close()}
 }
 
+
+async function numericInputRegressionV403(browser){
+  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2,locale:'zh-CN'});
+  const page=await context.newPage(),errors=[];
+  page.on('pageerror',e=>errors.push(String(e)));
+  try{
+    await page.goto('https://muye-guan-jia-migration-test.onrender.com/',{waitUntil:'domcontentloaded',timeout:120000});
+    await page.waitForFunction(()=>typeof window.muyeNumericKeyboardStatusV403==='function'&&typeof addQuoteExtraProduct==='function');
+    const start=await page.evaluate(()=>{
+      addQuoteExtraProduct({species:'柚木',spec:'910×125×18',area:25,price:350});
+      addEditProductRow({species:'红檀香',spec:'740×115×17',area:50,billArea:50,price:300});
+      addOrderProductRow({species:'橡木',spec:'760×125×18',area:30,billArea:30,price:240});
+      const numeric=[...document.querySelectorAll('input[type="number"]')].filter(x=>!x.readOnly&&!x.disabled);
+      const specs=[...document.querySelectorAll('input#spec,input#aqSpec,input#cSpec,input#pSpec,input#costSpec,input[data-field="spec"]')].filter(x=>x.closest('.app'));
+      return {
+        status:muyeNumericKeyboardStatusV403(),
+        numModes:numeric.map(x=>({id:x.id,mode:x.inputMode,step:x.step})),
+        specInputs:specs.map(x=>({id:x.id,mode:x.inputMode,type:x.type,hasButton:!!x.parentElement.querySelector('.muye-spec-x'),value:x.value})),
+        nameInputMode:document.getElementById('cust').inputMode,
+        phoneMode:document.getElementById('cPhone').inputMode,
+        quoteAreaMode:document.getElementById('area').inputMode,
+        discountMode:document.getElementById('eDiscount').inputMode,
+        productAreaMode:document.querySelector('#editProductRows [data-field="area"]').inputMode,
+        productPriceMode:document.querySelector('#editProductRows [data-field="price"]').inputMode,
+        salesFields:[...document.querySelectorAll('#editSalesRows [type="number"]')].map(x=>x.inputMode)
+      };
+    });
+    assert.equal(start.status.missingModes,0,'all editable numeric inputs need a numeric keyboard');
+    assert.ok(start.status.specs>=9,'static and generated specification fields must be enhanced');
+    assert.equal(start.status.specs,start.status.buttons,'every specification must have its own x button');
+    assert.ok(start.specInputs.every(x=>x.mode==='decimal'&&x.type==='text'&&x.hasButton),'spec fields require decimal keypad and ×');
+    assert.equal(start.quoteAreaMode,'decimal','quote area numeric keyboard');
+    assert.equal(start.discountMode,'decimal','order discount numeric keyboard');
+    assert.equal(start.productAreaMode,'decimal','order area numeric keyboard');
+    assert.equal(start.productPriceMode,'decimal','order unit price numeric keyboard');
+    assert.equal(start.phoneMode,'tel','phone keypad unchanged');
+    assert.ok(start.nameInputMode!=='decimal'&&start.nameInputMode!=='numeric','customer text keyboard untouched');
+    const button=page.locator('#editProductRows .muye-spec-x').first();
+    await page.evaluate(()=>document.getElementById('orderEditModal').classList.remove('hide'));
+    const field=page.locator('#editProductRows [data-field="spec"]').first();
+    await field.tap();
+    await field.evaluate(el=>{el.focus();el.setSelectionRange(el.value.length,el.value.length)});
+    const before=await field.inputValue();
+    await button.tap();
+    const inserted=await field.inputValue();
+    assert.equal(inserted,before+'×','touching the spec x button inserts multiplication, no duplicate');
+    const styles=await button.evaluate(el=>{
+      const host=el.parentElement,input=host.querySelector('input'),br=el.getBoundingClientRect(),ir=input.getBoundingClientRect(),parent=host.getBoundingClientRect();
+      return {visible:br.width>20&&br.height>20,inside:br.right<=ir.right+1&&br.top>=ir.top-1&&br.bottom<=ir.bottom+1,
+        specHeight:ir.height,buttonHeight:br.height,hostWidth:parent.width,layout:getComputedStyle(host).position,
+        focus:document.activeElement===input}
+    });
+    assert.equal(styles.visible,true,'inline × button visible');
+    assert.equal(styles.inside,true,'× fits within existing spec input without adding rows');
+    assert.ok(styles.specHeight>=styles.buttonHeight,'x button never exceeds specification field height');
+    assert.equal(styles.layout,'relative','x button must overlay, not add a separate row');
+    const after=await page.evaluate(()=>{
+      const room=addMeasureRow('房间1','325×430');
+      const i=room.querySelector('.mexpr');
+      return {roomMode:i.inputMode,expression:i.value,
+        numericCount:[...document.querySelectorAll('input[type="number"]')].filter(x=>!x.readOnly&&!x.disabled).length};
+    });
+    assert.equal(after.roomMode,'decimal','V401 measurement keypad must be preserved');
+    assert.equal(after.expression,'325×430','V400 measurement input value preserved');
+    assert.ok(!errors.some(x=>/TypeError|ReferenceError|SyntaxError/.test(x)),'no JavaScript errors '+errors.join('; '));
+    console.log('PASS V403 global numeric modes, 9+ specification fields, dynamic order/quote inputs, touch × insertion and compact layout');
+  }catch(e){await page.screenshot({path:'/tmp/muye-v403-numeric.png',fullPage:true}).catch(()=>{});console.error('V403 input regression failed',String(e),errors);throw e}
+  finally{await context.close()}
+}
+
 (async()=>{
   const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
   try{
@@ -411,6 +481,7 @@ async function focusWithoutShadowV402(browser,width,height){
     await measurementArchiveRegression(browser);
     await focusWithoutShadowV402(browser,390,844);
     await focusWithoutShadowV402(browser,820,1180);
+    await numericInputRegressionV403(browser);
     await smoke(browser,'production-readonly','https://muye-guan-jia.onrender.com/');
   }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
