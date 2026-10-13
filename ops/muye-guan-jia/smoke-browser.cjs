@@ -22,8 +22,10 @@ async function smoke(browser,name,url){
     if(name==='staging'){
       assert.equal(title,'木业管家 V399','staging must serve actual V399 code');
       assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','staging recovery guard must initialize');
-      const isolated=await page.evaluate(()=>({url:SUPABASE_URL,write:FLOOR_SYNC_WRITE_RELEASED_V363}));
+      const isolated=await page.evaluate(()=>({url:SUPABASE_URL,authUrl:FLOOR_AUTH_URL,authMode:FLOOR_AUTH_MODE,write:isCloudWritableRuntime()}));
       assert.equal(isolated.url,'','test must never connect to production database');
+      assert.equal(isolated.authUrl,'','test authentication must be disabled');
+      assert.equal(isolated.authMode,'disabled','test must not authenticate');
       assert.equal(isolated.write,false,'test must never write production data');
     }else { assert.equal(title,'木业管家 V398','production must remain V398 during V399 validation'); assert.equal(await page.evaluate(()=>typeof isVerifiedV371MacBackupOnlyV372),'function','production Mac recovery guard must initialize'); }
     console.log('PASS',name,'main JS initialized',title);
