@@ -6137,6 +6137,24 @@ html body .app #quote .measure-row input.stair-platform{font-size:16px!important
 #orders .order-measure-footer{display:flex;gap:3px 10px;justify-content:space-between;flex-wrap:wrap;color:#62656a;font-size:12px;margin-top:10px}
 #orders .order-measure-footer b{color:#1f1f1f}
 </style>
+<style id="v403-global-numeric-keyboard-style">
+/* Global keyboard cues: a compact inline multiplication key for specification fields.
+   No new row; retain normal text editing and the same input dimensions. */
+body .app .muye-spec-host{position:relative!important;min-width:0}
+body .app .muye-spec-host>input.muye-spec-numeric{width:100%;min-width:0;padding-right:46px!important;box-sizing:border-box}
+body .app .muye-spec-host>button.muye-spec-x{
+ position:absolute!important;right:7px!important;bottom:6px!important;z-index:2;
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ width:31px!important;min-width:31px!important;max-width:31px!important;height:31px!important;min-height:31px!important;
+ margin:0!important;padding:0!important;border:1px solid #e3e5e9!important;
+ border-radius:9px!important;background:#f5f5f7!important;color:#292b31!important;
+ font-size:20px!important;line-height:1!important;font-weight:400!important;box-shadow:none!important;
+ transform:none!important;-webkit-tap-highlight-color:transparent!important;touch-action:manipulation;
+}
+body .app .muye-spec-host>button.muye-spec-x:active{background:#e9eaed!important}
+body .app .muye-spec-host>button.muye-spec-x:focus{outline:none!important;box-shadow:none!important}
+body .app .muye-spec-host>button.muye-spec-x:focus-visible{outline:2px solid #64676f!important;outline-offset:1px!important}
+</style>
 </head><body><div class="app">
 
 
@@ -10872,24 +10890,7 @@ window.muyeMeasureArchiveStatusV400=function(id){
 })();
 </script>
 
-<style id="v403-global-numeric-keyboard-style">
-/* Global keyboard cues: a compact inline multiplication key for specification fields.
-   No new row; retain normal text editing and the same input dimensions. */
-body .app .muye-spec-host{position:relative!important;min-width:0}
-body .app .muye-spec-host>input.muye-spec-numeric{width:100%;min-width:0;padding-right:46px!important;box-sizing:border-box}
-body .app .muye-spec-host>button.muye-spec-x{
- position:absolute!important;right:7px!important;bottom:6px!important;z-index:2;
- display:flex!important;align-items:center!important;justify-content:center!important;
- width:31px!important;min-width:31px!important;max-width:31px!important;height:31px!important;min-height:31px!important;
- margin:0!important;padding:0!important;border:1px solid #e3e5e9!important;
- border-radius:9px!important;background:#f5f5f7!important;color:#292b31!important;
- font-size:20px!important;line-height:1!important;font-weight:400!important;box-shadow:none!important;
- transform:none!important;-webkit-tap-highlight-color:transparent!important;touch-action:manipulation;
-}
-body .app .muye-spec-host>button.muye-spec-x:active{background:#e9eaed!important}
-body .app .muye-spec-host>button.muye-spec-x:focus{outline:none!important;box-shadow:none!important}
-body .app .muye-spec-host>button.muye-spec-x:focus-visible{outline:2px solid #64676f!important;outline-offset:1px!important}
-</style>
+
 <script id="v403-global-numeric-keyboard">
 (function(){
 'use strict';
