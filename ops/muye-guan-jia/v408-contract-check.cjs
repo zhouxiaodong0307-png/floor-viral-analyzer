@@ -13,13 +13,13 @@ const url='https://muye-guan-jia-migration-test.onrender.com/';
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:90000});
   await page.waitForFunction(()=>typeof window.muyeContractRevisionStatus==='function'&&typeof window.muyeContractV408Status==='function',{timeout:25000});
   let init=await page.evaluate(()=>{
-   const o={id:900408,cust:'未命名客户',opener:'周潇东',date:'2026/10/14',products:[{species:'缅甸柚木',spec:'740×115×17',area:20,billArea:21,price:350,subtotal:7350}],salesItems:[{name:'安装费',qty:20,unit:'㎡',price:25,subtotal:500}],finalAmount:7850,sales:7850,paid:0,costStatus:'missing',status:'进行中'};
+   const o={id:900408,cust:'未命名客户',opener:'周潇东',date:'2026/10/14',products:[{species:'缅甸柚木',spec:'740×115×17',area:20,billArea:21,price:350,subtotal:7350}],salesItems:[{name:'安装费',qty:20,unit:'㎡',price:25,subtotal:500}],finalAmount:7850,sales:7850,paid:0,costStatus:'missing',status:'进行中',entrySource:'quote',pricingMode:'quote_loss',orderMode:'auto',orderModeSource:'quote_conversion'};
    localStorage.setItem('floor_orders_v3',JSON.stringify([o]));
    window.orders=()=>JSON.parse(localStorage.getItem('floor_orders_v3')||'[]');
    window.sendOrderContract(o.id);
    return {mode:window.contractMode,orderId:window.currentContractOrderId,storedAmount:orders()[0].finalAmount,hasDoc:!!document.querySelector('#contractPreview .contract-title'),link:document.querySelector('#contractShareBtn')?.classList.contains('hide')};
   });
-  console.log('DEBUG PRICE after first open',init.storedAmount);
+  assert.equal(init.storedAmount,7850,'quote-origin test order retains its bill-area pricing');
   assert.equal(init.orderId,900408,'order contract linked');assert.equal(init.mode,'electronic');assert.equal(init.hasDoc,true);
   assert.equal(init.link,false);
   await page.locator('#contractDoc button').filter({hasText:'完善合同信息'}).click();
@@ -95,7 +95,7 @@ const url='https://muye-guan-jia-migration-test.onrender.com/';
   assert.ok(sharing.data?.size>1000,'shared PDF must not be empty');
   assert.ok(!dialogs.some(x=>/失败/.test(x)),'no failed share alert');
   const orderAfter=await page.evaluate(()=>orders()[0]);
-  console.log('DEBUG PRICE after contract',JSON.stringify({final:orderAfter.finalAmount,sales:orderAfter.sales,products:orderAfter.products,cust:orderAfter.cust}));
+  
   assert.equal(orderAfter.finalAmount,7850,'contract edits may not rewrite order price');
   assert.equal(orderAfter.paid,0,'contract edits may not alter payment');
   assert.equal(orderAfter.cust,'未命名客户','contract customer does not corrupt order data');
