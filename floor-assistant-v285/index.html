@@ -11031,6 +11031,18 @@ window.generateContract=function(){
   const result=originalGenerate.apply(this,arguments);
   schedulePdf(550);return result;
 };
+/* Contract-specific customer name wins for the exported file name, without mutating order customer. */
+const originalPdfBuilderV408=window.buildContractPdfFile;
+window.buildContractPdfFile=async function(){
+  const file=await originalPdfBuilderV408.apply(this,arguments);
+  const draft=typeof loadContractDraft==='function'?loadContractDraft():null;
+  const typed=$('cCust')?.value?.trim();
+  const named=(draft?.cust&&draft.cust!=='未命名客户'?draft.cust:(typed&&typed!=='未命名客户'?typed:''));
+  if(!named)return file;
+  const safeName=String(named).replace(/[\\/:*?"<>|\x00-\x1f]/g,'').trim().slice(0,48);
+  if(!safeName)return file;
+  return new File([await file.arrayBuffer()],'木地板电子订货合同_'+safeName+'.pdf',{type:'application/pdf'});
+};
 let cache=null,task=null,timer=null,revision=0;
 function currentRevision(){
  const p=$('contractPreview');return [window.contractMode||'',window.currentContractOrderId??window.currentQuoteOrderId??'',p?.innerHTML||''].join('\x1e');
