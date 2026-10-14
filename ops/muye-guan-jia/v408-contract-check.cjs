@@ -126,5 +126,20 @@ const url='https://muye-guan-jia-migration-test.onrender.com/';
   console.log('PASS V408 contract name, bank, Enter line, save/reopen/reload, PDF share '+width+'px');
   await ctx.close();
  }
+ // Final released production probe is strictly read-only: no login, data changes or modal interactions.
+ const prodCtx=await browser.newContext({viewport:{width:390,height:844},locale:'zh-CN'});
+ const prodPage=await prodCtx.newPage();
+ const res=await prodPage.goto('https://muye-guan-jia.onrender.com/',{waitUntil:'domcontentloaded',timeout:90000});
+ assert.ok(res?.ok(),'production site must respond');
+ await prodPage.waitForFunction(()=>typeof window.muyeContractV408Status==='function',{timeout:25000});
+ const live=await prodPage.evaluate(()=>({title:document.title,version:document.querySelector('meta[name="app-version"]')?.content,appVersion:APP_VERSION,cloudConfigured:!!SUPABASE_URL,authMode:FLOOR_AUTH_MODE,documentReady:typeof window.muyeContractRevisionStatus==='function'}));
+ assert.equal(live.title,'木业管家 V408','production HTML is not newest release');
+ assert.equal(live.version,'V408');
+ assert.equal(live.appVersion,'408');
+ assert.equal(live.cloudConfigured,true,'production cloud config must be present');
+ assert.equal(live.authMode,'password');
+ assert.equal(live.documentReady,true);
+ console.log('PASS V408 production actual deployed HTML read-only',JSON.stringify(live));
+ await prodCtx.close();
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});
