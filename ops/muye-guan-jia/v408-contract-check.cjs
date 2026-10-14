@@ -73,6 +73,17 @@ const url='https://muye-guan-jia-migration-test.onrender.com/';
   await page.evaluate(()=>window.sendOrderContract(900408));
   assert.ok((await page.locator('#contractPreview').innerText()).includes('6222 8888 1234'),'manual bank survives reload');
   assert.ok((await page.locator('#contractPreview').innerText()).includes('张先生'),'customer survives reload');
+  // Real PDF generation smoke: render edited preview as a PDF before sharing.
+  if(width===375){
+    const real=await page.evaluate(async()=>{
+      const file=await window.buildContractPdfFile();
+      const buf=await file.arrayBuffer();
+      const bytes=new Uint8Array(buf.slice(0,5));
+      return {name:file.name,size:file.size,signature:String.fromCharCode(...bytes)};
+    });
+    assert.ok(real.size>3000&&real.signature.startsWith('%PDF-'),'real edited contract PDF must be nonempty and valid '+JSON.stringify(real));
+    console.log('PASS V408 real PDF generation',real.size,real.name);
+  }
   // Mock platform PDF capture, not the clipboard/share UI; confirm correct edited preview is what is shared.
   await page.evaluate(()=>{
     window.__v408Shared=null;
