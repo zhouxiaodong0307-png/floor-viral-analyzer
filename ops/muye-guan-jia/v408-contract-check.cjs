@@ -82,6 +82,7 @@ const url='https://muye-guan-jia-migration-test.onrender.com/';
       return {name:file.name,size:file.size,signature:String.fromCharCode(...bytes)};
     });
     assert.ok(real.size>3000&&real.signature.startsWith('%PDF-'),'real edited contract PDF must be nonempty and valid '+JSON.stringify(real));
+    assert.equal(real.name,'木地板电子订货合同_张先生.pdf','actual PDF filename must use edited contract customer, not placeholder order name');
     console.log('PASS V408 real PDF generation',real.size,real.name);
   }
   // Mock platform PDF capture, not the clipboard/share UI; confirm correct edited preview is what is shared.
@@ -105,6 +106,17 @@ const url='https://muye-guan-jia-migration-test.onrender.com/';
   assert.equal(sharing.data?.fileName,'木地板电子订货合同_张先生.pdf','WeChat share selects current PDF with modified account');
   assert.ok(sharing.data?.size>1000,'shared PDF must not be empty');
   assert.ok(!dialogs.some(x=>/失败/.test(x)),'no failed share alert');
+  if(width===820){
+    await page.evaluate(()=>{
+      Object.defineProperty(navigator,'share',{configurable:true,value:async()=>{throw new DOMException('Activation expired','NotAllowedError')}});
+    });
+    const downloadWait=page.waitForEvent('download',{timeout:15000});
+    await page.locator('#contractShareBtn').click();
+    const downloaded=await downloadWait;
+    assert.ok(downloaded.suggestedFilename().includes('张先生'),'share rejection must automatically save the edited PDF');
+    assert.ok(dialogs.some(x=>x.includes('已为你保存')),'share fallback must clearly explain the PDF was saved');
+    console.log('PASS V408 Safari share failure auto-download fallback',downloaded.suggestedFilename());
+  }
   const orderAfter=await page.evaluate(()=>orders()[0]);
   
   assert.equal(orderAfter.finalAmount,7500,'contract edits may not rewrite original order price');
