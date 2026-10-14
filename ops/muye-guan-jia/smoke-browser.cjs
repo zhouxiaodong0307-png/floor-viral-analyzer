@@ -549,8 +549,11 @@ async function orderDetailRegressionV404(browser){
       await page.locator('.m404-dots').click();
       assert.equal(await page.locator('.m404-action-menu button').count(),3,'V404 legacy actions retained');
       await page.evaluate(()=>{window.__v404ActionId=null;window.recordPayment=function(id){window.__v404ActionId=id}});
-      await page.locator('.m404-pay-btn').click();
-      assert.equal(await page.evaluate(()=>window.__v404ActionId),900044,'V404 numeric order ID preserved');
+      await page.locator('.m404-action-menu [data-m404="pay"]').click();
+      assert.equal(await page.evaluate(()=>window.__v404ActionId),900044,'V409 pay menu must preserve actual order ID');
+      await page.evaluate(()=>{window.__v409SettlementId=null;window.openSettlementList=function(id){window.__v409SettlementId=id}});
+      await page.locator('.m404-pay-btn[data-m404="settlement"]').click();
+      assert.equal(await page.evaluate(()=>window.__v409SettlementId),900044,'V409 bottom button must open settlement list for same order');
       if(viewport.width===375)await page.screenshot({path:'/tmp/muye-v404-375.png',fullPage:true});
       await page.locator('.m404-back').click();
       assert.equal(await page.locator('.muye404-root.visible').count(),0,'V404 back closes full-screen detail');
