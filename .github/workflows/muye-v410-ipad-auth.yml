@@ -1,0 +1,26 @@
+name: Muye V410 iPad cloud login isolated regression
+on:
+  push:
+    branches: [wood-floor-migration-v345-validation]
+    paths:
+      - 'floor-assistant-v285/index.html'
+      - 'ops/muye-guan-jia/v410-ipad-auth-check.cjs'
+      - '.github/workflows/muye-v410-ipad-auth.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ipad-auth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium for iPad viewport
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.1
+          npx playwright install --with-deps chromium
+      - name: Mock authentication without touching production credentials or orders
+        run: node ops/muye-guan-jia/v410-ipad-auth-check.cjs
