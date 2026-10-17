@@ -1,4 +1,4 @@
-/* 木业管家 V407 · iOS-style order detail · view-only UI layer.
+/* 木业管家 V411 · iOS-style order detail · live calculated profit, read-only.
    Uses existing order business functions and stored order/measurement records. */
 (function(){
  'use strict';
@@ -22,12 +22,7 @@
  };
  const accurateProfitOriginal=window.orderAccurateProfit;
  const profitDisplayOriginal=window.profitDisplay;
- if(typeof accurateProfitOriginal==='function'){
-  window.orderAccurateProfit=function(o){const v=manualProfit(o);return v===null?accurateProfitOriginal(o):v};
- }
- if(typeof profitDisplayOriginal==='function'){
-  window.profitDisplay=function(o){const v=manualProfit(o);return v===null?profitDisplayOriginal(o):money(v)};
- }
+ /* V411: automatic ledger profit takes precedence; preserve historical manual fields without mutating them. */
  const profitEditor=document.createElement('div');
  profitEditor.id='muyeProfitEditorV407';profitEditor.hidden=true;
  document.body.appendChild(profitEditor);
@@ -108,7 +103,10 @@
   const final=calcOrderFinalAmount(o),difference=final-(original-discount+surcharge-refunds);
   const products=ps.map((p,i)=>`<div class="m404-line m404-product m406-tappable" data-m404="editfocus" data-target="product" data-index="${i}" role="button" tabindex="0" aria-label="编辑${E(p.species||'地板')}产品"><div class="m404-main"><b>${E(p.species||'木地板')}</b><span>${E(p.spec||'规格未填')}</span><small>实际 ${A(p.area)}㎡${Math.abs(N(p.billArea)-N(p.area))>.0001?' · 计价 '+A(p.billArea)+'㎡':''}</small></div><div class="m404-line-end"><b>${M(p.subtotal)}</b><span>${M(p.price)}/㎡</span></div></div>`).join('');
   const sales=ss.map((x,i)=>`<div class="m404-line m406-tappable" data-m404="editfocus" data-target="sales" data-index="${i}" role="button" tabindex="0" aria-label="编辑${E(x.name||'销售项目')}"><div class="m404-main"><b>${E(x.name||'其他销售项目')}</b><span>${A(x.qty)}${E(x.unit||'项')} · ${M(x.price)}/${E(x.unit||'项')}</span></div><div class="m404-line-end"><b>${M(x.subtotal)}</b></div></div>`).join('');
-  const paid=orderPaidValue(o),due=calcOrderReceivable(o),st=orderCostStatus(o),known=isProfitKnown(o),cost=orderRecordedCost(o),manual=manualProfit(o),prof=(known||manual!==null)?orderAccurateProfit(o):null;
+  const paid=orderPaidValue(o),due=calcOrderReceivable(o),st=orderCostStatus(o),known=isProfitKnown(o),cost=orderRecordedCost(o);
+  // Partial costs yield provisional profit. No costs means unknown profit, not revenue masquerading as profit.
+  const provisional=!known&&cost>0,prof=known?orderAccurateProfit(o):(provisional?calcOrderFinalAmount(o)-cost:null);
+  const profitLabel=provisional?'暂估利润':'利润';
   return `<section class="m404-card m404-items-card">${cardTitle('项目明细')}${products||'<div class="m404-empty">暂无产品资料</div>'}${sales}<button type="button" class="m404-add-row" data-m404="edit">＋ <span>编辑或添加销售项目</span><span>›</span></button></section>
   <section class="m404-card m404-money">${cardTitle('金额汇总')}<div class="m404-key-list">
     ${keyValue('产品金额',M(floor))}${keyValue('其他销售项目',M(extra))}
@@ -122,7 +120,7 @@
     <div class="m406-tappable" data-m404="editfocus" data-target="ePaid" role="button" tabindex="0" aria-label="编辑已收"><span>已收</span><strong>${M(paid)}</strong></div>
     <div class="m404-highlight m406-tappable" data-m404="pay" role="button" tabindex="0" aria-label="查看待收并收款"><span>待收</span><strong>${M(due)}</strong></div>
     <div class="m406-tappable" data-m404="editfocus" data-target="eFloorCostTotal" role="button" tabindex="0" aria-label="编辑成本"><span>成本</span><strong class="${st!=='complete'?'m404-red':''}">${st==='missing'?'待补':M(cost)}</strong></div>
-    <div class="m406-tappable" data-m404="profit" role="button" tabindex="0" aria-label="编辑订单利润"><span>利润${manual!==null?' · 手动':''}</span><strong>${prof!==null?M(prof):'待补成本'}</strong></div></section>`;
+    <div class="m404-profit-readonly" aria-label="${provisional?'暂估利润，仅扣除已录入成本':'自动计算利润'}" title="${provisional?'仅扣除已录入成本，待补成本会继续减少利润':'利润自动跟随订单成交额与成本更新'}"><span>${profitLabel}</span><strong>${prof!==null?M(prof):'待补成本'}</strong></div></section>`;
  }
  function paymentsPage(o){
   const hist=Array.isArray(o.paymentHistory)?o.paymentHistory:[],paid=orderPaidValue(o),due=calcOrderReceivable(o);

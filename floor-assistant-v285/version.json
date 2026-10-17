@@ -1,6 +1,6 @@
 {
-  "version": "410",
+  "version": "411",
   "channel": "production",
   "cloudSync": "authenticated_owner_only",
-  "builtAt": "2026-10-16"
+  "builtAt": "2026-10-17"
 }
