@@ -1,0 +1,27 @@
+name: Muye V411 isolated real-time profit
+on:
+  push:
+    branches: [wood-floor-migration-v345-validation]
+    paths:
+      - 'floor-assistant-v285/index.html'
+      - 'floor-assistant-v285/order-detail-v404.js'
+      - 'ops/muye-guan-jia/v411-profit-live.cjs'
+      - '.github/workflows/muye-v411-profit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  profit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated Playwright browser
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.1
+          npx playwright install --with-deps chromium
+      - name: Test simulated profit updates without production data writes
+        run: node ops/muye-guan-jia/v411-profit-live.cjs
