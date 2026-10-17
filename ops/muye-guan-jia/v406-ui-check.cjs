@@ -14,7 +14,7 @@ const URL='https://muye-guan-jia-migration-test.onrender.com/';
    assert.ok(res&&res.ok(),'test site unavailable');
    await page.waitForFunction(()=>window.muyeOrderDetailV404Ready===true,{timeout:20000});
    const stage=await page.evaluate(()=>({version:APP_VERSION,cloud:SUPABASE_URL,auth:FLOOR_AUTH_URL,mode:FLOOR_AUTH_MODE,write:isCloudWritableRuntime()}));
-   assert.deepEqual(stage,{version:'410',cloud:'',auth:'',mode:'disabled',write:false});
+   assert.deepEqual(stage,{version:'411',cloud:'',auth:'',mode:'disabled',write:false});
    const value=await page.evaluate(()=>{
      const o={id:999995406,cust:'测试专用',date:'2026/10/14',opener:'周潇东',species:'缅甸柚木',area:100,paid:0,costStatus:'missing',status:'进行中',products:[{species:'缅甸柚木',spec:'760×125',area:100,billArea:105,price:300,subtotal:31500}],salesItems:[{name:'安装费',qty:105,unit:'㎡',price:25,subtotal:2625}],measureSnapshot:{floors:[{name:'一楼'},{name:'二楼'}],rows:[{floor:'一楼',name:'客厅',expr:'4.2×3.8',area:15.96},{floor:'二楼',name:'卧室',expr:'3.5×3',area:10.5}]}};
      window.orders=()=>[o];window.muyeOrderDetailV404.open(o.id);
@@ -80,51 +80,40 @@ const URL='https://muye-guan-jia-migration-test.onrender.com/';
    assert.equal(align.overviewCells.length,3,'three overview metrics');
    assert.ok(align.overviewCells.every(w=>Math.abs(w-align.overviewCells[0])<=1.5),'equal thirds '+JSON.stringify(align));
    if(width===375){
-     // Use only synthetic browser-local data; never call cloud APIs or production persistence.
-     await page.evaluate(()=>{
+     // Verify read-only calculated profit without mutating any production records.
+     const first=await page.evaluate(()=>{
        const o=orders()[0];
        localStorage.setItem('floor_orders_v3',JSON.stringify([o]));
        window.orders=()=>JSON.parse(localStorage.getItem('floor_orders_v3')||'[]');
        window.muyeOrderDetailV404.refresh();
+       return {cost:orderRecordedCost(o),profitText:document.querySelector('#muyeOrderDetailV404 .m404-profit-readonly')?.textContent||''};
      });
-     await page.locator('#muyeOrderDetailV404 [data-m404="profit"]').click();
-     assert.equal(await page.locator('#muyeProfitEditorV407:not([hidden]) #m407-profit-input').count(),1,'profit input opens');
-     await page.locator('#m407-profit-input').fill('-125.50');
-     await page.locator('#muyeProfitEditorV407 [data-profit-action="save"]').click();
-     let state=await page.evaluate(()=>{
-       const x=orders()[0];return{manual:x.manualProfitV407?.amount,costStatus:x.costStatus,sales:calcOrderFinalAmount(x),paid:x.paid,known:isProfitKnown(x),profit:orderAccurateProfit(x),cost:orderRecordedCost(x),eventCount:x.eventHistory?.length||0,shown:document.querySelector('#muyeOrderDetailV404 [data-m404="profit"]')?.textContent||''};
+     assert.equal(first.cost,0);
+     assert.ok(first.profitText.includes('待补成本'));
+     assert.equal(await page.locator('#muyeOrderDetailV404 [data-m404="profit"]').count(),0,'profit must not be manually editable');
+     await page.evaluate(()=>{
+       const o=orders()[0];
+       o.costStatus='partial';o.profitKnown=false;
+       o.costBreakdown={floor:24000,install:0,batten:0,skirt:0,material:0,freight:0,remove:0,other:0};
+       o.manualProfitV407={amount:-125.5,updatedAt:new Date().toISOString()};
+       localStorage.setItem('floor_orders_v3',JSON.stringify([o]));
+       window.muyeOrderDetailV404.refresh();
      });
-     assert.equal(state.manual,-125.5,'manual profit persists in order record');
-     assert.equal(state.known,false,'incomplete costs cannot become statistically accurate from override');
-     assert.equal(state.profit,-125.5,'profit evaluator honors explicitly entered value');
-     assert.equal(state.cost,0,'actual cost cannot be silently edited');
-     assert.equal(state.sales,34125,'manual profit cannot change sales');
-     assert.equal(state.paid,0,'manual profit cannot change received money');
-     assert.ok(state.eventCount>=1&&state.shown.includes('手动'),'manual adjustment requires audit and label');
+     const provisional=await page.locator('#muyeOrderDetailV404 .m404-profit-readonly').innerText();
+     assert.ok(provisional.includes('暂估利润')&&provisional.includes('¥10,125'),'partial cost displays calculated provisional profit');
      await page.reload({waitUntil:'domcontentloaded'});
      await page.waitForFunction(()=>window.muyeOrderDetailV404Ready===true,{timeout:20000});
      await page.evaluate(()=>window.muyeOrderDetailV404.open(999995406));
-     assert.equal(await page.evaluate(()=>orders().find(x=>x.id===999995406)?.manualProfitV407?.amount),-125.5,'manual profit must survive reload');
-     await page.locator('#muyeOrderDetailV404 [data-m404="profit"]').click();
-     await page.locator('#muyeProfitEditorV407 [data-profit-action="restore"]').click();
-     assert.equal(await page.evaluate(()=>orders().find(x=>x.id===999995406)?.manualProfitV407===undefined),true,'restore automatic profit removes only manual override');
-     assert.ok((await page.locator('#muyeOrderDetailV404 [data-m404="profit"]').innerText()).includes('待补成本'),'unknown profit restored to pending cost');
+     assert.ok((await page.locator('#muyeOrderDetailV404 .m404-profit-readonly').innerText()).includes('暂估利润'),'provisional profit survives reload');
      const snap=await page.evaluate(()=>{
-       const arr=orders();arr[0].costStatus='complete';arr[0].profitKnown=true;arr[0].costBreakdown={floor:24000,install:0,batten:0,skirt:0,material:0,freight:0,remove:0,other:0};
+       const arr=orders();arr[0].costStatus='complete';arr[0].profitKnown=true;
        localStorage.setItem('floor_orders_v3',JSON.stringify(arr));window.muyeOrderDetailV404.refresh();
-       return {profit:orderAccurateProfit(orders()[0]),known:isProfitKnown(orders()[0]),sales:calcOrderFinalAmount(orders()[0]),cost:orderRecordedCost(orders()[0])};
+       return {profit:orderAccurateProfit(orders()[0]),shown:document.querySelector('#muyeOrderDetailV404 .m404-profit-readonly').textContent,
+         sales:calcOrderFinalAmount(orders()[0]),cost:orderRecordedCost(orders()[0]),manual:orders()[0].manualProfitV407?.amount};
      });
-     assert.equal(snap.profit,snap.sales-snap.cost,'auto accurate profit should equal real sales minus recorded cost');
-     assert.equal(snap.known,true);
-     await page.locator('#muyeOrderDetailV404 [data-m404="profit"]').click();
-     await page.locator('#m407-profit-input').fill('12000.25');
-     await page.locator('#muyeProfitEditorV407 [data-profit-action="save"]').click();
-     const final=await page.evaluate(()=>{const o=orders()[0];return{manual:o.manualProfitV407.amount,shown:orderAccurateProfit(o),known:isProfitKnown(o),cost:orderRecordedCost(o),sales:calcOrderFinalAmount(o)}});
-     assert.equal(final.manual,12000.25);
-     assert.equal(final.shown,12000.25);
-     assert.equal(final.known,true);
-     assert.equal(final.cost,24000);
-     assert.equal(final.sales,snap.sales,'manually edited profit cannot alter computed sales');
+     assert.equal(snap.profit,snap.sales-snap.cost,'complete profit must follow sales minus costs');
+     assert.ok(snap.shown.includes('利润')&&!snap.shown.includes('暂估利润'));
+     assert.equal(snap.manual,-125.5,'historical field preserved');
    }
 
    assert.equal(errors.length,0,'page errors: '+errors.join(' | '));
