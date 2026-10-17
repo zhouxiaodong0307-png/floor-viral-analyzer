@@ -21,7 +21,7 @@ const URL='https://muye-guan-jia-migration-test.onrender.com/';
     window.muyeOrderDetailV404.open(fake.id);
     const partial=read();
     fake.costBreakdown.other=2400;fake.cost=3700;const moreCosts=read();
-    fake.finalAmount=10300;fake.sales=10300;const moreSales=read();
+    fake.finalAmount=10300;fake.sales=10300;fake.salesItems.push({name:'新增服务',qty:1,unit:'项',price:400,subtotal:400});const moreSales=read();
     fake.costStatus='missing';fake.costBreakdown.other=0;fake.costBreakdown.remove=0;fake.cost=0;const missing=read();
     fake.costStatus='complete';fake.profitKnown=true;fake.costBreakdown.floor=4000;fake.cost=4000;const complete=read();
     fake.costStatus='partial';fake.profitKnown=false;fake.costBreakdown.floor=0;fake.costBreakdown.other=12000;fake.cost=12000;const negative=read();
