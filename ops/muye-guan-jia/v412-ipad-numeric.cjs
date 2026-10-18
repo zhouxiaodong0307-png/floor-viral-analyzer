@@ -40,7 +40,7 @@ const URL='https://muye-guan-jia-migration-test.onrender.com/';
    // Original quick × must not close or confuse the custom iPad keyboard.
    await page.locator('.measure-row').last().locator('.measure-inline-symbol').first().tap();
    assert.equal(await pad.isVisible(),true);
-   assert.ok((await expr.inputValue()).includes('××'),'inline symbol preserves active keypad');
+   assert.equal((await expr.inputValue()).split('×').length-1,2,'inline symbol inserts a second multiplication sign without closing keypad');
    await pad.locator('[data-action="done"]').tap();assert.equal(await pad.isVisible(),false);
    assert.equal(await expr.evaluate(el=>!el.readOnly&&el.inputMode==='decimal'),true);
    const money=page.locator('#v412-money');await money.tap();assert.equal(await pad.isVisible(),true);
