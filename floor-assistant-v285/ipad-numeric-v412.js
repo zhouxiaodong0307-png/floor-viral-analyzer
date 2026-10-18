@@ -1,4 +1,4 @@
-/* V414: movable and resizable iPad touch numeric entry. iPhone native keypad and hardware keyboards stay native. */
+/* V415: stable minimum size, focused caret and aligned controls for iPad touch numeric entry. iPhone native keypad and hardware keyboards stay native. */
 (function(){
  'use strict';
  const ua=navigator.userAgent||'';
@@ -104,7 +104,7 @@
  function sizeBounds(){
    const v=viewportLimits();
    const maxW=Math.max(0,v.width-14),maxH=Math.max(0,v.height-14);
-   return {minW:Math.min(355,maxW),minH:Math.min(315,maxH),maxW,maxH};
+   return {minW:Math.min(445,maxW),minH:Math.min(480,maxH),maxW,maxH};
  }
  function resizePanel(width,height,left,top){
    if(panel.hidden)return;
@@ -148,6 +148,44 @@
    resizePanel(r.width+delta[0]*step,r.height+delta[1]*step,r.left,r.top);
    saveLayout();
  });
+ /* Safari hides its native caret in readonly fields. Draw a selection-aware caret instead. */
+ const caret=document.createElement('span');
+ caret.id='muye-ipad-caret-v415';caret.hidden=true;caret.setAttribute('aria-hidden','true');
+ document.body.appendChild(caret);
+ const canvas=document.createElement('canvas'),measure=canvas.getContext('2d');
+ let caretFrame=0;
+ function updateCaret(){
+   caretFrame=0;
+   const el=active;
+   if(!el||!el.isConnected||panel.hidden){caret.hidden=true;return;}
+   const rect=el.getBoundingClientRect(),style=getComputedStyle(el);
+   if(!rect.width||!rect.height||rect.bottom<0||rect.top>innerHeight){caret.hidden=true;return;}
+   const selection=typeof el.selectionStart==='number'?el.selectionStart:el.value.length;
+   const text=el.value||'',index=Math.min(Math.max(0,selection),text.length);
+   measure.font=style.font||style.fontSize+' '+style.fontFamily;
+   const prefix=measure.measureText(text.slice(0,index)).width;
+   const whole=measure.measureText(text).width;
+   const padL=parseFloat(style.paddingLeft)||0,padR=parseFloat(style.paddingRight)||0;
+   const inner=rect.width-padL-padR;
+   let lead=padL;
+   if(style.textAlign==='right'||style.textAlign==='end')lead=Math.max(padL,rect.width-padR-whole);
+   else if(style.textAlign==='center')lead=Math.max(padL,padL+(inner-whole)/2);
+   const left=rect.left+lead+prefix-(el.scrollLeft||0);
+   const size=Math.max(13,parseFloat(style.fontSize)||16);
+   caret.style.left=Math.max(rect.left+padL,Math.min(rect.right-padR-2,left))+'px';
+   caret.style.top=(rect.top+(rect.height-size*1.18)/2)+'px';
+   caret.style.height=Math.min(size*1.18,rect.height-6)+'px';
+   caret.hidden=false;
+ }
+ function scheduleCaret(){
+   if(caretFrame)cancelAnimationFrame(caretFrame);
+   caretFrame=requestAnimationFrame(updateCaret);
+ }
+ document.addEventListener('selectionchange',()=>{if(active)scheduleCaret()});
+ document.addEventListener('scroll',()=>{if(active)scheduleCaret()},true);
+ window.addEventListener('resize',scheduleCaret);
+ window.visualViewport?.addEventListener('resize',scheduleCaret);
+ window.visualViewport?.addEventListener('scroll',scheduleCaret);
  function restore(){
    if(!active)return;
    const el=active,saved=original;
@@ -164,6 +202,12 @@
    }
    el.readOnly=saved.readOnly;el.inputMode=saved.inputMode;
    el.classList.remove('muye-ipad-field-active');
+   for(const p of ['outline','outline-offset','box-shadow']){
+     const item=saved.activeStyles?.[p];
+     if(item?.value)el.style.setProperty(p,item.value,item.priority);
+     else el.style.removeProperty(p);
+   }
+   caret.hidden=true;
    if(dirty)el.dispatchEvent(new Event('change',{bubbles:true}));
    dirty=false;
  }
@@ -185,6 +229,10 @@
    el.readOnly=true;el.inputMode='none';
    if(saved.type==='number')el.type='text';
    el.classList.add('muye-ipad-field-active');
+   saved.activeStyles=Object.fromEntries(['outline','outline-offset','box-shadow'].map(p=>[p,{value:el.style.getPropertyValue(p),priority:el.style.getPropertyPriority(p)}]));
+   el.style.setProperty('outline','2px solid #007aff','important');
+   el.style.setProperty('outline-offset','-2px','important');
+   el.style.setProperty('box-shadow','0 0 0 3px rgba(0,119,255,.15)','important');
    configureExtras(el);
    panel.hidden=false;document.body.classList.add('muye-ipad-pad-visible');
    if(lastSize){const rect=panel.getBoundingClientRect();resizePanel(lastSize.width,lastSize.height,lastPlacement?.left??rect.left,lastPlacement?.top??rect.top);}
@@ -196,6 +244,8 @@
      });
    }
    try{el.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'})}catch(_){}
+   // Keep readonly input without forced iPadOS focus; draw a virtual caret instead.
+   scheduleCaret();
  }
  function edit(key){
    const el=active;if(!el||!el.isConnected){close();return;}
@@ -215,6 +265,7 @@
    }
    dirty=true;
    el.dispatchEvent(new Event('input',{bubbles:true}));
+   scheduleCaret();
  }
  function goNext(){
    const all=[...document.querySelectorAll(selector)].filter(el=>numericAttr(el)&&el.getClientRects().length>0);
@@ -228,7 +279,7 @@
  let lastTouchAction=null;
  function activateButton(btn){
    if(btn.dataset.key)edit(btn.dataset.key);
-   else if(btn.dataset.action==='clear'){if(active){active.value='';dirty=true;active.dispatchEvent(new Event('input',{bubbles:true}));}}
+   else if(btn.dataset.action==='clear'){if(active){active.value='';dirty=true;active.dispatchEvent(new Event('input',{bubbles:true}));scheduleCaret();}}
    else if(btn.dataset.action==='next')goNext();
    else if(btn.dataset.action==='done')close();
    else if(btn.dataset.action==='system'){
@@ -251,18 +302,14 @@
    activateButton(btn);
  });
  document.addEventListener('pointerdown',e=>{
-   if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;
+   if(e.pointerType==='mouse'&&e.button!==0)return;
    if(panel.contains(e.target))return;
    const el=e.target.closest?.('input');
    if(el&&numericAttr(el))open(el);
    else if(active&&e.target.closest?.('.measure-inline-symbol,.muye-spec-x'))return;
    else if(active)close();
  },true);
- document.addEventListener('focusout',e=>{
-   if(active===e.target)requestAnimationFrame(()=>{
-     if(active===e.target&&document.activeElement!==active&&!panel.contains(document.activeElement))close();
-   });
- },true);
+ // V415: app-owned keyboard closes on outside pointer and Done, not WebKit's spurious readonly blur.
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&active){e.preventDefault();close();}},true);
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&active)close()});
  window.muyeIPadNumericV412={enabled:true,status:()=>({visible:!panel.hidden,field:active?.id||active?.className||null,movable:true,resizable:true,position:lastPlacement?{...lastPlacement}:null,size:lastSize?{...lastSize}:null}),dismiss:close};

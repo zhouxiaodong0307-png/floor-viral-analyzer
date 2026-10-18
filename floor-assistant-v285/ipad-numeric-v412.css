@@ -1,4 +1,4 @@
-/* V414: movable and resizable iPadOS numeric touch keypad; keyboard layout is app-owned, not system-native. */
+/* V415: movable, resizable and cursor-aware iPadOS numeric touch keypad; keyboard layout is app-owned, not system-native. */
 #muye-ipad-numeric-v412[hidden]{display:none!important}
 #muye-ipad-numeric-v412{box-sizing:border-box;position:fixed;z-index:16000;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,640px);margin:0!important;padding:9px 12px calc(12px + env(safe-area-inset-bottom,0px));border:1px solid #d5d5da;border-bottom:0;border-radius:19px 19px 0 0;background:#ececf0;box-shadow:0 -8px 30px #0002;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 #muye-ipad-numeric-v412 *{box-sizing:border-box}
@@ -49,3 +49,50 @@
 #muye-ipad-numeric-v412 .muye-ipad-pad-resize:focus-visible{
  outline:2px solid #4a5568;outline-offset:-4px;
 }
+
+
+/* V415: Screenshot-sized minimum, true 3-column fifth row, visible input caret. */
+#muye-ipad-numeric-v412:not([hidden]){
+ width:min(445px,calc(100dvw - 14px));
+ height:min(480px,calc(100dvh - 14px));
+ min-width:min(445px,calc(100dvw - 14px));
+ min-height:min(480px,calc(100dvh - 14px));
+ padding-bottom:34px;
+}
+#muye-ipad-numeric-v412 .muye-ipad-pad-extras{
+ display:grid!important;
+ grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ gap:7px!important;
+ height:auto!important;
+ min-height:0;
+ flex:1 1 0!important;
+ padding-right:0!important;
+ margin:7px 0 0!important;
+}
+#muye-ipad-numeric-v412 .muye-ipad-pad-keys{flex:4 1 0!important}
+#muye-ipad-numeric-v412 .muye-ipad-pad-extras button{
+ width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;
+ font-size:clamp(17px,2.4vw,23px);
+}
+#muye-ipad-numeric-v412 .muye-ipad-pad-extras button[data-action="clear"]{
+ grid-column:3;font-size:clamp(13px,1.8vw,18px);
+}
+#muye-ipad-numeric-v412 .muye-ipad-pad-extras button[data-key="−"]:not([hidden]){grid-column:1}
+#muye-ipad-numeric-v412 .muye-ipad-pad-resize{
+ width:32px!important;height:29px!important;right:1px!important;bottom:1px!important;
+}
+#muye-ipad-numeric-v412 .muye-ipad-pad-resize::after{
+ right:7px!important;bottom:6px!important;width:15px!important;height:15px!important;
+}
+body .muye-ipad-field-active{
+ outline:2px solid #087eff!important;
+ outline-offset:-2px!important;
+ background-color:#f7fbff!important;
+ box-shadow:0 0 0 3px rgba(0,119,255,.12)!important;
+}
+#muye-ipad-caret-v415{
+ position:fixed;z-index:15999;width:2px;display:block;pointer-events:none;
+ background:#007aff;border-radius:2px;animation:muye-v415-caret 1s steps(1,end) infinite;
+}
+#muye-ipad-caret-v415[hidden]{display:none!important}
+@keyframes muye-v415-caret{0%,48%{opacity:1}49%,100%{opacity:0}}
