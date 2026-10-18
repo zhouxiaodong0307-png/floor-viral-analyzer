@@ -157,9 +157,8 @@
    restore();open(next);try{next.focus({preventScroll:true})}catch(_){}
  }
  panel.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.pointerType==='pen')e.preventDefault()},{passive:false});
- panel.addEventListener('click',e=>{
-   const btn=e.target.closest('button');if(!btn||btn.hidden)return;
-   e.preventDefault();e.stopPropagation();
+ let lastTouchAction=null;
+ function activateButton(btn){
    if(btn.dataset.key)edit(btn.dataset.key);
    else if(btn.dataset.action==='clear'){if(active){active.value='';dirty=true;active.dispatchEvent(new Event('input',{bubbles:true}));}}
    else if(btn.dataset.action==='next')goNext();
@@ -167,6 +166,21 @@
    else if(btn.dataset.action==='system'){
      const el=active;close();if(el)try{el.focus({preventScroll:true})}catch(_){}
    }
+ }
+ // iPad Safari can omit the compatibility click after a captured touch drag.
+ // Pointer-up guarantees each touchscreen button gets exactly one action.
+ panel.addEventListener('pointerup',e=>{
+   if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;
+   const btn=e.target.closest('button');if(!btn||btn.hidden||btn.disabled)return;
+   e.preventDefault();e.stopPropagation();
+   lastTouchAction={btn,time:performance.now()};
+   activateButton(btn);
+ },{passive:false});
+ panel.addEventListener('click',e=>{
+   const btn=e.target.closest('button');if(!btn||btn.hidden||btn.disabled)return;
+   e.preventDefault();e.stopPropagation();
+   if(lastTouchAction?.btn===btn&&performance.now()-lastTouchAction.time<650)return;
+   activateButton(btn);
  });
  document.addEventListener('pointerdown',e=>{
    if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;
