@@ -53,6 +53,8 @@
 
 /* V415: Screenshot-sized minimum, true 3-column fifth row, visible input caret. */
 #muye-ipad-numeric-v412:not([hidden]){
+ width:min(445px,calc(100dvw - 14px));
+ height:min(480px,calc(100dvh - 14px));
  min-width:min(445px,calc(100dvw - 14px));
  min-height:min(480px,calc(100dvh - 14px));
  padding-bottom:34px;
