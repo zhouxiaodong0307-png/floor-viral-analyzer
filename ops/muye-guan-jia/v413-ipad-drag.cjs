@@ -15,7 +15,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
    await page.goto(URL,{waitUntil:'domcontentloaded',timeout:90000});
    await page.waitForFunction(()=>window.muyeIPadNumericV412?.enabled&&typeof addMeasureRow==='function',{timeout:25000});
    const safe=await page.evaluate(()=>({version:APP_VERSION,cloud:SUPABASE_URL,auth:FLOOR_AUTH_MODE,write:isCloudWritableRuntime()}));
-   assert.deepEqual(safe,{version:'413',cloud:'',auth:'disabled',write:false});
+   assert.deepEqual(safe,{version:'414',cloud:'',auth:'disabled',write:false});
    await page.evaluate(()=>{show('quote');const row=addMeasureRow('V413Drag','');row.querySelector('.mexpr').scrollIntoView({block:'center'});});
    const field=page.locator('.measure-row .mexpr').last(),pad=page.locator('#muye-ipad-numeric-v412');
    await field.tap();assert.ok(await pad.isVisible());
