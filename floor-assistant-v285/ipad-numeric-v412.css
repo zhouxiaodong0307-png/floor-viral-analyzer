@@ -1,4 +1,4 @@
-/* V413: movable iPadOS numeric touch keypad; keyboard layout is app-owned, not system-native. */
+/* V414: movable and resizable iPadOS numeric touch keypad; keyboard layout is app-owned, not system-native. */
 #muye-ipad-numeric-v412[hidden]{display:none!important}
 #muye-ipad-numeric-v412{box-sizing:border-box;position:fixed;z-index:16000;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,640px);margin:0!important;padding:9px 12px calc(12px + env(safe-area-inset-bottom,0px));border:1px solid #d5d5da;border-bottom:0;border-radius:19px 19px 0 0;background:#ececf0;box-shadow:0 -8px 30px #0002;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 #muye-ipad-numeric-v412 *{box-sizing:border-box}
@@ -26,3 +26,26 @@
 #muye-ipad-numeric-v412 .muye-ipad-pad-drag::before{content:"⠿";font-size:19px;color:#84848e;font-weight:600;line-height:1}
 #muye-ipad-numeric-v412 .muye-ipad-pad-drag:focus-visible{outline:2px solid #555;outline-offset:2px;border-radius:6px}
 #muye-ipad-numeric-v412:not([hidden]){border-bottom:1px solid #d5d5da;border-radius:19px;box-shadow:0 5px 25px #0003}
+
+
+/* V414: right-bottom resize grip; flexible key row heights scale without changing digit positions. */
+#muye-ipad-numeric-v412:not([hidden]){display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+#muye-ipad-numeric-v412 .muye-ipad-pad-head{flex:0 0 auto}
+#muye-ipad-numeric-v412 .muye-ipad-pad-keys{
+ flex:1 1 auto;min-height:0;grid-template-rows:repeat(4,minmax(0,1fr));
+}
+#muye-ipad-numeric-v412 .muye-ipad-pad-keys button{min-height:0!important;font-size:clamp(19px,2.7vw,27px)}
+#muye-ipad-numeric-v412 .muye-ipad-pad-extras{flex:0 0 auto;margin-bottom:5px}
+#muye-ipad-numeric-v412 .muye-ipad-pad-resize{
+ position:absolute;right:0;bottom:0;width:42px;height:42px;
+ z-index:4;cursor:nwse-resize;touch-action:none;-webkit-tap-highlight-color:transparent;
+ border-radius:0 0 17px 0;
+}
+#muye-ipad-numeric-v412 .muye-ipad-pad-resize::after{
+ content:"";position:absolute;right:9px;bottom:8px;width:19px;height:19px;
+ border-right:3px solid #858892;border-bottom:3px solid #858892;
+ transform:skew(-8deg);border-radius:0 0 3px 0;
+}
+#muye-ipad-numeric-v412 .muye-ipad-pad-resize:focus-visible{
+ outline:2px solid #4a5568;outline-offset:-4px;
+}
