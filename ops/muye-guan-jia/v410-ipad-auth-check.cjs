@@ -13,7 +13,7 @@ async function launch(){
   assert.ok(response?.ok(),'V410 staging must respond');
   await page.waitForFunction(()=>typeof window.floorAuthLoginV350==='function'&&typeof window.floorAuthRestoreV363==='function',{timeout:25000});
   const setup=await page.evaluate(()=>{
-    if(APP_VERSION!=='410'||SUPABASE_URL!==''||FLOOR_AUTH_MODE!=='disabled'||isCloudWritableRuntime())throw Error('staging must remain completely cloud-isolated');
+    if(APP_VERSION!=='412'||SUPABASE_URL!==''||FLOOR_AUTH_MODE!=='disabled'||isCloudWritableRuntime())throw Error('staging must remain completely cloud-isolated');
     window.__authTest={
      initialOrders:localStorage.getItem('floor_orders_v3'),
      initialProducts:localStorage.getItem('floor_product_library_v1')
@@ -24,7 +24,7 @@ async function launch(){
     document.getElementById('floorAuthPasswordV350').value='password';
     return {version:APP_VERSION,mode:FLOOR_AUTH_MODE,write:isCloudWritableRuntime()};
   });
-  assert.deepEqual(setup,{version:'410',mode:'disabled',write:false});
+  assert.deepEqual(setup,{version:'412',mode:'disabled',write:false});
   const inputs=()=>page.evaluate(()=>({notice:document.getElementById('authMigrationStatusTextV349')?.textContent,loggedIn:!!floorAuthSessionV350?.access_token,stored:localStorage.getItem('floor_authenticated_session_v363'),busy:floorAuthLoginBusyV410,enabled:!document.querySelector('#floorAuthControlsV350 button[onclick*="floorAuthLoginV350"]').disabled}));
   // 1: On iPad a token may already be accepted while follow-up data load fails.
   await page.evaluate(()=>{
