@@ -1,4 +1,4 @@
-/* V416: decimal segments, smart focus visibility, precise caret, undo clear and scoped next navigation. iPhone and Mac remain native. */
+/* V417: per-orientation layout, stable floating position, repeated backspace, overflow caret and format hints. */
 (function(){
  'use strict';
  const ua=navigator.userAgent||'';
@@ -7,16 +7,20 @@
  const selector='input[type="number"],input.mexpr,input.stair-platform,input.muye-spec-numeric,input#spec,input#aqSpec,input#cSpec,input#pSpec,input#costSpec,input#installEditSpec,input[data-field="spec"],input#installEditArea';
  let active=null, original=null, dirty=false, clearUndo=null;
  let lastPlacement=null,lastSize=null,dragging=null,resizing=null;
+ let screenMode=window.innerWidth>window.innerHeight?'landscape':'portrait';
+ let layoutPrefs={portrait:null,landscape:null},layoutFrame=0;
  const panel=document.createElement('section');
  panel.id='muye-ipad-numeric-v412';panel.hidden=true;
  panel.setAttribute('role','group');panel.setAttribute('aria-label','数字输入键盘');
  panel.innerHTML='<div class="muye-ipad-pad-head" title="按住标题区域拖动键盘"><span class="muye-ipad-pad-drag" tabindex="0" role="button" aria-label="拖动键盘位置，方向键可微调">数字输入</span><button type="button" data-action="system">系统键盘</button><button type="button" data-action="next">下一项</button><button type="button" class="done" data-action="done">完成</button></div>'+
  '<div class="muye-ipad-pad-keys">'+['1','2','3','4','5','6','7','8','9','.','0','⌫'].map(k=>'<button type="button" data-key="'+k+'" aria-label="'+(k==='⌫'?'删除上一位':k)+'">'+k+'</button>').join('')+'</div>'+
  '<div class="muye-ipad-pad-extras"><button type="button" data-key="×" class="symbol">×</button><button type="button" data-key="+" class="symbol">+</button><button type="button" data-key="−" class="negative">−</button><button type="button" data-action="clear" class="clear">清空</button></div>'+
+ '<div class="muye-ipad-format-hint" role="status" aria-live="polite" hidden></div>'+ 
  '<div class="muye-ipad-pad-resize" role="button" tabindex="0" aria-label="拖动右下角调整数字键盘大小，方向键微调" title="拖动调整键盘大小"></div>';
  document.body.appendChild(panel);
  const extraButtons=[...panel.querySelectorAll('.muye-ipad-pad-extras button')];
  const clearButton=panel.querySelector('[data-action="clear"]');
+ const formatHint=panel.querySelector('.muye-ipad-format-hint');
  function resetClearUndo(){
    clearUndo=null;clearButton.textContent='清空';clearButton.setAttribute('aria-label','清空当前输入');
  }
@@ -26,11 +30,27 @@
    if(el.matches('input.muye-spec-numeric,input#spec,input#aqSpec,input#cSpec,input#pSpec,input#costSpec,input#installEditSpec,input[data-field="spec"]'))return 'spec';
    return 'number';
  }
+ function formatIssue(el,finished=false){
+   if(!el||kind(el)==='number')return '';
+   const value=(el.value||'').trim().replace(/\s/g,'').replace(/[xX*]/g,'×');
+   if(!value)return '';
+   if(/[+×]{2,}/.test(value))return '连续符号，请检查';
+   if(/^[+×]/.test(value))return '开头需要数字';
+   if(value.split(/[+×]/).some(chunk=>(chunk.match(/\./g)||[]).length>1))return '一个数字只能输入一个小数点';
+   if(finished&&/[+×]$/.test(value))return '末尾还缺少数字';
+   return '';
+ }
+ function updateFormatHint(finished=false){
+   const issue=formatIssue(active,finished);
+   formatHint.textContent=issue;
+   formatHint.hidden=!issue;
+ }
  function configureExtras(el){
    const k=kind(el),min=el.getAttribute('min'),negative=(min==null||Number(min)<0);
    extraButtons[0].hidden=k==='number';extraButtons[1].hidden=k!=='expression';
    extraButtons[2].hidden=k!=='number'||!negative;
    panel.querySelector('.muye-ipad-pad-head>span').textContent=k==='expression'?'面积尺寸输入':k==='spec'?'规格数字输入':'数字输入';
+   updateFormatHint();
  }
  /* Only the empty/header title region moves the panel. Key and toolbar button taps remain independent. */
  const dragHeader=panel.querySelector('.muye-ipad-pad-head');
@@ -40,7 +60,7 @@
    return {left:v?v.offsetLeft:0,top:v?v.offsetTop:0,
      width:v?v.width:window.innerWidth,height:v?v.height:window.innerHeight};
  }
- function movePanel(left,top){
+ function movePanel(left,top,remember=true){
    if(panel.hidden)return;
    const v=viewportLimits(),rect=panel.getBoundingClientRect(),margin=7;
    const lowX=v.left+margin,highX=Math.max(lowX,v.left+v.width-rect.width-margin);
@@ -48,7 +68,7 @@
    const x=Math.max(lowX,Math.min(highX,left)),y=Math.max(lowY,Math.min(highY,top));
    panel.style.left=x+'px';panel.style.top=y+'px';
    panel.style.bottom='auto';panel.style.transform='none';
-   lastPlacement={left:x,top:y};
+   if(remember)lastPlacement={left:x,top:y};
  }
  dragHeader.addEventListener('pointerdown',event=>{
    if(event.target.closest('button')||panel.hidden)return;
@@ -81,44 +101,72 @@
    movePanel(rect.left+delta[0]*step,rect.top+delta[1]*step);
    saveLayout();
  });
+ function orientationMode(){return window.innerWidth>window.innerHeight?'landscape':'portrait'}
+ function applyLayout(){
+   const pref=layoutPrefs[screenMode];
+   lastPlacement=pref?{left:pref.left,top:pref.top}:null;
+   lastSize=pref?{width:pref.width,height:pref.height}:null;
+   for(const p of ['left','top','bottom','transform','width','height'])panel.style.removeProperty(p);
+   if(!panel.hidden&&pref)resizePanel(pref.width,pref.height,pref.left,pref.top,false);
+ }
  function keepPanelOnScreen(){
-   if(panel.hidden)return;
-   if(lastSize){const rect=panel.getBoundingClientRect();resizePanel(lastSize.width,lastSize.height,lastPlacement?.left??rect.left,lastPlacement?.top??rect.top);}
-   else if(lastPlacement)movePanel(lastPlacement.left,lastPlacement.top);
-   if(active)ensureFieldUncovered(active);
+   if(panel.hidden||layoutFrame)return;
+   layoutFrame=requestAnimationFrame(()=>{
+     layoutFrame=0;
+     if(panel.hidden||dragging||resizing)return;
+     const mode=orientationMode();
+     if(mode!==screenMode){screenMode=mode;applyLayout();}
+     else {
+       const r=panel.getBoundingClientRect(),b=sizeBounds();
+       if(r.width>b.maxW+1||r.height>b.maxH+1)resizePanel(r.width,r.height,r.left,r.top,false);
+       else movePanel(r.left,r.top,false);
+     }
+     if(active)ensureFieldUncovered(active);
+   });
  }
  window.addEventListener('resize',keepPanelOnScreen);
  window.visualViewport?.addEventListener('resize',keepPanelOnScreen);
  window.visualViewport?.addEventListener('scroll',keepPanelOnScreen);
  /* V414: size and position are local presentation preferences, not order or cloud data. */
  const resizeHandle=panel.querySelector('.muye-ipad-pad-resize');
- const sizeKey='muye-ipad-keypad-layout-v414';
+ const sizeKey='muye-ipad-keypad-layout-v417',legacySizeKey='muye-ipad-keypad-layout-v414';
+ function validLayout(v){return v&&['width','height','left','top'].every(k=>Number.isFinite(v[k]))}
  function getSavedLayout(){
    try{
      const v=JSON.parse(localStorage.getItem(sizeKey)||'null');
-     if(v&&Number.isFinite(v.width)&&Number.isFinite(v.height)&&Number.isFinite(v.left)&&Number.isFinite(v.top)){
-       lastSize={width:v.width,height:v.height};lastPlacement={left:v.left,top:v.top};
+     if(v&&typeof v==='object'){
+       for(const mode of ['portrait','landscape'])if(validLayout(v[mode]))layoutPrefs[mode]={...v[mode]};
+     }else{
+       const legacy=JSON.parse(localStorage.getItem(legacySizeKey)||'null');
+       if(validLayout(legacy))layoutPrefs[screenMode]={...legacy};
      }
    }catch(_){}
+   const p=layoutPrefs[screenMode];
+   lastSize=p?{width:p.width,height:p.height}:null;
+   lastPlacement=p?{left:p.left,top:p.top}:null;
  }
  function saveLayout(){
-   if(!lastPlacement&&!lastSize)return;
+   if(panel.hidden)return;
    const r=panel.getBoundingClientRect();
-   try{localStorage.setItem(sizeKey,JSON.stringify({left:r.left,top:r.top,width:r.width,height:r.height}))}catch(_){}
+   const value={left:r.left,top:r.top,width:r.width,height:r.height};
+   layoutPrefs[screenMode]={...value};
+   lastSize={width:value.width,height:value.height};
+   lastPlacement={left:value.left,top:value.top};
+   try{localStorage.setItem(sizeKey,JSON.stringify(layoutPrefs))}catch(_){}
  }
  function sizeBounds(){
    const v=viewportLimits();
    const maxW=Math.max(0,v.width-14),maxH=Math.max(0,v.height-14);
    return {minW:Math.min(445,maxW),minH:Math.min(480,maxH),maxW,maxH};
  }
- function resizePanel(width,height,left,top){
+ function resizePanel(width,height,left,top,remember=true){
    if(panel.hidden)return;
    const b=sizeBounds();
    const w=Math.round(Math.max(b.minW,Math.min(b.maxW,width)));
    const h=Math.round(Math.max(b.minH,Math.min(b.maxH,height)));
    panel.style.width=w+'px';panel.style.height=h+'px';
-   lastSize={width:w,height:h};
-   movePanel(left??panel.getBoundingClientRect().left,top??panel.getBoundingClientRect().top);
+   if(remember)lastSize={width:w,height:h};
+   movePanel(left??panel.getBoundingClientRect().left,top??panel.getBoundingClientRect().top,remember);
  }
 
  // Keep the edited field visible without permanently changing the user's saved keyboard placement.
@@ -139,11 +187,7 @@
    window.scrollBy({top:delta,behavior:'instant'});
    return Math.abs(window.scrollY-before)>1;
  }
- function temporarilyPlacePanel(x,y){
-   const preference=lastPlacement?{...lastPlacement}:null;
-   movePanel(x,y);
-   lastPlacement=preference;
- }
+ function temporarilyPlacePanel(x,y){movePanel(x,y,false)}
  function ensureFieldUncovered(el){
    requestAnimationFrame(()=>{
      if(el!==active||panel.hidden||!el.isConnected)return;
@@ -214,26 +258,39 @@
  caret.id='muye-ipad-caret-v415';caret.hidden=true;caret.setAttribute('aria-hidden','true');
  document.body.appendChild(caret);
  const canvas=document.createElement('canvas'),measure=canvas.getContext('2d');
+ function textGeometry(el,style){
+   measure.font=style.font||style.fontSize+' '+style.fontFamily;
+   const padL=parseFloat(style.paddingLeft)||0,padR=parseFloat(style.paddingRight)||0;
+   const rect=el.getBoundingClientRect(),total=measure.measureText(el.value||'').width;
+   const inner=Math.max(1,rect.width-padL-padR);
+   let lead=padL;
+   if(total<=inner){
+     if(style.textAlign==='right'||style.textAlign==='end')lead=rect.width-padR-total;
+     else if(style.textAlign==='center')lead=padL+(inner-total)/2;
+   }
+   return {rect,padL,padR,lead,inner,total};
+ }
+ function revealCaret(el,prefix,g){
+   if(g.total<=g.inner)return;
+   const near=g.padL+5,far=g.rect.width-g.padR-5;
+   const screenPos=g.lead+prefix-(el.scrollLeft||0);
+   if(screenPos>far)el.scrollLeft=(el.scrollLeft||0)+(screenPos-far);
+   else if(screenPos<near)el.scrollLeft=Math.max(0,(el.scrollLeft||0)-(near-screenPos));
+ }
  let caretFrame=0;
  function updateCaret(){
    caretFrame=0;
    const el=active;
    if(!el||!el.isConnected||panel.hidden){caret.hidden=true;return;}
-   const rect=el.getBoundingClientRect(),style=getComputedStyle(el);
+   const style=getComputedStyle(el),g=textGeometry(el,style),rect=g.rect;
    if(!rect.width||!rect.height||rect.bottom<0||rect.top>innerHeight){caret.hidden=true;return;}
    const selection=typeof el.selectionStart==='number'?el.selectionStart:el.value.length;
    const text=el.value||'',index=Math.min(Math.max(0,selection),text.length);
-   measure.font=style.font||style.fontSize+' '+style.fontFamily;
    const prefix=measure.measureText(text.slice(0,index)).width;
-   const whole=measure.measureText(text).width;
-   const padL=parseFloat(style.paddingLeft)||0,padR=parseFloat(style.paddingRight)||0;
-   const inner=rect.width-padL-padR;
-   let lead=padL;
-   if(style.textAlign==='right'||style.textAlign==='end')lead=Math.max(padL,rect.width-padR-whole);
-   else if(style.textAlign==='center')lead=Math.max(padL,padL+(inner-whole)/2);
-   const left=rect.left+lead+prefix-(el.scrollLeft||0);
+   revealCaret(el,prefix,g);
+   const left=rect.left+g.lead+prefix-(el.scrollLeft||0);
    const size=Math.max(13,parseFloat(style.fontSize)||16);
-   caret.style.left=Math.max(rect.left+padL,Math.min(rect.right-padR-2,left))+'px';
+   caret.style.left=Math.max(rect.left+g.padL,Math.min(rect.right-g.padR-2,left))+'px';
    caret.style.top=(rect.top+(rect.height-size*1.18)/2)+'px';
    caret.style.height=Math.min(size*1.18,rect.height-6)+'px';
    caret.hidden=false;
@@ -275,6 +332,7 @@
  }
  function close(){
    if(!active)return;
+   stopBackspaceHold();
    const el=active;
    // Blur before removing readonly so WebKit cannot summon a second keyboard.
    try{el.blur()}catch(_){}
@@ -285,6 +343,9 @@
    if(active===el)return;
    if(active)restore();
    if(!numericAttr(el))return;
+   const wasOpen=!panel.hidden;
+   const mode=orientationMode();
+   if(mode!==screenMode){screenMode=mode;const p=layoutPrefs[screenMode];lastPlacement=p?{left:p.left,top:p.top}:null;lastSize=p?{width:p.width,height:p.height}:null;}
    const saved={type:el.type,readOnly:el.readOnly,inputMode:el.inputMode,integer:el.type==='number'&&(el.getAttribute('step')==='1'||el.inputMode==='numeric')};
    active=el;original=saved;dirty=false;resetClearUndo();
    // iPadOS owns native keyboard layouts. Readonly-before-focus prevents its large QWERTY.
@@ -297,19 +358,14 @@
    el.style.setProperty('box-shadow','0 0 0 3px rgba(0,119,255,.15)','important');
    configureExtras(el);
    panel.hidden=false;document.body.classList.add('muye-ipad-pad-visible');
-   if(!lastPlacement){
-     panel.style.removeProperty('left');panel.style.removeProperty('top');
-     panel.style.removeProperty('bottom');panel.style.removeProperty('transform');
-   }
-   if(lastSize){const rect=panel.getBoundingClientRect();resizePanel(lastSize.width,lastSize.height,lastPlacement?.left??rect.left,lastPlacement?.top??rect.top);}
-   else if(lastPlacement)movePanel(lastPlacement.left,lastPlacement.top);
+   if(!wasOpen)applyLayout();
    if(saved.type==='number'){
      requestAnimationFrame(()=>{
        if(active!==el)return;
        try{el.setSelectionRange(0,el.value.length)}catch(_){}
      });
    }
-   try{el.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'})}catch(_){}
+   try{el.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'})}catch(_){}
    // Keep readonly input without forced iPadOS focus; draw a virtual caret instead.
    scheduleCaret();ensureFieldUncovered(el);
  }
@@ -339,7 +395,7 @@
    }
    dirty=true;
    el.dispatchEvent(new Event('input',{bubbles:true}));
-   scheduleCaret();
+   updateFormatHint();scheduleCaret();
  }
  function goNext(){
    if(!active)return;
@@ -372,7 +428,7 @@
          end:typeof active.selectionEnd==='number'?active.selectionEnd:active.value.length};
        active.value='';clearButton.textContent='撤销';clearButton.setAttribute('aria-label','撤销清空');
      }
-     dirty=true;active.dispatchEvent(new Event('input',{bubbles:true}));scheduleCaret();
+     dirty=true;active.dispatchEvent(new Event('input',{bubbles:true}));updateFormatHint();scheduleCaret();
    }
    else if(btn.dataset.action==='next')goNext();
    else if(btn.dataset.action==='done')close();
@@ -380,11 +436,51 @@
      const el=active;close();if(el)try{el.focus({preventScroll:true})}catch(_){}
    }
  }
- // iPad Safari can omit the compatibility click after a captured touch drag.
- // Pointer-up guarantees each touchscreen button gets exactly one action.
+ // Hold backspace to repeat deletion; short taps still delete one character.
+ let backspaceHold=null,lastRepeatedBackspace=null;
+ function stopBackspaceHold(pointerId){
+   if(!backspaceHold||(pointerId!=null&&backspaceHold.id!==pointerId))return false;
+   const repeated=backspaceHold.repeated;
+   clearTimeout(backspaceHold.delay);clearInterval(backspaceHold.interval);
+   backspaceHold=null;
+   return repeated;
+ }
+ panel.addEventListener('pointerdown',e=>{
+   const btn=e.target.closest?.('button[data-key="⌫"]');
+   if(!btn||panel.hidden)return;
+   stopBackspaceHold();
+   const hold={id:e.pointerId,btn,x:e.clientX,y:e.clientY,repeated:false,delay:null,interval:null};
+   backspaceHold=hold;
+   hold.delay=setTimeout(()=>{
+     if(backspaceHold!==hold||!active)return;
+     hold.repeated=true;edit('⌫');
+     hold.interval=setInterval(()=>{if(backspaceHold===hold&&active)edit('⌫')},85);
+   },410);
+ },{passive:false});
+ panel.addEventListener('pointermove',e=>{
+   if(backspaceHold&&backspaceHold.id===e.pointerId&&
+       Math.hypot(e.clientX-backspaceHold.x,e.clientY-backspaceHold.y)>28)
+     stopBackspaceHold(e.pointerId);
+ },{passive:false});
+ panel.addEventListener('pointercancel',e=>stopBackspaceHold(e.pointerId));
+ document.addEventListener('pointerup',e=>{
+   if(backspaceHold&&backspaceHold.id===e.pointerId&&!panel.contains(e.target))
+     stopBackspaceHold(e.pointerId);
+ },true);
+ // iPad Safari may omit compatibility clicks; touch pointer-up triggers one action.
  panel.addEventListener('pointerup',e=>{
+   const btn=e.target.closest('button');
+   const wasRepeated=stopBackspaceHold(e.pointerId);
+   if(!btn||btn.hidden||btn.disabled)return;
+   if(wasRepeated){
+     lastRepeatedBackspace={btn,time:performance.now()};
+     if(e.pointerType==='touch'||e.pointerType==='pen'){
+       e.preventDefault();e.stopPropagation();
+       lastTouchAction={btn,time:performance.now()};
+     }
+     return;
+   }
    if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;
-   const btn=e.target.closest('button');if(!btn||btn.hidden||btn.disabled)return;
    e.preventDefault();e.stopPropagation();
    lastTouchAction={btn,time:performance.now()};
    activateButton(btn);
@@ -393,19 +489,14 @@
    const btn=e.target.closest('button');if(!btn||btn.hidden||btn.disabled)return;
    e.preventDefault();e.stopPropagation();
    if(lastTouchAction?.btn===btn&&performance.now()-lastTouchAction.time<650)return;
+   if(lastRepeatedBackspace?.btn===btn&&performance.now()-lastRepeatedBackspace.time<650)return;
    activateButton(btn);
  });
  // Tap a digit position inside a readonly input; Safari otherwise places the virtual caret at the end.
  function placeCaretAtX(el,x){
    if(el!==active||!el.isConnected)return;
-   const rect=el.getBoundingClientRect(),style=getComputedStyle(el),val=el.value||'';
-   measure.font=style.font||style.fontSize+' '+style.fontFamily;
-   const padL=parseFloat(style.paddingLeft)||0,padR=parseFloat(style.paddingRight)||0;
-   const width=measure.measureText(val).width,inner=rect.width-padL-padR;
-   let lead=padL;
-   if(style.textAlign==='right'||style.textAlign==='end')lead=Math.max(padL,rect.width-padR-width);
-   else if(style.textAlign==='center')lead=Math.max(padL,padL+(inner-width)/2);
-   const target=x-rect.left-lead+(el.scrollLeft||0);
+   const val=el.value||'',style=getComputedStyle(el),g=textGeometry(el,style);
+   const target=x-g.rect.left-g.lead+(el.scrollLeft||0);
    let best=0,distance=Infinity;
    for(let i=0;i<=val.length;i++){
      const d=Math.abs(measure.measureText(val.slice(0,i)).width-target);
@@ -452,6 +543,7 @@
  },true);
  // V415: app-owned keyboard closes on outside pointer and Done, not WebKit's spurious readonly blur.
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&active){e.preventDefault();close();}},true);
- document.addEventListener('visibilitychange',()=>{if(document.hidden&&active)close()});
- window.muyeIPadNumericV412={enabled:true,status:()=>({visible:!panel.hidden,field:active?.id||active?.className||null,movable:true,resizable:true,position:lastPlacement?{...lastPlacement}:null,size:lastSize?{...lastSize}:null}),dismiss:close};
+ document.addEventListener('visibilitychange',()=>{if(document.hidden){stopBackspaceHold();if(active)close()}});
+ document.addEventListener('input',e=>{if(active&&e.target===active)updateFormatHint()},true);
+ window.muyeIPadNumericV412={enabled:true,status:()=>({visible:!panel.hidden,field:active?.id||active?.className||null,movable:true,resizable:true,orientation:screenMode,position:lastPlacement?{...lastPlacement}:null,size:lastSize?{...lastSize}:null}),dismiss:close};
 })();
