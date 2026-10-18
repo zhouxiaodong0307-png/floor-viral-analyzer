@@ -1,4 +1,4 @@
-/* V416: decimal segments, smart focus visibility, precise caret, undo clear and scoped next navigation. iPhone and Mac remain native. */
+/* V417: per-orientation layout, stable floating position, repeated backspace, overflow caret and format hints. */
 (function(){
  'use strict';
  const ua=navigator.userAgent||'';
@@ -7,6 +7,8 @@
  const selector='input[type="number"],input.mexpr,input.stair-platform,input.muye-spec-numeric,input#spec,input#aqSpec,input#cSpec,input#pSpec,input#costSpec,input#installEditSpec,input[data-field="spec"],input#installEditArea';
  let active=null, original=null, dirty=false, clearUndo=null;
  let lastPlacement=null,lastSize=null,dragging=null,resizing=null;
+ let screenMode=window.innerWidth>window.innerHeight?'landscape':'portrait';
+ let layoutPrefs={portrait:null,landscape:null},layoutFrame=0;
  const panel=document.createElement('section');
  panel.id='muye-ipad-numeric-v412';panel.hidden=true;
  panel.setAttribute('role','group');panel.setAttribute('aria-label','数字输入键盘');
@@ -40,7 +42,7 @@
    return {left:v?v.offsetLeft:0,top:v?v.offsetTop:0,
      width:v?v.width:window.innerWidth,height:v?v.height:window.innerHeight};
  }
- function movePanel(left,top){
+ function movePanel(left,top,remember=true){
    if(panel.hidden)return;
    const v=viewportLimits(),rect=panel.getBoundingClientRect(),margin=7;
    const lowX=v.left+margin,highX=Math.max(lowX,v.left+v.width-rect.width-margin);
@@ -48,7 +50,7 @@
    const x=Math.max(lowX,Math.min(highX,left)),y=Math.max(lowY,Math.min(highY,top));
    panel.style.left=x+'px';panel.style.top=y+'px';
    panel.style.bottom='auto';panel.style.transform='none';
-   lastPlacement={left:x,top:y};
+   if(remember)lastPlacement={left:x,top:y};
  }
  dragHeader.addEventListener('pointerdown',event=>{
    if(event.target.closest('button')||panel.hidden)return;
@@ -81,44 +83,72 @@
    movePanel(rect.left+delta[0]*step,rect.top+delta[1]*step);
    saveLayout();
  });
+ function orientationMode(){return window.innerWidth>window.innerHeight?'landscape':'portrait'}
+ function applyLayout(){
+   const pref=layoutPrefs[screenMode];
+   lastPlacement=pref?{left:pref.left,top:pref.top}:null;
+   lastSize=pref?{width:pref.width,height:pref.height}:null;
+   for(const p of ['left','top','bottom','transform','width','height'])panel.style.removeProperty(p);
+   if(!panel.hidden&&pref)resizePanel(pref.width,pref.height,pref.left,pref.top,false);
+ }
  function keepPanelOnScreen(){
-   if(panel.hidden)return;
-   if(lastSize){const rect=panel.getBoundingClientRect();resizePanel(lastSize.width,lastSize.height,lastPlacement?.left??rect.left,lastPlacement?.top??rect.top);}
-   else if(lastPlacement)movePanel(lastPlacement.left,lastPlacement.top);
-   if(active)ensureFieldUncovered(active);
+   if(panel.hidden||layoutFrame)return;
+   layoutFrame=requestAnimationFrame(()=>{
+     layoutFrame=0;
+     if(panel.hidden||dragging||resizing)return;
+     const mode=orientationMode();
+     if(mode!==screenMode){screenMode=mode;applyLayout();}
+     else {
+       const r=panel.getBoundingClientRect(),b=sizeBounds();
+       if(r.width>b.maxW+1||r.height>b.maxH+1)resizePanel(r.width,r.height,r.left,r.top,false);
+       else movePanel(r.left,r.top,false);
+     }
+     if(active)ensureFieldUncovered(active);
+   });
  }
  window.addEventListener('resize',keepPanelOnScreen);
  window.visualViewport?.addEventListener('resize',keepPanelOnScreen);
  window.visualViewport?.addEventListener('scroll',keepPanelOnScreen);
  /* V414: size and position are local presentation preferences, not order or cloud data. */
  const resizeHandle=panel.querySelector('.muye-ipad-pad-resize');
- const sizeKey='muye-ipad-keypad-layout-v414';
+ const sizeKey='muye-ipad-keypad-layout-v417',legacySizeKey='muye-ipad-keypad-layout-v414';
+ function validLayout(v){return v&&['width','height','left','top'].every(k=>Number.isFinite(v[k]))}
  function getSavedLayout(){
    try{
      const v=JSON.parse(localStorage.getItem(sizeKey)||'null');
-     if(v&&Number.isFinite(v.width)&&Number.isFinite(v.height)&&Number.isFinite(v.left)&&Number.isFinite(v.top)){
-       lastSize={width:v.width,height:v.height};lastPlacement={left:v.left,top:v.top};
+     if(v&&typeof v==='object'){
+       for(const mode of ['portrait','landscape'])if(validLayout(v[mode]))layoutPrefs[mode]={...v[mode]};
+     }else{
+       const legacy=JSON.parse(localStorage.getItem(legacySizeKey)||'null');
+       if(validLayout(legacy))layoutPrefs[screenMode]={...legacy};
      }
    }catch(_){}
+   const p=layoutPrefs[screenMode];
+   lastSize=p?{width:p.width,height:p.height}:null;
+   lastPlacement=p?{left:p.left,top:p.top}:null;
  }
  function saveLayout(){
-   if(!lastPlacement&&!lastSize)return;
+   if(panel.hidden)return;
    const r=panel.getBoundingClientRect();
-   try{localStorage.setItem(sizeKey,JSON.stringify({left:r.left,top:r.top,width:r.width,height:r.height}))}catch(_){}
+   const value={left:r.left,top:r.top,width:r.width,height:r.height};
+   layoutPrefs[screenMode]={...value};
+   lastSize={width:value.width,height:value.height};
+   lastPlacement={left:value.left,top:value.top};
+   try{localStorage.setItem(sizeKey,JSON.stringify(layoutPrefs))}catch(_){}
  }
  function sizeBounds(){
    const v=viewportLimits();
    const maxW=Math.max(0,v.width-14),maxH=Math.max(0,v.height-14);
    return {minW:Math.min(445,maxW),minH:Math.min(480,maxH),maxW,maxH};
  }
- function resizePanel(width,height,left,top){
+ function resizePanel(width,height,left,top,remember=true){
    if(panel.hidden)return;
    const b=sizeBounds();
    const w=Math.round(Math.max(b.minW,Math.min(b.maxW,width)));
    const h=Math.round(Math.max(b.minH,Math.min(b.maxH,height)));
    panel.style.width=w+'px';panel.style.height=h+'px';
-   lastSize={width:w,height:h};
-   movePanel(left??panel.getBoundingClientRect().left,top??panel.getBoundingClientRect().top);
+   if(remember)lastSize={width:w,height:h};
+   movePanel(left??panel.getBoundingClientRect().left,top??panel.getBoundingClientRect().top,remember);
  }
 
  // Keep the edited field visible without permanently changing the user's saved keyboard placement.
@@ -139,11 +169,7 @@
    window.scrollBy({top:delta,behavior:'instant'});
    return Math.abs(window.scrollY-before)>1;
  }
- function temporarilyPlacePanel(x,y){
-   const preference=lastPlacement?{...lastPlacement}:null;
-   movePanel(x,y);
-   lastPlacement=preference;
- }
+ function temporarilyPlacePanel(x,y){movePanel(x,y,false)}
  function ensureFieldUncovered(el){
    requestAnimationFrame(()=>{
      if(el!==active||panel.hidden||!el.isConnected)return;
@@ -285,6 +311,9 @@
    if(active===el)return;
    if(active)restore();
    if(!numericAttr(el))return;
+   const wasOpen=!panel.hidden;
+   const mode=orientationMode();
+   if(mode!==screenMode){screenMode=mode;const p=layoutPrefs[screenMode];lastPlacement=p?{left:p.left,top:p.top}:null;lastSize=p?{width:p.width,height:p.height}:null;}
    const saved={type:el.type,readOnly:el.readOnly,inputMode:el.inputMode,integer:el.type==='number'&&(el.getAttribute('step')==='1'||el.inputMode==='numeric')};
    active=el;original=saved;dirty=false;resetClearUndo();
    // iPadOS owns native keyboard layouts. Readonly-before-focus prevents its large QWERTY.
@@ -297,19 +326,14 @@
    el.style.setProperty('box-shadow','0 0 0 3px rgba(0,119,255,.15)','important');
    configureExtras(el);
    panel.hidden=false;document.body.classList.add('muye-ipad-pad-visible');
-   if(!lastPlacement){
-     panel.style.removeProperty('left');panel.style.removeProperty('top');
-     panel.style.removeProperty('bottom');panel.style.removeProperty('transform');
-   }
-   if(lastSize){const rect=panel.getBoundingClientRect();resizePanel(lastSize.width,lastSize.height,lastPlacement?.left??rect.left,lastPlacement?.top??rect.top);}
-   else if(lastPlacement)movePanel(lastPlacement.left,lastPlacement.top);
+   if(!wasOpen)applyLayout();
    if(saved.type==='number'){
      requestAnimationFrame(()=>{
        if(active!==el)return;
        try{el.setSelectionRange(0,el.value.length)}catch(_){}
      });
    }
-   try{el.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'})}catch(_){}
+   try{el.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'})}catch(_){}
    // Keep readonly input without forced iPadOS focus; draw a virtual caret instead.
    scheduleCaret();ensureFieldUncovered(el);
  }
