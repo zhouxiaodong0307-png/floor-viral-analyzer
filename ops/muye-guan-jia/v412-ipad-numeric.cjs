@@ -15,7 +15,7 @@ const URL='https://muye-guan-jia-migration-test.onrender.com/';
    assert.ok(response?.ok(),'test site must load');
    await page.waitForFunction(()=>window.muyeIPadNumericV412&&typeof addMeasureRow==='function',{timeout:25000});
    const setup=await page.evaluate(()=>{
-     if(APP_VERSION!=='413'||SUPABASE_URL!==''||FLOOR_AUTH_MODE!=='disabled'||isCloudWritableRuntime())throw Error('staging isolation not confirmed');
+     if(APP_VERSION!=='414'||SUPABASE_URL!==''||FLOOR_AUTH_MODE!=='disabled'||isCloudWritableRuntime())throw Error('staging isolation not confirmed');
      show('quote');
      const row=addMeasureRow('V412房间','');
      const host=document.querySelector('.app')||document.body;
