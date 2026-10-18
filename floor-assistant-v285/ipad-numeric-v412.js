@@ -240,26 +240,38 @@
  caret.id='muye-ipad-caret-v415';caret.hidden=true;caret.setAttribute('aria-hidden','true');
  document.body.appendChild(caret);
  const canvas=document.createElement('canvas'),measure=canvas.getContext('2d');
+ function textGeometry(el,style){
+   measure.font=style.font||style.fontSize+' '+style.fontFamily;
+   const padL=parseFloat(style.paddingLeft)||0,padR=parseFloat(style.paddingRight)||0;
+   const rect=el.getBoundingClientRect(),total=measure.measureText(el.value||'').width;
+   const inner=Math.max(1,rect.width-padL-padR);
+   let lead=padL;
+   if(total<=inner){
+     if(style.textAlign==='right'||style.textAlign==='end')lead=rect.width-padR-total;
+     else if(style.textAlign==='center')lead=padL+(inner-total)/2;
+   }
+   return {rect,padL,padR,lead,inner};
+ }
+ function revealCaret(el,prefix,g){
+   const near=g.padL+5,far=g.rect.width-g.padR-5;
+   const screenPos=g.lead+prefix-(el.scrollLeft||0);
+   if(screenPos>far)el.scrollLeft=(el.scrollLeft||0)+(screenPos-far);
+   else if(screenPos<near)el.scrollLeft=Math.max(0,(el.scrollLeft||0)-(near-screenPos));
+ }
  let caretFrame=0;
  function updateCaret(){
    caretFrame=0;
    const el=active;
    if(!el||!el.isConnected||panel.hidden){caret.hidden=true;return;}
-   const rect=el.getBoundingClientRect(),style=getComputedStyle(el);
+   const style=getComputedStyle(el),g=textGeometry(el,style),rect=g.rect;
    if(!rect.width||!rect.height||rect.bottom<0||rect.top>innerHeight){caret.hidden=true;return;}
    const selection=typeof el.selectionStart==='number'?el.selectionStart:el.value.length;
    const text=el.value||'',index=Math.min(Math.max(0,selection),text.length);
-   measure.font=style.font||style.fontSize+' '+style.fontFamily;
    const prefix=measure.measureText(text.slice(0,index)).width;
-   const whole=measure.measureText(text).width;
-   const padL=parseFloat(style.paddingLeft)||0,padR=parseFloat(style.paddingRight)||0;
-   const inner=rect.width-padL-padR;
-   let lead=padL;
-   if(style.textAlign==='right'||style.textAlign==='end')lead=Math.max(padL,rect.width-padR-whole);
-   else if(style.textAlign==='center')lead=Math.max(padL,padL+(inner-whole)/2);
-   const left=rect.left+lead+prefix-(el.scrollLeft||0);
+   revealCaret(el,prefix,g);
+   const left=rect.left+g.lead+prefix-(el.scrollLeft||0);
    const size=Math.max(13,parseFloat(style.fontSize)||16);
-   caret.style.left=Math.max(rect.left+padL,Math.min(rect.right-padR-2,left))+'px';
+   caret.style.left=Math.max(rect.left+g.padL,Math.min(rect.right-g.padR-2,left))+'px';
    caret.style.top=(rect.top+(rect.height-size*1.18)/2)+'px';
    caret.style.height=Math.min(size*1.18,rect.height-6)+'px';
    caret.hidden=false;
@@ -422,14 +434,8 @@
  // Tap a digit position inside a readonly input; Safari otherwise places the virtual caret at the end.
  function placeCaretAtX(el,x){
    if(el!==active||!el.isConnected)return;
-   const rect=el.getBoundingClientRect(),style=getComputedStyle(el),val=el.value||'';
-   measure.font=style.font||style.fontSize+' '+style.fontFamily;
-   const padL=parseFloat(style.paddingLeft)||0,padR=parseFloat(style.paddingRight)||0;
-   const width=measure.measureText(val).width,inner=rect.width-padL-padR;
-   let lead=padL;
-   if(style.textAlign==='right'||style.textAlign==='end')lead=Math.max(padL,rect.width-padR-width);
-   else if(style.textAlign==='center')lead=Math.max(padL,padL+(inner-width)/2);
-   const target=x-rect.left-lead+(el.scrollLeft||0);
+   const val=el.value||'',style=getComputedStyle(el),g=textGeometry(el,style);
+   const target=x-g.rect.left-g.lead+(el.scrollLeft||0);
    let best=0,distance=Infinity;
    for(let i=0;i<=val.length;i++){
      const d=Math.abs(measure.measureText(val.slice(0,i)).width-target);
