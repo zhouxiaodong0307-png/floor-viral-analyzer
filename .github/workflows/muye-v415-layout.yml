@@ -1,0 +1,28 @@
+name: Muye V415 keypad focus and layout
+on:
+  push:
+    branches: [wood-floor-migration-v345-validation]
+    paths:
+      - 'floor-assistant-v285/index.html'
+      - 'floor-assistant-v285/ipad-numeric-v412.js'
+      - 'floor-assistant-v285/ipad-numeric-v412.css'
+      - 'ops/muye-guan-jia/v415-keypad-layout.cjs'
+      - '.github/workflows/muye-v415-layout.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  keypad:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.1
+          npx playwright install --with-deps chromium
+      - name: Test number keypad focus and alignment
+        run: node ops/muye-guan-jia/v415-keypad-layout.cjs
