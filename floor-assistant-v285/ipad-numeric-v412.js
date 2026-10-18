@@ -84,7 +84,7 @@
      if(start===end)start=Math.max(0,start-1);
      el.setRangeText('',start,end,'end');
    }else{
-     if(insert==='.'&&val.includes('.')&&!(val.slice(start,end).includes('.')))return;
+     if(insert==='.'&&((original?.inputMode==='numeric'&&original?.type==='number')||(val.includes('.')&&!val.slice(start,end).includes('.'))))return;
      if(insert==='-'&&(k!=='number'||start!==0||val.includes('-')))return;
      if(insert==='.'&&k==='number'&&start===0&&!val.startsWith('0')){el.setRangeText('0.',start,end,'end');}
      else el.setRangeText(insert,start,end,'end');
@@ -117,6 +117,7 @@
    if(panel.contains(e.target))return;
    const el=e.target.closest?.('input');
    if(el&&numericAttr(el))open(el);
+   else if(active&&e.target.closest?.('.measure-inline-symbol,.muye-spec-x'))return;
    else if(active)close();
  },true);
  document.addEventListener('focusout',e=>{
