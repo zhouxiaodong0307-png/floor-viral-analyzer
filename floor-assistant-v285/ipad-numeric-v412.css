@@ -96,3 +96,12 @@ body .muye-ipad-field-active{
 }
 #muye-ipad-caret-v415[hidden]{display:none!important}
 @keyframes muye-v415-caret{0%,48%{opacity:1}49%,100%{opacity:0}}
+
+/* V417: nonblocking inline validation, in existing reserved footer space. */
+#muye-ipad-numeric-v412 .muye-ipad-format-hint{
+ position:absolute;left:15px;right:42px;bottom:8px;
+ font:500 11px/16px -apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;
+ color:#b42318;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+ pointer-events:none;text-align:left;
+}
+#muye-ipad-numeric-v412 .muye-ipad-format-hint[hidden]{display:none!important}
