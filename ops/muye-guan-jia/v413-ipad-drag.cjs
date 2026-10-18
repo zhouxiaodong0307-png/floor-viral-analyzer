@@ -55,7 +55,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
    await page.mouse.move(b.x+35,b.y+20);await page.mouse.down();
    await page.mouse.move(b.x+3000,b.y+3000,{steps:5});await page.mouse.up();
    const rightEdge=await pad.boundingBox();
-   console.log('DEBUG BOUNDS',JSON.stringify({width,rightEdge,viewport:await page.evaluate(()=>({innerWidth,innerHeight,visual:{width:visualViewport?.width,height:visualViewport?.height,offsetLeft:visualViewport?.offsetLeft,offsetTop:visualViewport?.offsetTop},pad:muyeIPadNumericV412.status().position,style:document.querySelector('#muye-ipad-numeric-v412').style.cssText}))}));
+   console.log('DEBUG BOUNDS',JSON.stringify({width,rightEdge,viewport:await page.evaluate(()=>({innerWidth,innerHeight,visual:{width:visualViewport?.width,height:visualViewport?.height,offsetLeft:visualViewport?.offsetLeft,offsetTop:visualViewport?.offsetTop},pad:muyeIPadNumericV412.status().position,style:document.querySelector('#muye-ipad-numeric-v412').style.cssText,computed:(()=>{let p=document.querySelector('#muye-ipad-numeric-v412'),c=getComputedStyle(p);return{margin:c.margin,marginLeft:c.marginLeft,left:c.left,transform:c.transform,width:c.width,position:c.position,bodyTransform:getComputedStyle(document.body).transform,cssHref:[...document.querySelectorAll('link[rel=stylesheet]')].map(x=>x.href).filter(x=>x.includes('ipad-numeric'))}})()}))}));
    assert.ok(rightEdge.x>=0&&rightEdge.x+rightEdge.width<=width+2,'drag should clamp horizontally to viewport');
    assert.ok(rightEdge.y>=0&&rightEdge.y+rightEdge.height<=1024+3,'drag should clamp vertically');
    await page.setViewportSize({width:width===768?1024:768,height:800});
