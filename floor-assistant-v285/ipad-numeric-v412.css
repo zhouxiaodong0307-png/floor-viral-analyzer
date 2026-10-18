@@ -29,13 +29,13 @@
 
 
 /* V414: right-bottom resize grip; flexible key row heights scale without changing digit positions. */
-#muye-ipad-numeric-v412:not([hidden]){display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+#muye-ipad-numeric-v412:not([hidden]){display:flex;flex-direction:column;min-width:0;min-height:0;height:367px;max-height:calc(100dvh - 14px);overflow:hidden}
 #muye-ipad-numeric-v412 .muye-ipad-pad-head{flex:0 0 auto}
 #muye-ipad-numeric-v412 .muye-ipad-pad-keys{
  flex:1 1 auto;min-height:0;grid-template-rows:repeat(4,minmax(0,1fr));
 }
 #muye-ipad-numeric-v412 .muye-ipad-pad-keys button{min-height:0!important;font-size:clamp(19px,2.7vw,27px)}
-#muye-ipad-numeric-v412 .muye-ipad-pad-extras{flex:0 0 auto;margin-bottom:5px}
+#muye-ipad-numeric-v412 .muye-ipad-pad-extras{flex:0 0 auto;margin-bottom:5px;padding-right:38px}
 #muye-ipad-numeric-v412 .muye-ipad-pad-resize{
  position:absolute;right:0;bottom:0;width:42px;height:42px;
  z-index:4;cursor:nwse-resize;touch-action:none;-webkit-tap-highlight-color:transparent;
