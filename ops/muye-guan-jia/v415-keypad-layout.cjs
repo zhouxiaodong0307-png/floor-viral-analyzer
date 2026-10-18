@@ -21,6 +21,7 @@ const near=(x,y,t=4)=>Math.abs(x-y)<=t;
   assert.ok(near(box.width,445,5)&&near(box.height,480,5),'default keyboard must match minimum screenshot dimensions');
   const caret=page.locator('#muye-ipad-caret-v415');
   assert.ok(await caret.isVisible(),'virtual caret shows despite readonly input');
+  console.log('DEBUG_FOCUS',JSON.stringify(await field.evaluate(el=>({style:el.style.cssText,computed:getComputedStyle(el).outline,cls:el.className,focus:document.activeElement===el,js:window.muyeIPadNumericV412.status()}))));
   assert.equal(await field.evaluate(el=>getComputedStyle(el).outlineStyle!=='none'),true,'active field shows visible outline');
   const fieldBox=await field.boundingBox(),caretBox=await caret.boundingBox();
   assert.ok(caretBox.x>=fieldBox.x&&caretBox.x<=fieldBox.x+fieldBox.width,'caret positioned within input');
