@@ -313,6 +313,7 @@
  }
  function close(){
    if(!active)return;
+   stopBackspaceHold();
    const el=active;
    // Blur before removing readonly so WebKit cannot summon a second keyboard.
    try{el.blur()}catch(_){}
@@ -416,11 +417,50 @@
      const el=active;close();if(el)try{el.focus({preventScroll:true})}catch(_){}
    }
  }
- // iPad Safari can omit the compatibility click after a captured touch drag.
- // Pointer-up guarantees each touchscreen button gets exactly one action.
+ // Hold backspace to repeat deletion; short taps still delete one character.
+ let backspaceHold=null,lastRepeatedBackspace=null;
+ function stopBackspaceHold(pointerId){
+   if(!backspaceHold||(pointerId!=null&&backspaceHold.id!==pointerId))return false;
+   const repeated=backspaceHold.repeated;
+   clearTimeout(backspaceHold.delay);clearInterval(backspaceHold.interval);
+   backspaceHold=null;
+   return repeated;
+ }
+ panel.addEventListener('pointerdown',e=>{
+   const btn=e.target.closest?.('button[data-key="⌫"]');
+   if(!btn||panel.hidden)return;
+   stopBackspaceHold();
+   const hold={id:e.pointerId,btn,x:e.clientX,y:e.clientY,repeated:false,delay:null,interval:null};
+   backspaceHold=hold;
+   hold.delay=setTimeout(()=>{
+     if(backspaceHold!==hold||!active)return;
+     hold.repeated=true;edit('⌫');
+     hold.interval=setInterval(()=>{if(backspaceHold===hold&&active)edit('⌫')},85);
+   },410);
+ },{passive:false});
+ panel.addEventListener('pointermove',e=>{
+   if(backspaceHold&&backspaceHold.id===e.pointerId&&
+       Math.hypot(e.clientX-backspaceHold.x,e.clientY-backspaceHold.y)>28)
+     stopBackspaceHold(e.pointerId);
+ },{passive:false});
+ panel.addEventListener('pointercancel',e=>stopBackspaceHold(e.pointerId));
+ document.addEventListener('pointerup',e=>{
+   if(backspaceHold&&backspaceHold.id===e.pointerId&&!panel.contains(e.target))
+     stopBackspaceHold(e.pointerId);
+ },true);
+ // iPad Safari may omit compatibility clicks; touch pointer-up triggers one action.
  panel.addEventListener('pointerup',e=>{
-   if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;
    const btn=e.target.closest('button');if(!btn||btn.hidden||btn.disabled)return;
+   const wasRepeated=stopBackspaceHold(e.pointerId);
+   if(wasRepeated){
+     lastRepeatedBackspace={btn,time:performance.now()};
+     if(e.pointerType==='touch'||e.pointerType==='pen'){
+       e.preventDefault();e.stopPropagation();
+       lastTouchAction={btn,time:performance.now()};
+     }
+     return;
+   }
+   if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;
    e.preventDefault();e.stopPropagation();
    lastTouchAction={btn,time:performance.now()};
    activateButton(btn);
@@ -429,6 +469,7 @@
    const btn=e.target.closest('button');if(!btn||btn.hidden||btn.disabled)return;
    e.preventDefault();e.stopPropagation();
    if(lastTouchAction?.btn===btn&&performance.now()-lastTouchAction.time<650)return;
+   if(lastRepeatedBackspace?.btn===btn&&performance.now()-lastRepeatedBackspace.time<650)return;
    activateButton(btn);
  });
  // Tap a digit position inside a readonly input; Safari otherwise places the virtual caret at the end.
@@ -482,6 +523,6 @@
  },true);
  // V415: app-owned keyboard closes on outside pointer and Done, not WebKit's spurious readonly blur.
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&active){e.preventDefault();close();}},true);
- document.addEventListener('visibilitychange',()=>{if(document.hidden&&active)close()});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden){stopBackspaceHold();if(active)close()}});
  window.muyeIPadNumericV412={enabled:true,status:()=>({visible:!panel.hidden,field:active?.id||active?.className||null,movable:true,resizable:true,position:lastPlacement?{...lastPlacement}:null,size:lastSize?{...lastSize}:null}),dismiss:close};
 })();
