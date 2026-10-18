@@ -268,9 +268,10 @@
      if(style.textAlign==='right'||style.textAlign==='end')lead=rect.width-padR-total;
      else if(style.textAlign==='center')lead=padL+(inner-total)/2;
    }
-   return {rect,padL,padR,lead,inner};
+   return {rect,padL,padR,lead,inner,total};
  }
  function revealCaret(el,prefix,g){
+   if(g.total<=g.inner)return;
    const near=g.padL+5,far=g.rect.width-g.padR-5;
    const screenPos=g.lead+prefix-(el.scrollLeft||0);
    if(screenPos>far)el.scrollLeft=(el.scrollLeft||0)+(screenPos-far);
