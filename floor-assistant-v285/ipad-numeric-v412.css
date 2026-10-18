@@ -1,6 +1,6 @@
 /* V415: movable, resizable and cursor-aware iPadOS numeric touch keypad; keyboard layout is app-owned, not system-native. */
 #muye-ipad-numeric-v412[hidden]{display:none!important}
-#muye-ipad-numeric-v412{box-sizing:border-box;position:fixed;z-index:16000;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,640px);margin:0!important;padding:9px 12px calc(12px + env(safe-area-inset-bottom,0px));border:1px solid #d5d5da;border-bottom:0;border-radius:19px 19px 0 0;background:#ececf0;box-shadow:0 -8px 30px #0002;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+#muye-ipad-numeric-v412{box-sizing:border-box;position:fixed;z-index:16000;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,445px);margin:0!important;padding:9px 12px calc(12px + env(safe-area-inset-bottom,0px));border:1px solid #d5d5da;border-bottom:0;border-radius:19px 19px 0 0;background:#ececf0;box-shadow:0 -8px 30px #0002;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 #muye-ipad-numeric-v412 *{box-sizing:border-box}
 #muye-ipad-numeric-v412 .muye-ipad-pad-head{display:flex;align-items:center;gap:8px;min-height:43px;padding-bottom:8px}
 #muye-ipad-numeric-v412 .muye-ipad-pad-head span{font-size:15px;font-weight:650;color:#333;white-space:nowrap;margin-right:auto}
@@ -28,14 +28,14 @@
 #muye-ipad-numeric-v412:not([hidden]){border-bottom:1px solid #d5d5da;border-radius:19px;box-shadow:0 5px 25px #0003}
 
 
-/* V414: right-bottom resize grip; flexible key row heights scale without changing digit positions. */
-#muye-ipad-numeric-v412:not([hidden]){display:flex;flex-direction:column;min-width:0;min-height:0;height:367px;max-height:calc(100dvh - 14px);overflow:hidden}
+/* V415: bounded size with aligned operator keys and a visible text caret; right-bottom resize grip; flexible key row heights scale without changing digit positions. */
+#muye-ipad-numeric-v412:not([hidden]){display:flex;flex-direction:column;min-width:0;min-height:0;height:480px;max-height:calc(100dvh - 14px);overflow:hidden}
 #muye-ipad-numeric-v412 .muye-ipad-pad-head{flex:0 0 auto}
 #muye-ipad-numeric-v412 .muye-ipad-pad-keys{
  flex:1 1 auto;min-height:0;grid-template-rows:repeat(4,minmax(0,1fr));
 }
 #muye-ipad-numeric-v412 .muye-ipad-pad-keys button{min-height:0!important;font-size:clamp(19px,2.7vw,27px)}
-#muye-ipad-numeric-v412 .muye-ipad-pad-extras{flex:0 0 auto;margin-bottom:5px;padding-right:38px}
+#muye-ipad-numeric-v412 .muye-ipad-pad-extras{flex:0 0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:7px;margin-bottom:0;padding:0}
 #muye-ipad-numeric-v412 .muye-ipad-pad-resize{
  position:absolute;right:0;bottom:0;width:42px;height:42px;
  z-index:4;cursor:nwse-resize;touch-action:none;-webkit-tap-highlight-color:transparent;
@@ -96,3 +96,14 @@ body .muye-ipad-field-active{
 }
 #muye-ipad-caret-v415[hidden]{display:none!important}
 @keyframes muye-v415-caret{0%,48%{opacity:1}49%,100%{opacity:0}}
+
+/* V415 fixed minimum usability: identical three-column bottom row without truncating buttons. */
+#muye-ipad-numeric-v412:not([hidden]){padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+#muye-ipad-numeric-v412 .muye-ipad-pad-extras button{flex:initial;min-width:0;width:100%;height:45px}
+#muye-ipad-numeric-v412 .muye-ipad-pad-extras button.clear{grid-column:3}
+#muye-ipad-numeric-v412 .muye-ipad-pad-resize{width:29px;height:23px;right:1px;bottom:1px}
+#muye-ipad-numeric-v412 .muye-ipad-pad-resize::after{width:13px;height:13px;right:6px;bottom:5px;border-right-width:2px;border-bottom-width:2px}
+body .app input.muye-ipad-field-active{outline:2px solid #007aff!important;outline-offset:1px!important;border-color:#007aff!important;box-shadow:0 0 0 2px rgba(0,122,255,.12)!important}
+#muye-ipad-caret-v415{position:fixed;z-index:15990;display:block;width:2px;border-radius:2px;pointer-events:none;background:#007aff;animation:muye-ipad-caret-blink-v415 1.04s steps(1,end) infinite}
+#muye-ipad-caret-v415[hidden]{display:none!important}
+@keyframes muye-ipad-caret-blink-v415{0%,55%{opacity:1}56%,100%{opacity:0}}
