@@ -244,7 +244,7 @@
      });
    }
    try{el.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'})}catch(_){}
-   try{el.focus({preventScroll:true})}catch(_){}
+   // Keep readonly input without forced iPadOS focus; draw a virtual caret instead.
    scheduleCaret();
  }
  function edit(key){
