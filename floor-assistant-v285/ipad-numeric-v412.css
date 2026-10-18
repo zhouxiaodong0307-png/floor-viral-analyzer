@@ -1,0 +1,18 @@
+/* V412: compact iPadOS numeric touch keypad; keyboard layout is app-owned, not system-native. */
+#muye-ipad-numeric-v412[hidden]{display:none!important}
+#muye-ipad-numeric-v412{box-sizing:border-box;position:fixed;z-index:16000;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,640px);padding:9px 12px calc(12px + env(safe-area-inset-bottom,0px));border:1px solid #d5d5da;border-bottom:0;border-radius:19px 19px 0 0;background:#ececf0;box-shadow:0 -8px 30px #0002;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+#muye-ipad-numeric-v412 *{box-sizing:border-box}
+#muye-ipad-numeric-v412 .muye-ipad-pad-head{display:flex;align-items:center;gap:8px;min-height:43px;padding-bottom:8px}
+#muye-ipad-numeric-v412 .muye-ipad-pad-head span{font-size:15px;font-weight:650;color:#333;white-space:nowrap;margin-right:auto}
+#muye-ipad-numeric-v412 button{font-family:inherit;border:0;box-shadow:none;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#muye-ipad-numeric-v412 .muye-ipad-pad-head button{height:34px;padding:0 12px;border-radius:10px;background:#fff;color:#36363a;font-size:13px;white-space:nowrap}
+#muye-ipad-numeric-v412 .muye-ipad-pad-head button.done{background:#171717;color:#fff}
+#muye-ipad-numeric-v412 .muye-ipad-pad-keys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#muye-ipad-numeric-v412 .muye-ipad-pad-keys button{min-height:55px;border-radius:9px;background:#fff;color:#202024;font-size:25px;font-weight:400}
+#muye-ipad-numeric-v412 .muye-ipad-pad-keys button:active,#muye-ipad-numeric-v412 .muye-ipad-pad-extras button:active{background:#d4d5da}
+#muye-ipad-numeric-v412 .muye-ipad-pad-keys button[data-key="⌫"]{font-size:24px;background:#d9d9de}
+#muye-ipad-numeric-v412 .muye-ipad-pad-extras{display:flex;gap:7px;margin-top:7px}
+#muye-ipad-numeric-v412 .muye-ipad-pad-extras button{height:37px;min-width:0;flex:1;border-radius:9px;background:#fff;font-size:19px;color:#303038}
+#muye-ipad-numeric-v412 .muye-ipad-pad-extras button.clear{font-size:14px;background:#d9d9de;flex:1}
+#muye-ipad-numeric-v412 button[hidden]{display:none!important}
+@media(max-width:650px){#muye-ipad-numeric-v412{border-radius:15px 15px 0 0;padding-left:8px;padding-right:8px}#muye-ipad-numeric-v412 .muye-ipad-pad-head button{padding:0 7px}#muye-ipad-numeric-v412 .muye-ipad-pad-keys button{min-height:49px}}
