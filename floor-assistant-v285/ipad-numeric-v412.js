@@ -15,10 +15,12 @@
  panel.innerHTML='<div class="muye-ipad-pad-head" title="按住标题区域拖动键盘"><span class="muye-ipad-pad-drag" tabindex="0" role="button" aria-label="拖动键盘位置，方向键可微调">数字输入</span><button type="button" data-action="system">系统键盘</button><button type="button" data-action="next">下一项</button><button type="button" class="done" data-action="done">完成</button></div>'+
  '<div class="muye-ipad-pad-keys">'+['1','2','3','4','5','6','7','8','9','.','0','⌫'].map(k=>'<button type="button" data-key="'+k+'" aria-label="'+(k==='⌫'?'删除上一位':k)+'">'+k+'</button>').join('')+'</div>'+
  '<div class="muye-ipad-pad-extras"><button type="button" data-key="×" class="symbol">×</button><button type="button" data-key="+" class="symbol">+</button><button type="button" data-key="−" class="negative">−</button><button type="button" data-action="clear" class="clear">清空</button></div>'+
+ '<div class="muye-ipad-format-hint" role="status" aria-live="polite" hidden></div>'+ 
  '<div class="muye-ipad-pad-resize" role="button" tabindex="0" aria-label="拖动右下角调整数字键盘大小，方向键微调" title="拖动调整键盘大小"></div>';
  document.body.appendChild(panel);
  const extraButtons=[...panel.querySelectorAll('.muye-ipad-pad-extras button')];
  const clearButton=panel.querySelector('[data-action="clear"]');
+ const formatHint=panel.querySelector('.muye-ipad-format-hint');
  function resetClearUndo(){
    clearUndo=null;clearButton.textContent='清空';clearButton.setAttribute('aria-label','清空当前输入');
  }
@@ -28,11 +30,27 @@
    if(el.matches('input.muye-spec-numeric,input#spec,input#aqSpec,input#cSpec,input#pSpec,input#costSpec,input#installEditSpec,input[data-field="spec"]'))return 'spec';
    return 'number';
  }
+ function formatIssue(el,finished=false){
+   if(!el||kind(el)==='number')return '';
+   const value=(el.value||'').trim().replace(/\s/g,'').replace(/[xX*]/g,'×');
+   if(!value)return '';
+   if(/[+×]{2,}/.test(value))return '连续符号，请检查';
+   if(/^[+×]/.test(value))return '开头需要数字';
+   if(value.split(/[+×]/).some(chunk=>(chunk.match(/\./g)||[]).length>1))return '一个数字只能输入一个小数点';
+   if(finished&&/[+×]$/.test(value))return '末尾还缺少数字';
+   return '';
+ }
+ function updateFormatHint(finished=false){
+   const issue=formatIssue(active,finished);
+   formatHint.textContent=issue;
+   formatHint.hidden=!issue;
+ }
  function configureExtras(el){
    const k=kind(el),min=el.getAttribute('min'),negative=(min==null||Number(min)<0);
    extraButtons[0].hidden=k==='number';extraButtons[1].hidden=k!=='expression';
    extraButtons[2].hidden=k!=='number'||!negative;
    panel.querySelector('.muye-ipad-pad-head>span').textContent=k==='expression'?'面积尺寸输入':k==='spec'?'规格数字输入':'数字输入';
+   updateFormatHint();
  }
  /* Only the empty/header title region moves the panel. Key and toolbar button taps remain independent. */
  const dragHeader=panel.querySelector('.muye-ipad-pad-head');
@@ -376,7 +394,7 @@
    }
    dirty=true;
    el.dispatchEvent(new Event('input',{bubbles:true}));
-   scheduleCaret();
+   updateFormatHint();scheduleCaret();
  }
  function goNext(){
    if(!active)return;
@@ -409,7 +427,7 @@
          end:typeof active.selectionEnd==='number'?active.selectionEnd:active.value.length};
        active.value='';clearButton.textContent='撤销';clearButton.setAttribute('aria-label','撤销清空');
      }
-     dirty=true;active.dispatchEvent(new Event('input',{bubbles:true}));scheduleCaret();
+     dirty=true;active.dispatchEvent(new Event('input',{bubbles:true}));updateFormatHint();scheduleCaret();
    }
    else if(btn.dataset.action==='next')goNext();
    else if(btn.dataset.action==='done')close();
@@ -450,8 +468,9 @@
  },true);
  // iPad Safari may omit compatibility clicks; touch pointer-up triggers one action.
  panel.addEventListener('pointerup',e=>{
-   const btn=e.target.closest('button');if(!btn||btn.hidden||btn.disabled)return;
+   const btn=e.target.closest('button');
    const wasRepeated=stopBackspaceHold(e.pointerId);
+   if(!btn||btn.hidden||btn.disabled)return;
    if(wasRepeated){
      lastRepeatedBackspace={btn,time:performance.now()};
      if(e.pointerType==='touch'||e.pointerType==='pen'){
@@ -524,5 +543,6 @@
  // V415: app-owned keyboard closes on outside pointer and Done, not WebKit's spurious readonly blur.
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&active){e.preventDefault();close();}},true);
  document.addEventListener('visibilitychange',()=>{if(document.hidden){stopBackspaceHold();if(active)close()}});
- window.muyeIPadNumericV412={enabled:true,status:()=>({visible:!panel.hidden,field:active?.id||active?.className||null,movable:true,resizable:true,position:lastPlacement?{...lastPlacement}:null,size:lastSize?{...lastSize}:null}),dismiss:close};
+ document.addEventListener('input',e=>{if(active&&e.target===active)updateFormatHint()},true);
+ window.muyeIPadNumericV412={enabled:true,status:()=>({visible:!panel.hidden,field:active?.id||active?.className||null,movable:true,resizable:true,orientation:screenMode,position:lastPlacement?{...lastPlacement}:null,size:lastSize?{...lastSize}:null}),dismiss:close};
 })();
