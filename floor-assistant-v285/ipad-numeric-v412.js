@@ -302,18 +302,14 @@
    activateButton(btn);
  });
  document.addEventListener('pointerdown',e=>{
-   if(e.pointerType!=='touch'&&e.pointerType!=='pen')return;
+   if(e.pointerType==='mouse'&&e.button!==0)return;
    if(panel.contains(e.target))return;
    const el=e.target.closest?.('input');
    if(el&&numericAttr(el))open(el);
    else if(active&&e.target.closest?.('.measure-inline-symbol,.muye-spec-x'))return;
    else if(active)close();
  },true);
- document.addEventListener('focusout',e=>{
-   if(active===e.target)requestAnimationFrame(()=>{
-     if(active===e.target&&document.activeElement!==active&&!panel.contains(document.activeElement))close();
-   });
- },true);
+ // V415: app-owned keyboard closes on outside pointer and Done, not WebKit's spurious readonly blur.
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&active){e.preventDefault();close();}},true);
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&active)close()});
  window.muyeIPadNumericV412={enabled:true,status:()=>({visible:!panel.hidden,field:active?.id||active?.className||null,movable:true,resizable:true,position:lastPlacement?{...lastPlacement}:null,size:lastSize?{...lastSize}:null}),dismiss:close};
