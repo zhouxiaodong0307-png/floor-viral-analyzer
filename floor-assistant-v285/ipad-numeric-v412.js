@@ -426,6 +426,22 @@
      const x=e.clientX;requestAnimationFrame(()=>placeCaretAtX(el,x));
    }
  },true);
+ // Double-tap a numeric component to replace only that part (e.g. 115 in 740×115×17).
+ function selectNumberPart(el,x){
+   placeCaretAtX(el,x);
+   if(el!==active)return;
+   const val=el.value||'',i=typeof el.selectionStart==='number'?el.selectionStart:0;
+   let from=i,to=i;
+   while(from>0&&/[0-9.]/.test(val[from-1]))from--;
+   while(to<val.length&&/[0-9.]/.test(val[to]))to++;
+   if(to>from){try{el.setSelectionRange(from,to)}catch(_){}scheduleCaret();}
+ }
+ document.addEventListener('dblclick',e=>{
+   const el=active;
+   if(el&&e.target===el){
+     const x=e.clientX;requestAnimationFrame(()=>selectNumberPart(el,x));
+   }
+ },true);
  document.addEventListener('pointerdown',e=>{
    if(e.pointerType==='mouse'&&e.button!==0)return;
    if(panel.contains(e.target))return;
