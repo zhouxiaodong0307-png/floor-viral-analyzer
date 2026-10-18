@@ -202,6 +202,11 @@
    }
    el.readOnly=saved.readOnly;el.inputMode=saved.inputMode;
    el.classList.remove('muye-ipad-field-active');
+   for(const p of ['outline','outline-offset','box-shadow']){
+     const item=saved.activeStyles?.[p];
+     if(item?.value)el.style.setProperty(p,item.value,item.priority);
+     else el.style.removeProperty(p);
+   }
    caret.hidden=true;
    if(dirty)el.dispatchEvent(new Event('change',{bubbles:true}));
    dirty=false;
@@ -224,6 +229,10 @@
    el.readOnly=true;el.inputMode='none';
    if(saved.type==='number')el.type='text';
    el.classList.add('muye-ipad-field-active');
+   saved.activeStyles=Object.fromEntries(['outline','outline-offset','box-shadow'].map(p=>[p,{value:el.style.getPropertyValue(p),priority:el.style.getPropertyPriority(p)}]));
+   el.style.setProperty('outline','2px solid #007aff','important');
+   el.style.setProperty('outline-offset','-2px','important');
+   el.style.setProperty('box-shadow','0 0 0 3px rgba(0,119,255,.15)','important');
    configureExtras(el);
    panel.hidden=false;document.body.classList.add('muye-ipad-pad-visible');
    if(lastSize){const rect=panel.getBoundingClientRect();resizePanel(lastSize.width,lastSize.height,lastPlacement?.left??rect.left,lastPlacement?.top??rect.top);}
