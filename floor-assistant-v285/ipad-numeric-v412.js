@@ -1,4 +1,4 @@
-/* V413: movable iPad touch numeric entry. iPhone native keypad and hardware keyboards stay native. */
+/* V414: movable and resizable iPad touch numeric entry. iPhone native keypad and hardware keyboards stay native. */
 (function(){
  'use strict';
  const ua=navigator.userAgent||'';
@@ -6,13 +6,14 @@
  if(!supported){window.muyeIPadNumericV412={enabled:false};return;}
  const selector='input[type="number"],input.mexpr,input.stair-platform,input.muye-spec-numeric,input#spec,input#aqSpec,input#cSpec,input#pSpec,input#costSpec,input#installEditSpec,input[data-field="spec"],input#installEditArea';
  let active=null, original=null, dirty=false;
- let lastPlacement=null, dragging=null;
+ let lastPlacement=null,lastSize=null,dragging=null,resizing=null;
  const panel=document.createElement('section');
  panel.id='muye-ipad-numeric-v412';panel.hidden=true;
  panel.setAttribute('role','group');panel.setAttribute('aria-label','数字输入键盘');
  panel.innerHTML='<div class="muye-ipad-pad-head" title="按住标题区域拖动键盘"><span class="muye-ipad-pad-drag" tabindex="0" role="button" aria-label="拖动键盘位置，方向键可微调">数字输入</span><button type="button" data-action="system">系统键盘</button><button type="button" data-action="next">下一项</button><button type="button" class="done" data-action="done">完成</button></div>'+
  '<div class="muye-ipad-pad-keys">'+['1','2','3','4','5','6','7','8','9','.','0','⌫'].map(k=>'<button type="button" data-key="'+k+'" aria-label="'+(k==='⌫'?'删除上一位':k)+'">'+k+'</button>').join('')+'</div>'+
- '<div class="muye-ipad-pad-extras"><button type="button" data-key="×" class="symbol">×</button><button type="button" data-key="+" class="symbol">+</button><button type="button" data-key="−" class="negative">−</button><button type="button" data-action="clear" class="clear">清空</button></div>';
+ '<div class="muye-ipad-pad-extras"><button type="button" data-key="×" class="symbol">×</button><button type="button" data-key="+" class="symbol">+</button><button type="button" data-key="−" class="negative">−</button><button type="button" data-action="clear" class="clear">清空</button></div>'+
+ '<div class="muye-ipad-pad-resize" role="button" tabindex="0" aria-label="拖动右下角调整数字键盘大小，方向键微调" title="拖动调整键盘大小"></div>';
  document.body.appendChild(panel);
  const extraButtons=[...panel.querySelectorAll('.muye-ipad-pad-extras button')];
  const numericAttr=el=>el.matches(selector)&&el.type!=='hidden'&&!el.disabled&&(!el.readOnly||el===active)&&!el.closest('#muye-ipad-numeric-v412');
@@ -61,12 +62,12 @@
  },{passive:false});
  function stopDrag(event){
    if(!dragging||dragging.id!==event.pointerId)return;
-   dragging=null;
+   dragging=null;saveLayout();
    try{if(dragHeader.hasPointerCapture(event.pointerId))dragHeader.releasePointerCapture(event.pointerId)}catch(_){}
  }
  dragHeader.addEventListener('pointerup',stopDrag);
  dragHeader.addEventListener('pointercancel',stopDrag);
- dragHeader.addEventListener('lostpointercapture',event=>{if(dragging?.id===event.pointerId)dragging=null});
+ dragHeader.addEventListener('lostpointercapture',event=>{if(dragging?.id===event.pointerId){dragging=null;saveLayout()}});
  dragHandle.addEventListener('keydown',event=>{
    const increments={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
    const delta=increments[event.key];
@@ -74,13 +75,79 @@
    event.preventDefault();event.stopPropagation();
    const rect=panel.getBoundingClientRect(),step=event.shiftKey?48:16;
    movePanel(rect.left+delta[0]*step,rect.top+delta[1]*step);
+   saveLayout();
  });
  function keepPanelOnScreen(){
-   if(!panel.hidden&&lastPlacement)movePanel(lastPlacement.left,lastPlacement.top);
+   if(panel.hidden)return;
+   if(lastSize){const rect=panel.getBoundingClientRect();resizePanel(lastSize.width,lastSize.height,lastPlacement?.left??rect.left,lastPlacement?.top??rect.top);}
+   else if(lastPlacement)movePanel(lastPlacement.left,lastPlacement.top);
  }
  window.addEventListener('resize',keepPanelOnScreen);
  window.visualViewport?.addEventListener('resize',keepPanelOnScreen);
  window.visualViewport?.addEventListener('scroll',keepPanelOnScreen);
+ /* V414: size and position are local presentation preferences, not order or cloud data. */
+ const resizeHandle=panel.querySelector('.muye-ipad-pad-resize');
+ const sizeKey='muye-ipad-keypad-layout-v414';
+ function getSavedLayout(){
+   try{
+     const v=JSON.parse(localStorage.getItem(sizeKey)||'null');
+     if(v&&Number.isFinite(v.width)&&Number.isFinite(v.height)&&Number.isFinite(v.left)&&Number.isFinite(v.top)){
+       lastSize={width:v.width,height:v.height};lastPlacement={left:v.left,top:v.top};
+     }
+   }catch(_){}
+ }
+ function saveLayout(){
+   if(!lastPlacement&&!lastSize)return;
+   const r=panel.getBoundingClientRect();
+   try{localStorage.setItem(sizeKey,JSON.stringify({left:r.left,top:r.top,width:r.width,height:r.height}))}catch(_){}
+ }
+ function sizeBounds(){
+   const v=viewportLimits();
+   const maxW=Math.max(0,v.width-14),maxH=Math.max(0,v.height-14);
+   return {minW:Math.min(355,maxW),minH:Math.min(315,maxH),maxW,maxH};
+ }
+ function resizePanel(width,height,left,top){
+   if(panel.hidden)return;
+   const b=sizeBounds();
+   const w=Math.round(Math.max(b.minW,Math.min(b.maxW,width)));
+   const h=Math.round(Math.max(b.minH,Math.min(b.maxH,height)));
+   panel.style.width=w+'px';panel.style.height=h+'px';
+   lastSize={width:w,height:h};
+   movePanel(left??panel.getBoundingClientRect().left,top??panel.getBoundingClientRect().top);
+ }
+ getSavedLayout();
+ resizeHandle.addEventListener('pointerdown',event=>{
+   if(panel.hidden||event.pointerType==='mouse'&&event.button!==0)return;
+   const rect=panel.getBoundingClientRect();
+   resizing={id:event.pointerId,startX:event.clientX,startY:event.clientY,
+     width:rect.width,height:rect.height,left:rect.left,top:rect.top};
+   event.preventDefault();event.stopPropagation();
+   try{resizeHandle.setPointerCapture(event.pointerId)}catch(_){}
+ },{passive:false});
+ resizeHandle.addEventListener('pointermove',event=>{
+   if(!resizing||event.pointerId!==resizing.id)return;
+   event.preventDefault();
+   resizePanel(resizing.width+event.clientX-resizing.startX,
+     resizing.height+event.clientY-resizing.startY,resizing.left,resizing.top);
+ },{passive:false});
+ function stopResize(event){
+   if(!resizing||resizing.id!==event.pointerId)return;
+   resizing=null;saveLayout();
+   try{if(resizeHandle.hasPointerCapture(event.pointerId))resizeHandle.releasePointerCapture(event.pointerId)}catch(_){}
+ }
+ resizeHandle.addEventListener('pointerup',stopResize);
+ resizeHandle.addEventListener('pointercancel',stopResize);
+ resizeHandle.addEventListener('lostpointercapture',event=>{
+   if(resizing?.id===event.pointerId){resizing=null;saveLayout();}
+ });
+ resizeHandle.addEventListener('keydown',event=>{
+   const increments={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
+   const delta=increments[event.key];if(!delta||panel.hidden)return;
+   event.preventDefault();event.stopPropagation();
+   const r=panel.getBoundingClientRect(),step=event.shiftKey?32:12;
+   resizePanel(r.width+delta[0]*step,r.height+delta[1]*step,r.left,r.top);
+   saveLayout();
+ });
  function restore(){
    if(!active)return;
    const el=active,saved=original;
@@ -120,7 +187,8 @@
    el.classList.add('muye-ipad-field-active');
    configureExtras(el);
    panel.hidden=false;document.body.classList.add('muye-ipad-pad-visible');
-   if(lastPlacement)movePanel(lastPlacement.left,lastPlacement.top);
+   if(lastSize){const rect=panel.getBoundingClientRect();resizePanel(lastSize.width,lastSize.height,lastPlacement?.left??rect.left,lastPlacement?.top??rect.top);}
+   else if(lastPlacement)movePanel(lastPlacement.left,lastPlacement.top);
    if(saved.type==='number'){
      requestAnimationFrame(()=>{
        if(active!==el)return;
@@ -197,5 +265,5 @@
  },true);
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&active){e.preventDefault();close();}},true);
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&active)close()});
- window.muyeIPadNumericV412={enabled:true,status:()=>({visible:!panel.hidden,field:active?.id||active?.className||null,movable:true,position:lastPlacement?{...lastPlacement}:null}),dismiss:close};
+ window.muyeIPadNumericV412={enabled:true,status:()=>({visible:!panel.hidden,field:active?.id||active?.className||null,movable:true,resizable:true,position:lastPlacement?{...lastPlacement}:null,size:lastSize?{...lastSize}:null}),dismiss:close};
 })();
