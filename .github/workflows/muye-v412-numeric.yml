@@ -1,0 +1,28 @@
+name: Muye V412 iPad unified number input
+on:
+  push:
+    branches: [wood-floor-migration-v345-validation]
+    paths:
+      - 'floor-assistant-v285/index.html'
+      - 'floor-assistant-v285/ipad-numeric-v412.js'
+      - 'floor-assistant-v285/ipad-numeric-v412.css'
+      - 'ops/muye-guan-jia/v412-ipad-numeric.cjs'
+      - '.github/workflows/muye-v412-numeric.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ipad-numeric:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright browser
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.1
+          npx playwright install --with-deps chromium
+      - name: Emulate iPad touch entry and confirm iPhone/Mac native input
+        run: node ops/muye-guan-jia/v412-ipad-numeric.cjs
