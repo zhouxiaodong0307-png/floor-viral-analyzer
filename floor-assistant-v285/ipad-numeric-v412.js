@@ -57,7 +57,7 @@
    if(active===el)return;
    if(active)restore();
    if(!numericAttr(el))return;
-   const saved={type:el.type,readOnly:el.readOnly,inputMode:el.inputMode};
+   const saved={type:el.type,readOnly:el.readOnly,inputMode:el.inputMode,integer:el.type==='number'&&(el.getAttribute('step')==='1'||el.inputMode==='numeric')};
    active=el;original=saved;dirty=false;
    // iPadOS owns native keyboard layouts. Readonly-before-focus prevents its large QWERTY.
    el.readOnly=true;el.inputMode='none';
@@ -84,7 +84,7 @@
      if(start===end)start=Math.max(0,start-1);
      el.setRangeText('',start,end,'end');
    }else{
-     if(insert==='.'&&((original?.type==='number'&&(original.inputMode==='numeric'||el.step==='1'))||(val.includes('.')&&!val.slice(start,end).includes('.'))))return;
+     if(insert==='.'&&(original?.integer||(val.includes('.')&&!val.slice(start,end).includes('.'))))return;
      if(insert==='-'&&(k!=='number'||start!==0||val.includes('-')))return;
      if(insert==='.'&&k==='number'&&start===0&&!val.startsWith('0')){el.setRangeText('0.',start,end,'end');}
      else el.setRangeText(insert,start,end,'end');
