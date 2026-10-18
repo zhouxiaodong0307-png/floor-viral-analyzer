@@ -15,7 +15,7 @@ const close=(x,y,t=8)=>Math.abs(x-y)<=t;
    assert.ok(res?.ok(),'test site should load');
    await page.waitForFunction(()=>window.muyeIPadNumericV412?.enabled&&typeof addMeasureRow==='function',{timeout:25000});
    const safe=await page.evaluate(()=>({version:APP_VERSION,cloud:SUPABASE_URL,auth:FLOOR_AUTH_MODE,writable:isCloudWritableRuntime()}));
-   assert.deepEqual(safe,{version:'414',cloud:'',auth:'disabled',writable:false});
+   assert.deepEqual(safe,{version:'415',cloud:'',auth:'disabled',writable:false});
    await page.evaluate(()=>{
      show('quote');addMeasureRow('resize simulation','');
      document.querySelector('.measure-row:last-child .mexpr')?.scrollIntoView({block:'center'});
