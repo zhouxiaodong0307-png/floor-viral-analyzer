@@ -9171,7 +9171,7 @@ setInterval(()=>{if(document.visibilityState==='visible'&&navigator.onLine)reque
 /* V169 展开订单视觉分区：展开中的订单形成独立高亮卡片，增强订单间边界，不新增功能按钮 */
 /* V171 订单日期可修改：默认当天，支持补录历史订单；财务期间和订单排序继续以订单日期为准 */
 /* V175 预览兼容修复：统一版本标识并重新打包，订单日期自定义卡片保持不变 */ /* V201 自动匹配收紧：标准项目才自动归类/锁定，自定义销售项目保留用户输入。 */ /* V202 安装费数量修复：默认跟随销售面积，允许手动覆盖并持久保留。 */ /* V203 自动填充可编辑规则：安装相关统一按销售面积；自动单位/数量仅作默认值，手动修改永久优先。 */ /* V204 销售项目单位排版修复：单位改为数量输入内联后缀，保持三列紧凑布局且继续可编辑。 */ /* V205 修复：结算清单复制增强；手动录入订单永不应用损耗计价，历史手动订单残留损耗仅在可确认时自动纠正。 */
-const APP_VERSION=String(document.querySelector('meta[name="app-version"]')?.content||'V419').trim().replace(/^V/i,'');
+const APP_VERSION=String(document.querySelector('meta[name="app-version"]')?.content||'V420').trim().replace(/^V/i,'');
 function isWebTestRuntime(){
   try{const h=(location.hostname||'').toLowerCase();return !(h.endsWith('.netlify.app')||h==='muye-guan-jia.onrender.com'||h==='muye-guan-jia-migration-test.onrender.com')}catch(_){return true}
 }
