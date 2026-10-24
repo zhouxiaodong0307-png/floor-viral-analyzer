@@ -10862,7 +10862,7 @@ rows.forEach((row,i)=>{
   const oldSource=cell.getAttribute('data-contract-spec-source');
   const norm=contractOrderSpecKey;
   if(norm(shown)===norm(current)){
-    if(oldSource!==current){cell.setAttribute('data-contract-spec-source',current);changed=true;}
+    // Do not rewrite an existing saved contract merely to add internal metadata.
     return;
   }
   if(oldSource!=null){
@@ -10893,6 +10893,19 @@ if(legacy.length){
 }
 if(changed){
   const html=safeHtml(preview.innerHTML);
+  // Fail closed if an automatic spec sync would touch any account/confirmation
+  // section. These areas may contain unique manually edited line breaks.
+  const savedBefore=savedDoc()?.html||'';
+  function accountMarkup(raw){
+    const t=document.createElement('template');
+    t.innerHTML=String(raw||'');
+    return [...t.content.querySelectorAll('.contract-account')].map(x=>x.outerHTML).join('\\n');
+  }
+  if(savedBefore&&accountMarkup(savedBefore)!==accountMarkup(html)){
+    preview.innerHTML=safeHtml(savedBefore);
+    window.alert('自动同步规格时检测到收款或确认区域发生其他变化，已取消同步并保留旧合同。');
+    return;
+  }
   if(!storeDocument(html)){
     // Do not imply a completed sync when local persistence failed.
     preview.innerHTML=safeHtml(savedDoc()?.html||preview.innerHTML);
