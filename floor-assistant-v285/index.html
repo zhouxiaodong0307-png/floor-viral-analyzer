@@ -10882,8 +10882,8 @@ if(legacy.length){
   let dismissed='';
   try{dismissed=sessionStorage.getItem(key)||''}catch(_){}
   if(dismissed!==signature){
-    const message='此订单的合同规格与最新订单不一致：\\n'+signature+
-      '\\n是否只同步这些规格到合同？其他手动修改内容将保留。';
+    const message='此订单的合同规格与最新订单不一致：\n'+signature+
+      '\n是否只同步这些规格到合同？其他手动修改内容将保留。';
     const accepted=window.confirm(message);
     if(accepted){
       legacy.forEach(x=>{x.cell.textContent=x.current;x.cell.setAttribute('data-contract-spec-source',x.current)});
