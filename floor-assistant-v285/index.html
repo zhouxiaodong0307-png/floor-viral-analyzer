@@ -9266,6 +9266,8 @@ async function checkAppVersion(){
       saveDataSafetySnapshot('版本升级前');
       await removeLegacyAppCache();
       const fresh=buildProductionUrl({appv:remote||APP_VERSION,_:Date.now()});
+      // Safari can activate another field while legacy cache cleanup is awaiting.
+      if(isEditingSessionActiveV419()){versionReloading=false;return}
       location.replace(fresh.href);
     }
   }catch(e){console.warn('版本检测失败',e)}finally{versionCheckBusy=false}
