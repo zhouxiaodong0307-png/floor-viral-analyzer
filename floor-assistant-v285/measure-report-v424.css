@@ -151,3 +151,54 @@
  #mr-v424 .mr-table th{font-size:9px}
  #mr-v424 .mr-dialog-actions button{font-size:10px!important}
 }
+
+/* V427 · Shared close-X appearance across all real dialogs.
+   Keep × for deletion and size multiplication untouched. */
+html body .app .modal-head > button.modal-close,
+html body .modal-head > button.modal-close,
+html body #mr-v424 .mr-dialog-head > button[data-r-action="close"]{
+  box-sizing:border-box!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex:0 0 38px!important;
+  width:38px!important;
+  min-width:38px!important;
+  max-width:38px!important;
+  height:38px!important;
+  min-height:38px!important;
+  max-height:38px!important;
+  margin:0!important;
+  padding:0!important;
+  border:1px solid #e2e3e6!important;
+  border-radius:12px!important;
+  background:#f7f7f8!important;
+  color:#222!important;
+  font-family:inherit!important;
+  font-size:22px!important;
+  font-weight:500!important;
+  line-height:1!important;
+  text-align:center!important;
+  box-shadow:none!important;
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+@media(hover:hover){
+  html body .app .modal-head > button.modal-close:hover,
+  html body .modal-head > button.modal-close:hover,
+  html body #mr-v424 .mr-dialog-head > button[data-r-action="close"]:hover{background:#efeff1!important}
+}
+html body .app .modal-head > button.modal-close:active,
+html body .modal-head > button.modal-close:active,
+html body #mr-v424 .mr-dialog-head > button[data-r-action="close"]:active{
+  background:#ebebed!important;
+  transform:none!important;
+}
+html body .app .modal-head > button.modal-close:focus-visible,
+html body .modal-head > button.modal-close:focus-visible,
+html body #mr-v424 .mr-dialog-head > button[data-r-action="close"]:focus-visible{
+  outline:2px solid #111!important;
+  outline-offset:2px!important;
+}
