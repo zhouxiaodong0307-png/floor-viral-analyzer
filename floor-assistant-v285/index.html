@@ -6613,7 +6613,7 @@ function addMeasureRow(name='',expr='',floor){if(!measureFloors.length){measureF
   if(e.isTrusted&&performance.now()-lastTouchInsert<750)return;
   put(selection());
  });
-})nm.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();ex.focus()}});ex.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();let row=quickMeasureRoom();setTimeout(()=>row?.querySelector('.mexpr')?.focus(),20)}});calcMeasures();return div}
+});nm.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();ex.focus()}});ex.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();let row=quickMeasureRoom();setTimeout(()=>row?.querySelector('.mexpr')?.focus(),20)}});calcMeasures();return div}
 function quickMeasureArea(name){if(!measureFloors.length){measureFloors=['1楼'];activeMeasureFloor='1楼';renderMeasureFloorTabs()}let rows=[...document.querySelectorAll('.measure-row')],existing=rows.find(r=>(r.dataset.floor||'1楼')===activeMeasureFloor&&r.dataset.kind!=='stair'&&r.querySelector('.mname')?.value.trim()===name&&!r.querySelector('.mexpr')?.value.trim());let row=existing||addMeasureRow(name,'');focusMeasureExpr(row)}
 function nextRoomName(){let used=new Set([...document.querySelectorAll('.measure-row')].filter(r=>(r.dataset.floor||'1楼')===activeMeasureFloor).map(r=>r.querySelector('.mname')?.value.trim()));let i=1;while(used.has('房间'+i))i++;return '房间'+i}
 function quickMeasureRoom(){if(!measureFloors.length){measureFloors=['1楼'];activeMeasureFloor='1楼';renderMeasureFloorTabs()}let row=addMeasureRow(nextRoomName(),'');focusMeasureExpr(row);return row}
