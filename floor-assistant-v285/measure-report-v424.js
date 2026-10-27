@@ -30,12 +30,19 @@ function capture(){
    const fields={width:get('.stair-width'),depth:get('.stair-depth'),count:get('.stair-count'),riser:get('.stair-riser'),platform:get('.stair-platform')};
    const hasInput=Object.values(fields).some(v=>v!=='');
    if(!hasInput)return;
+   const badSizes=['width','depth','count','riser'].some(k=>fields[k]!==''&&num(fields[k])===null);
+   const badSteps=fields.count!==''&&!Number.isInteger(Number(fields.count));
+   const badPlatform=fields.platform!==''&&exactPerimeter(fields.platform)===null;
+   if(badSizes||badSteps||badPlatform){invalid.push(floor+' '+name);return;}
    const area=typeof stairMeasureArea==='function'?stairMeasureArea(el):0;
    if(!Number.isFinite(area)||area<=0){invalid.push(floor+' '+name);return;}
    rows.push({kind,floor,name,expr:'踏步'+fields.count+'级'+(fields.platform?'；平台'+fields.platform:''),area,fields});
   }else{
    const expr=q('.mexpr',el)?.value.trim()||'';
    if(!expr)return;
+   // The legacy quote parser may accept a valid prefix and ignore a malformed suffix.
+   // Never send a partial result to customers as a complete measurement.
+   if(exactPerimeter(expr)===null){invalid.push(floor+' '+name);return;}
    const area=typeof parseMeasureExpr==='function'?parseMeasureExpr(expr):0;
    if(!Number.isFinite(area)||area<=0){invalid.push(floor+' '+name);return;}
    rows.push({kind,floor,name,expr,area,perimeter:exactPerimeter(expr)});
