@@ -6593,6 +6593,8 @@ function addMeasureRow(name='',expr='',floor){if(!measureFloors.length){measureF
  b.addEventListener('touchcancel',()=>{if(gesture?.kind==='touch')gesture=null});
  // Pen support; touchscreen taps are handled solely above to avoid double insertion.
  b.addEventListener('pointerdown',e=>{
+  // Pointer defaults can transfer focus before touchstart on some WebKit builds.
+  if(e.pointerType==='touch'){if(e.isPrimary)e.preventDefault();return}
   if(e.pointerType!=='pen'||!e.isPrimary)return;
   gesture={kind:'pen',id:e.pointerId,x:e.clientX,y:e.clientY,...selection()};
   e.preventDefault();
