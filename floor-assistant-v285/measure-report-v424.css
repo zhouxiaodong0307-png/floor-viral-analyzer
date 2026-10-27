@@ -202,3 +202,31 @@ html body #mr-v424 .mr-dialog-head > button[data-r-action="close"]:focus-visible
   outline:2px solid #111!important;
   outline-offset:2px!important;
 }
+
+/* V428: secondary informational loss; less visually prominent than measured area.
+   Applies equally to the A4 print document and modal preview. */
+.mr-sheet .mr-loss{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin:5px 1px 0;
+  padding:5px 10px;
+  color:#77777d;
+  background:transparent;
+  font-size:10pt;
+  line-height:1.45;
+}
+.mr-sheet .mr-loss b{
+  flex:none;
+  color:#55555a;
+  font-size:11pt;
+  font-weight:600;
+  white-space:nowrap;
+}
+#mr-v424 .mr-sheet .mr-loss{font-size:11px;padding:6px 10px;}
+#mr-v424 .mr-sheet .mr-loss b{font-size:13px;}
+@media(max-width:700px){
+ #mr-v424 .mr-sheet .mr-loss{font-size:10px;padding:5px 7px;}
+ #mr-v424 .mr-sheet .mr-loss b{font-size:12px;}
+}
