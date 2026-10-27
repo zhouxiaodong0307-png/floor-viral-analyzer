@@ -62,6 +62,7 @@ function reportTotals(d){
 function validQuantity(v){return v===''||num(v)!==null}
 function confirmForm(){
  if(!current)return false;
+ if(current.source.invalid?.length){alert('部分测量尺寸尚未正确计算，请先回到①面积修正：'+current.source.invalid.join('、'));return false;}
  for(const key of ['skirtQty','battenQty','trimQty']){
   if(!validQuantity(current[key])){alert('数量必须为非负数字，请检查输入。');return false;}
  }
@@ -88,7 +89,7 @@ function buildMarkup(d){
  if(d.stairs&&t.steps.length)extra.push(['楼梯铺设面积',money2(t.stairArea)+' ㎡']);
  if(d.other)d.extras.forEach(x=>{if(x.name.trim())extra.push([x.name.trim(),x.qty!==''?x.qty+' '+x.unit:'待填写'])});
  const rows=extra.map(x=>'<div class="mr-item"><span>'+esc(x[0])+'</span><strong>'+esc(x[1])+'</strong></div>').join('');
- const floorNote=d.skirt&&d.skirtQty===''?'踢脚线按规则区域外周长预估，未扣除门洞、柜体等，连通或异形区域须现场复核。':'';
+ const floorNote=d.skirt&&d.skirtQty===''?'踢脚线按规则长宽的各矩形段周长累加预估，未扣除连通共边、门洞及固定柜体，须现场复核。':'';
  const flag=d.source.invalid?.length?'部分测量数据无有效面积，已排除，需补充后重新生成。':'';
  return '<article class="mr-sheet">'+
   '<header class="mr-heading"><span>深圳市佳杰木业有限公司</span><h1>现场量房汇总单</h1><small>MEASUREMENT SUMMARY · 客户版</small></header>'+
@@ -139,7 +140,7 @@ function render(){
  if(!modal||!current)return;
  q('#mr-preview',modal).innerHTML=buildMarkup(current);
  const t=reportTotals(current);
- q('#mr-warning',modal).textContent=current.source.invalid.length?'注意：'+current.source.invalid.join('、')+'未能计算面积；请返回量房修正。':
+ q('#mr-warning',modal).textContent=current.source.invalid?.length?'注意：'+current.source.invalid.join('、')+'未能计算面积；请返回量房修正。':
   current.skirt&&current.skirtQty===''&&t.needsManual?'提示：有 '+t.needsManual+' 个区域无法按长宽预估踢脚线，请手工复核。':'';
 }
 function markDataChanged(){if(current){current.id=null;current.createdAt=null;}const s=q('#mr-saved',modal);if(s)s.value='';}
@@ -221,7 +222,7 @@ function init(){
   if(el.id==='mr-saved'){
    if(!el.value)return;
    const found=collectSaved().find(r=>r.id===el.value);
-   if(found&&found.source&&Array.isArray(found.source.rows)){current=JSON.parse(JSON.stringify(found));controls()}
+   if(found&&found.source&&Array.isArray(found.source.rows)){current=JSON.parse(JSON.stringify(found));current.source.invalid=Array.isArray(current.source.invalid)?current.source.invalid:[];controls()}
    return;
   }
   const field={'mr-customer':'customer','mr-address':'address','mr-date':'date','mr-notes':'notes'}[el.id];
