@@ -177,9 +177,14 @@ function init(){
  card.appendChild(trigger);q('#mr-open-btn',trigger).addEventListener('click',open);
  modal=document.createElement('div');modal.id='mr-v424';modal.className='modal-mask mr-overlay';modal.hidden=true;
  modal.innerHTML='<section class="mr-dialog" role="dialog" aria-modal="true" aria-label="现场量房汇总单">'+
- '<header class="mr-dialog-head"><strong>现场量房汇总单</strong><button type="button" data-r-action="close" aria-label="关闭">×</button></header>'+
+ '<header class="mr-dialog-head"><strong>量房结果</strong><button type="button" data-r-action="close" aria-label="关闭">×</button></header>'+
  '<div class="mr-dialog-scroll"><p id="mr-warning" class="mr-warning" hidden></p><div id="mr-preview" class="mr-preview"></div></div>'+
- '<footer class="mr-dialog-actions"><button type="button" data-r-action="close">返回</button><button type="button" data-r-action="save">保存汇总单</button><button type="button" data-r-action="share">分享文字</button><button type="button" data-r-action="print">打印 / 保存PDF</button></footer></section>';
+ '<footer class="mr-dialog-actions">'+
+ '<button type="button" data-r-action="close" aria-label="返回量房"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h11"/></svg><span>返回</span></button>'+
+ '<button type="button" data-r-action="save" aria-label="保存汇总单"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2ZM7 3v6h9V3M7 21v-8h10v8"/></svg><span>保存</span></button>'+
+ '<button type="button" data-r-action="share" aria-label="分享文字"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m0 0-5 5m5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg><span>分享</span></button>'+
+ '<button type="button" data-r-action="print" aria-label="打印或保存PDF"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 15h12v6H6z"/></svg><span>打印PDF</span></button>'+
+ '</footer></section>';
  document.body.appendChild(modal);
  modal.addEventListener('click',e=>{
   if(e.target===modal){close();return}
@@ -191,7 +196,7 @@ function init(){
  });
  window.muyeMeasureReportV424={
   open,close,capture,estimatePerimeter:exactPerimeter,reportTotals,buildMarkup,
-  status:()=>({enabled:true,visible:!!modal&&!modal.hidden,sourceCount:current?.source.rows.length||0,version:'425'})
+  status:()=>({enabled:true,visible:!!modal&&!modal.hidden,sourceCount:current?.source.rows.length||0,version:'426'})
  };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
