@@ -109,7 +109,7 @@ function buildMarkup(d){
   '<p>踢脚线按房间尺寸估算，未扣除门洞、柜体及连通区域共边，须现场复核。</p>':'';
  const unmeasured=d.source.invalid?.length?'<p class="mr-attention">待核实的测量区域：'+esc(d.source.invalid.join('、'))+'</p>':'';
  return '<article class="mr-sheet">'+
- '<header class="mr-heading"><span>深圳市佳杰木业有限公司</span><h1>现场量房汇总单</h1><small>客户版</small></header>'+
+ '<header class="mr-heading"><h1>现场量房汇总单</h1><small>客户版</small></header>'+
  (meta.length?'<div class="mr-meta">'+meta.join('')+'</div>':'')+
  '<h2>01 · 房间面积明细</h2><table class="mr-table"><thead><tr><th>区域</th><th>尺寸（cm）</th><th>项目</th><th class="mr-right">实测面积</th></tr></thead><tbody>'+body.join('')+'</tbody></table>'+
  '<div class="mr-grand"><span>'+areaName+'</span><b>'+fmt(t.area)+' ㎡</b></div>'+
@@ -117,7 +117,7 @@ function buildMarkup(d){
  (loss?'<div class="mr-loss"><span>预估损耗面积（'+esc(loss.percent)+'%）</span><b>'+fmt(loss.area)+' ㎡</b></div>':'')+
  (optional.length?'<h2>02 · 其他项目汇总</h2><div class="mr-extras">'+rows+'</div>':'')+
  (d.notes?.trim()?'<h2>03 · 现场施工说明</h2><p class="mr-notes">'+esc(d.notes.trim())+'</p>':'')+
- '<footer class="mr-foot">'+unmeasured+caution+'<p>本单为现场测量初稿，实测面积不含备料损耗，最终施工及计价数量以双方确认方案为准。</p><span>佳杰木业 · 现场量房记录</span></footer></article>';
+ '<footer class="mr-foot">'+unmeasured+caution+'<p>本单为现场测量初稿，实测面积不含备料损耗，最终施工及计价数量以双方确认方案为准。</p></footer></article>';
 }
 function collectSaved(){
  try{const a=JSON.parse(localStorage.getItem(STORE)||'[]');return Array.isArray(a)?a:[]}catch(_){return []}
@@ -150,7 +150,7 @@ function printReport(){
  if(!exportReady())return;
  const tab=window.open('','_blank');
  if(!tab){alert('无法打开打印页面，请允许浏览器弹出新页面。');return}
- const href=new URL('./measure-report-v424.css?v=428',location.href).href;
+ const href=new URL('./measure-report-v424.css?v=429',location.href).href;
  const raw='<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>现场量房汇总单</title><link rel="stylesheet" href="'+esc(href)+'"></head><body class="mr-print-window"><div class="mr-print-toolbar"><button onclick="window.print()">打印 / 保存PDF</button></div>'+buildMarkup(current)+'</body></html>';
  tab.document.open();tab.document.write(raw);tab.document.close();
 }
@@ -208,7 +208,7 @@ function init(){
  });
  window.muyeMeasureReportV424={
   open,close,capture,estimatePerimeter:exactPerimeter,reportTotals,lossSummary,buildMarkup,
-  status:()=>({enabled:true,visible:!!modal&&!modal.hidden,sourceCount:current?.source.rows.length||0,version:'428'})
+  status:()=>({enabled:true,visible:!!modal&&!modal.hidden,sourceCount:current?.source.rows.length||0,version:'429'})
  };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
