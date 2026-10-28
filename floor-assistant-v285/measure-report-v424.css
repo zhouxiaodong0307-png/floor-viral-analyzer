@@ -146,7 +146,7 @@
  .mr-dialog-actions button{height:43px;min-height:43px;font-size:13px}
 }
 @media(max-width:360px){
- #quote .measure-card-v273 .mr-open-row button{font-size:11px}
+ #quote .measure-card-v273 .measure-head .mr-head-trigger #mr-open-btn{font-size:11px}
  .mr-sheet{padding:12px}
  .mr-table{font-size:9px}
  .mr-sheet h2{font-size:13px}
