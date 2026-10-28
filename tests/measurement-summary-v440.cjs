@@ -13,7 +13,7 @@ assert.match(printCss,/@media print[\s\S]*?\.mr-print-window \.mr-sheet\{[^}]*wi
  await page.waitForFunction(()=>['measureLoss','depositRate','stage1Rate','stage2Rate','stage3Rate'].every(id=>document.querySelector('#quote [data-ratio-for="'+id+'"] .ratio-manual-input')?.closest('[data-ratio-for]')));
  const inlineRatios=await page.evaluate(()=>{
   const ids=['measureLoss','depositRate','stage1Rate','stage2Rate','stage3Rate'];
-  return ids.map(id=>{const range=document.getElementById(id),out=document.querySelector('#quote [data-ratio-for="'+id+'"]'),input=out.querySelector('input');return {id,rangeHidden:getComputedStyle(range).display==='none',enabled:out.!!out.querySelector('.ratio-manual-input'),fieldHeight:input.getBoundingClientRect().height}});});
+  return ids.map(id=>{const range=document.getElementById(id),out=document.querySelector('#quote [data-ratio-for="'+id+'"]'),input=out.querySelector('input');return {id,rangeHidden:getComputedStyle(range).display==='none',enabled:!!out.querySelector('.ratio-manual-input'),fieldHeight:input.getBoundingClientRect().height}});});
  assert.ok(inlineRatios.every(x=>x.rangeHidden&&x.fieldHeight<=33),'V449 must hide tracks while keeping compact editable fields: '+JSON.stringify(inlineRatios));
  const manual=await page.evaluate(()=>{
    const ids=['measureLoss','depositRate','stage1Rate','stage2Rate','stage3Rate'];
