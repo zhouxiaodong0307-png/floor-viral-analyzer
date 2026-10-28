@@ -391,39 +391,3 @@ html body #mr-v424 .mr-dialog-head > button[data-r-action="close"]:focus-visible
  .mr-print-window .mr-table .mr-floor-name{font-size:10pt}
  .mr-print-window .mr-table .mr-floor-total{font-size:9pt}
 }
-
-/* V435: estimated total including wastage, clear but visually secondary to actual measured area. */
-.mr-sheet .mr-with-loss-total{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:8px;
-  margin:3px 0 0;
-  padding:11px 10px;
-  border:1px solid #ebebee;
-  border-radius:10px;
-  background:#f8f8f9;
-  color:#3d3d42;
-  font-size:10pt;
-  line-height:1.45;
-}
-.mr-sheet .mr-with-loss-total b{
-  flex:none;
-  white-space:nowrap;
-  font-size:14pt;
-  font-weight:700;
-  color:#202024;
-  font-variant-numeric:tabular-nums;
-}
-#mr-v424 .mr-sheet .mr-with-loss-total{
-  padding:10px 9px;
-  font-size:11px;
-}
-#mr-v424 .mr-sheet .mr-with-loss-total b{font-size:17px}
-@media(max-width:700px){
- #mr-v424 .mr-sheet .mr-with-loss-total{padding:9px 7px;font-size:10px}
- #mr-v424 .mr-sheet .mr-with-loss-total b{font-size:15px}
-}
-@media print{
- .mr-print-window .mr-sheet .mr-with-loss-total{break-inside:avoid}
-}
