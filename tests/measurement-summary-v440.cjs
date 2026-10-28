@@ -9,6 +9,15 @@ assert.match(printCss,/@media print[\s\S]*?\.mr-print-window \.mr-sheet\{[^}]*wi
  await page.context().route('**/*',route=>route.request().url().startsWith('http://127.0.0.1:8765/')?route.continue():route.abort());
  await page.goto('http://127.0.0.1:8765/floor-assistant-v285/');
  await page.waitForFunction(()=>window.muyeMeasureReportV424);
+ // Quote section title alignment: same outer-card left edge and heading inset.
+ await page.waitForSelector('#quote .quote-entry-shell .quote-entry-shell-title');
+ await page.waitForSelector('#quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note) > summary .quote-section-title-label');
+ const titles=await page.evaluate(()=>{
+  const selectors=['#quote .measure-card-v273 .measure-head .quote-section-title-label','#quote .quote-entry-shell .quote-entry-shell-title','#quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note)>summary .quote-section-title-label'];
+  return selectors.map(sel=>{const el=document.querySelector(sel);const r=el.getBoundingClientRect();return {left:r.left,top:r.top,width:r.width};});
+ });
+ assert.ok(Math.max(...titles.map(x=>x.left))-Math.min(...titles.map(x=>x.left))<=3,'①②③ title start edges must align: '+JSON.stringify(titles));
+
  await page.evaluate(()=>{window.alert=()=>{}; window.__shared='';Object.defineProperty(navigator,'share',{value:async d=>window.__shared=d.text,configurable:true});});
  async function setup(rooms,percent=5){await page.evaluate(({rooms,percent})=>{
  document.querySelector('#measureRows').innerHTML=rooms.map((r,i)=>`<div class="measure-row" data-kind="${r.kind||'area'}" data-floor="${r.floor||'1楼'}"><input class="mname" value="房间${i+1}"><input class="mexpr" value="${r.expr||''}">${r.kind==='stair'?'<input class="stair-width" value="100"><input class="stair-depth" value="30"><input class="stair-count" value="10"><input class="stair-riser" value="15"><input class="stair-platform" value="">':''}</div>`).join('');
