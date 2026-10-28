@@ -22,7 +22,7 @@ assert.match(printCss,/@media print[\s\S]*?\.mr-print-window \.mr-sheet\{[^}]*wi
  });
  assert.ok(layout.hero&&layout.breakdown&&layout.quoteId,'V452 retains all quote data IDs and hero');
  assert.equal(layout.inputs,3,'V452 payment percentages still manual inputs');
- assert.equal(layout.grid.trim().split(' ').filter(Boolean).length,3,'V452 stage payment columns');
+ assert.equal(layout.grid.trim().split(/\s+/).filter(Boolean).length,3,'V452 stage payment columns: '+JSON.stringify(layout));
  assert.ok(layout.background.includes('gradient'),'V452 retains original dark quotation panel palette');
 
  // V449: every quote percent control stays in its original compact field.
