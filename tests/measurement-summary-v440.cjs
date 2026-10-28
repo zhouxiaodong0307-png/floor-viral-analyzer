@@ -36,8 +36,9 @@ assert.match(printCss,/@media print[\s\S]*?\.mr-print-window \.mr-sheet\{[^}]*wi
    const b=document.querySelector('#quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note)>summary');
    a.style.setProperty('padding-left','26px','important');
    b.style.setProperty('padding-left','26px','important');
-   window.dispatchEvent(new Event('resize'));
-   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+   if(typeof window.muyeAlignQuoteBadgesV448!=='function')throw new Error('Missing V448 recalibration');
+   window.muyeAlignQuoteBadgesV448();
+   await new Promise(resolve=>requestAnimationFrame(resolve));
    const badgeNodes=[
      area,
      document.querySelector('#quote .quote-entry-shell .quote-section-number'),
