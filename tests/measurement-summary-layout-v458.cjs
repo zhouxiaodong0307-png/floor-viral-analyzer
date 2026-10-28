@@ -21,18 +21,19 @@ const assert = require('node:assert/strict');
     const r=box.getBoundingClientRect();
     const css=document.getElementById('v456-compact-measure-summary');
     const manual=document.querySelector('[data-ratio-for="measureLoss"] .ratio-manual-input');
-    return {display:getComputedStyle(box).display,cols:getComputedStyle(box).gridTemplateColumns,box:{x:r.x,y:r.y,w:r.width,h:r.height},items,styleInDocument:!!css,manual:!!manual,scrollWidth:document.documentElement.scrollWidth,viewport:innerWidth};
+    return {display:getComputedStyle(box).display,cols:getComputedStyle(box).gridTemplateColumns,box:{x:r.x,y:r.y,w:r.width,h:r.height},items,styleInDocument:!!css,manual:!!manual,manualHeight:manual?.getBoundingClientRect().height??0,scrollWidth:document.documentElement.scrollWidth,viewport:innerWidth};
    });
    console.log('V458 measurement layout',w,JSON.stringify(metrics));
    assert.ok(metrics.styleInDocument,'compact CSS tag exists');
    assert.equal(metrics.display,'grid','area summary must be CSS grid');
    assert.equal(metrics.items.length,3);
    assert.ok(Math.max(...metrics.items.map(x=>x.y))-Math.min(...metrics.items.map(x=>x.y))<=2,'three summary entries must be on the SAME row');
-   assert.ok(metrics.box.h<=130,'compact one-row panel must not keep old 3-row height');
+   assert.ok(metrics.box.h>=50&&metrics.box.h<=65,'V459 must reduce blank vertical space while retaining visible content: '+JSON.stringify(metrics.box));
+   assert.ok(metrics.manual&&metrics.manualHeight>=28,'loss percent input remains usable at original height');
    assert.ok(metrics.items.every(x=>x.x>=metrics.box.x-2&&x.x+x.w<=metrics.box.x+metrics.box.w+2),'no horizontal overflow');
    assert.ok(metrics.scrollWidth<=metrics.viewport+2,'no viewport horizontal overflow');
    await page.close();
   }
-  console.log('PASS: One-row measurement card geometry verified on six viewports');
+  console.log('PASS: V459 compact height and one-row measurement card geometry verified on six viewports');
  } finally { await browser.close(); }
 })().catch(e=>{console.error(e);process.exit(1)});
