@@ -9,6 +9,22 @@ assert.match(printCss,/@media print[\s\S]*?\.mr-print-window \.mr-sheet\{[^}]*wi
  await page.context().route('**/*',route=>route.request().url().startsWith('http://127.0.0.1:8765/')?route.continue():route.abort());
  await page.goto('http://127.0.0.1:8765/floor-assistant-v285/');
  await page.waitForFunction(()=>window.muyeMeasureReportV424);
+ await page.waitForSelector('#v452HeroAmount');
+ const layout=await page.evaluate(()=>{
+  const result=document.querySelector('#quote .result.quote-result-card');
+  document.getElementById('paymentMode').value='staged';
+  document.getElementById('paymentMode').dispatchEvent(new Event('change',{bubbles:true}));
+  const stage=document.getElementById('stagePaymentRows');
+  const hero=document.getElementById('v452HeroAmount');
+  const breakdown=document.querySelector('#quote .quote-result-top');
+  const inputs=[...document.querySelectorAll('#quote #stagePaymentRows .ratio-manual-input')];
+  return {hero:!!hero,breakdown:!!breakdown,grid:getComputedStyle(stage).gridTemplateColumns,inputs:inputs.length,background:getComputedStyle(result).backgroundImage,quoteId:!!document.getElementById('quoteTotal')};
+ });
+ assert.ok(layout.hero&&layout.breakdown&&layout.quoteId,'V452 retains all quote data IDs and hero');
+ assert.equal(layout.inputs,3,'V452 payment percentages still manual inputs');
+ assert.equal(layout.grid.trim().split(' ').filter(Boolean).length,3,'V452 stage payment columns');
+ assert.ok(layout.background.includes('gradient'),'V452 retains original dark quotation panel palette');
+
  // V449: every quote percent control stays in its original compact field.
  await page.waitForFunction(()=>['measureLoss','depositRate','stage1Rate','stage2Rate','stage3Rate'].every(id=>document.querySelector('#quote [data-ratio-for="'+id+'"] .ratio-manual-input')?.closest('[data-ratio-for]')));
  const inlineRatios=await page.evaluate(()=>{
