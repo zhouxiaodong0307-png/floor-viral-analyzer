@@ -1,0 +1,31 @@
+name: Muye V443 measurement regression
+on:
+  push:
+    branches:
+      - fix/muye-v443-loss-summary-two-decimals-20261028
+      - wood-floor-render-release
+  pull_request:
+    branches:
+      - wood-floor-render-release
+jobs:
+  measurement-regression:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run raw-precision measurement logic tests
+        run: node tests/measurement-logic-v440.cjs
+      - name: Install browser test dependencies
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+      - name: Start local isolated app server
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/muye-http.log 2>&1 &
+          echo $! > /tmp/muye-http.pid
+      - name: Run preview / share / save / PDF / viewport checks
+        run: node tests/measurement-summary-v440.cjs
