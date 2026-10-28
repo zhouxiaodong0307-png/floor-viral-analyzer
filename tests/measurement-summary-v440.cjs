@@ -17,7 +17,7 @@ assert.match(printCss,/@media print[\s\S]*?\.mr-print-window \.mr-sheet\{[^}]*wi
   return selectors.map(sel=>{const el=document.querySelector(sel);const r=el.getBoundingClientRect();return {left:r.left,top:r.top,width:r.width};});
  });
  assert.ok(Math.max(...titles.map(x=>x.left))-Math.min(...titles.map(x=>x.left))<=3,'①②③ title start edges must align: '+JSON.stringify(titles));
- for(const [width,height] of [[375,812],[390,844],[430,932],[768,1024]]){
+ for(const [width,height] of [[375,812],[390,844],[430,932],[768,1024],[1024,768],[1194,834],[1366,1024]]){
    await page.setViewportSize({width,height});
    const positions=await page.evaluate(()=>[
      '#quote .measure-card-v273 .measure-head .quote-section-number',
@@ -25,7 +25,8 @@ assert.match(printCss,/@media print[\s\S]*?\.mr-print-window \.mr-sheet\{[^}]*wi
      '#quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note)>summary .quote-section-number'
    ].map(sel=>document.querySelector(sel)?.getBoundingClientRect().left));
    assert.ok(positions.every(Number.isFinite),'all three section badges present: '+positions);
-   assert.ok(Math.max(...positions)-Math.min(...positions)<=3,`${width}px: ①②③ badge left edges should align: ${positions}`);
+   console.log(`Badge geometry ${width}px: ${positions}`);
+   if(width<=768) assert.ok(Math.max(...positions)-Math.min(...positions)<=3,`${width}px: ①②③ badge left edges should align: ${positions}`);
  }
  await page.setViewportSize({width:1280,height:720});
 
