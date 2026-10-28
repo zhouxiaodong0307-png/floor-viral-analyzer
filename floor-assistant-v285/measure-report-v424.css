@@ -1,5 +1,5 @@
 /* V425 · Instant customer measurement sheet. Print A4; preview is paper-like, not a form. */
-/* V437: compact summary action at upper-right of ①面积, no bottom separator or extra row. */
+/* V438: summary action at the area title; narrow app card stays two rows on Mac, iPad and iPhone. */
 #quote .measure-card-v273 .measure-head .mr-head-trigger{
   flex:0 0 auto;
   display:flex;
@@ -37,8 +37,7 @@
   outline:2px solid #111;
   outline-offset:2px;
 }
-@media(max-width:700px){
-  /* Keep title + summary on the first line, existing four toolbar buttons on line 2. */
+/* App max-width is 520px on desktop too. Always place the heading + summary above the existing five-action toolbar. */
   html body #quote .measure-card-v273 .measure-head{
     display:grid!important;
     grid-template-columns:minmax(0,1fr) auto!important;
@@ -68,7 +67,6 @@
     padding:0 10px;
     font-size:11.5px;
   }
-}
 @media(max-width:360px){
   #quote .measure-card-v273 .measure-head .mr-head-trigger #mr-open-btn{
     min-width:76px;
