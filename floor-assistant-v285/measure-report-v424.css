@@ -348,3 +348,46 @@ html body #mr-v424 .mr-dialog-head > button[data-r-action="close"]:focus-visible
   color:#6d6e75;
   font-weight:500;
 }
+
+/* V434: clear floor summaries. Three columns; one highlighted heading/total per floor.
+   Only the customer A4 report is affected (preview and print). */
+#mr-v424 .mr-table th:nth-child(1),
+.mr-print-window .mr-table th:nth-child(1){width:25%}
+#mr-v424 .mr-table th:nth-child(2),
+.mr-print-window .mr-table th:nth-child(2){width:38%}
+#mr-v424 .mr-table th:nth-child(3),
+.mr-print-window .mr-table th:nth-child(3){width:37%}
+#mr-v424 .mr-table .mr-floor td,
+.mr-print-window .mr-table .mr-floor td{
+  padding:9px 8px;
+  background:#f6f6f8;
+  border-top:1px solid #e9e9ed;
+  border-bottom:1px solid #e9e9ed;
+  vertical-align:middle;
+}
+#mr-v424 .mr-table .mr-floor-name,
+.mr-print-window .mr-table .mr-floor-name{
+  color:#28282c;
+  font-size:12px;
+  font-weight:700;
+}
+#mr-v424 .mr-table .mr-floor-total,
+.mr-print-window .mr-table .mr-floor-total{
+  color:#45464b;
+  font-size:11px;
+  font-weight:650;
+  white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+#mr-v424 .mr-table tr:not(.mr-floor) td,
+.mr-print-window .mr-table tr:not(.mr-floor) td{background:#fff}
+@media(max-width:700px){
+ #mr-v424 .mr-table .mr-floor td{padding:8px 5px}
+ #mr-v424 .mr-table .mr-floor-name{font-size:11px}
+ #mr-v424 .mr-table .mr-floor-total{font-size:10px}
+}
+@media print{
+ .mr-print-window .mr-table .mr-floor td{padding:7pt 5pt}
+ .mr-print-window .mr-table .mr-floor-name{font-size:10pt}
+ .mr-print-window .mr-table .mr-floor-total{font-size:9pt}
+}
