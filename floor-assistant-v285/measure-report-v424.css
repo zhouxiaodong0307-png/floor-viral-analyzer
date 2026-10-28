@@ -321,3 +321,30 @@ html body #mr-v424 .mr-dialog-head > button[data-r-action="close"]:focus-visible
   .mr-print-window .mr-table .mr-sub td{font-size:9pt;padding:6pt 4pt}
   .mr-print-window .mr-table .mr-sub .mr-right{font-size:9pt}
 }
+
+/* V433: normal single-floor summary, unfinished dimensions shown as a safe draft. */
+#mr-v424 .mr-warning{
+  padding:9px 11px;
+  background:#f7f7f8;
+  border-color:#e8e8ed;
+  color:#62636a;
+  font-size:11px;
+  line-height:1.5;
+}
+#mr-v424 .mr-table .mr-pending td,
+.mr-print-window .mr-table .mr-pending td{
+  background:#fff;
+  color:#77777e;
+}
+#mr-v424 .mr-table .mr-pending-value,
+.mr-print-window .mr-table .mr-pending-value{
+  color:#77777e;
+  font-size:.95em;
+  font-weight:500;
+  white-space:nowrap;
+}
+#mr-v424 .mr-foot .mr-attention,
+.mr-print-window .mr-foot .mr-attention{
+  color:#6d6e75;
+  font-weight:500;
+}
