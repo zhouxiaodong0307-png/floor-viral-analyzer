@@ -32,6 +32,30 @@ const assert = require('node:assert/strict');
    assert.ok(metrics.manual&&metrics.manualHeight>=28,'loss percent input remains usable at original height');
    assert.ok(metrics.items.every(x=>x.x>=metrics.box.x-2&&x.x+x.w<=metrics.box.x+metrics.box.w+2),'no horizontal overflow');
    assert.ok(metrics.scrollWidth<=metrics.viewport+2,'no viewport horizontal overflow');
+   if (w===390) {
+    const cases=await page.evaluate(()=>{
+     const rows=document.getElementById('measureRows'),rate=document.getElementById('measureLoss');
+     const result=[];
+     for(const [expr,percent] of [['500×300',5],['500×300',10],['325×555',5],['500×300',0]]){
+       rows.innerHTML='<div class="measure-row" data-floor="1楼"><input class="mexpr"><span class="measure-area"></span></div>';
+       rows.querySelector('.mexpr').value=expr;rate.value=String(percent);
+       calcMeasures();
+       result.push({loss:document.getElementById('measureLossArea')?.textContent,
+          bill:document.getElementById('measureBill')?.textContent,
+          hidden:getComputedStyle(document.getElementById('measureBill')).display==='none',
+          label:document.querySelector('.measure-bill-line > span')?.textContent,
+          actual:document.getElementById('measureTotal')?.textContent});
+     }
+     return result;
+    });
+    assert.deepEqual(cases,[
+      {loss:'1㎡',bill:'16㎡',hidden:true,label:'损耗面积',actual:'15.00㎡'},
+      {loss:'2㎡',bill:'17㎡',hidden:true,label:'损耗面积',actual:'15.00㎡'},
+      {loss:'1㎡',bill:'19㎡',hidden:true,label:'损耗面积',actual:'18.04㎡'},
+      {loss:'0㎡',bill:'15㎡',hidden:true,label:'损耗面积',actual:'15.00㎡'}
+    ],'Loss area must be rounded up from raw actual*percent; bill area kept hidden for business logic');
+   }
+
    await page.close();
   }
   console.log('PASS: V459 compact height and one-row measurement card geometry verified on six viewports');
