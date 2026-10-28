@@ -9,6 +9,30 @@ assert.match(printCss,/@media print[\s\S]*?\.mr-print-window \.mr-sheet\{[^}]*wi
  await page.context().route('**/*',route=>route.request().url().startsWith('http://127.0.0.1:8765/')?route.continue():route.abort());
  await page.goto('http://127.0.0.1:8765/floor-assistant-v285/');
  await page.waitForFunction(()=>window.muyeMeasureReportV424);
+ // V449: every quote percent control stays in its original compact field.
+ await page.waitForFunction(()=>['measureLoss','depositRate','stage1Rate','stage2Rate','stage3Rate'].every(id=>document.querySelector('#quote [data-ratio-for="'+id+'"] .ratio-manual-input')?.closest('[data-vertical-scrub449]')));
+ const inlineRatios=await page.evaluate(()=>{
+  const ids=['measureLoss','depositRate','stage1Rate','stage2Rate','stage3Rate'];
+  return ids.map(id=>{const range=document.getElementById(id),out=document.querySelector('#quote [data-ratio-for="'+id+'"]'),input=out.querySelector('input');return {id,rangeHidden:getComputedStyle(range).display==='none',enabled:out.dataset.verticalScrub449==='1',fieldHeight:input.getBoundingClientRect().height}});});
+ assert.ok(inlineRatios.every(x=>x.rangeHidden&&x.enabled&&x.fieldHeight<=33),'V449 must hide tracks while keeping compact editable fields: '+JSON.stringify(inlineRatios));
+ const scrub=await page.evaluate(()=>{
+   const range=document.getElementById('measureLoss'),out=document.querySelector('#quote [data-ratio-for="measureLoss"]'),input=out.querySelector('input');
+   const start=Number(range.value);
+   const fire=(type,y)=>out.dispatchEvent(new PointerEvent(type,{bubbles:true,pointerId:91,pointerType:'touch',button:0,clientY:y}));
+   fire('pointerdown',150);fire('pointermove',126);fire('pointerup',126);
+   const increased=Number(range.value);
+   fire('pointerdown',150);fire('pointermove',174);fire('pointerup',174);
+   const restored=Number(range.value);
+   fire('pointerdown',150);fire('pointerup',150);
+   const tapped=document.activeElement===input;
+   input.value='7.5';input.dispatchEvent(new Event('input',{bubbles:true}));
+   return {start,increased,restored,tapped,manual:Number(range.value)};
+ });
+ assert.equal(scrub.increased,scrub.start+2,'Upward touch drag increases percent by 1% per 12px');
+ assert.equal(scrub.restored,scrub.start,'Downward touch drag decreases percent');
+ assert.equal(scrub.tapped,true,'Short tap retains direct manual editing');
+ assert.equal(scrub.manual,7.5,'Manual percentage entry preserves decimal precision');
+
  // Quote section title alignment: same outer-card left edge and heading inset.
  await page.waitForSelector('#quote .quote-entry-shell .quote-entry-shell-title');
  await page.waitForSelector('#quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note) > summary .quote-section-title-label');
