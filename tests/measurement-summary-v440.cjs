@@ -1,10 +1,9 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
-const path=require('node:path');
 (async()=>{
- const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||undefined,args:['--no-sandbox']});
  const page=await browser.newPage();
- await page.route('**/*',route=>route.request().url().startsWith('http://127.0.0.1:8765/')?route.continue():route.abort());
+ await page.context().route('**/*',route=>route.request().url().startsWith('http://127.0.0.1:8765/')?route.continue():route.abort());
  await page.goto('http://127.0.0.1:8765/floor-assistant-v285/');
  await page.waitForFunction(()=>window.muyeMeasureReportV424);
  await page.evaluate(()=>{window.alert=()=>{}; window.__shared='';Object.defineProperty(navigator,'share',{value:async d=>window.__shared=d.text,configurable:true});});
@@ -24,12 +23,13 @@ const path=require('node:path');
  assert.equal(await page.evaluate(d=>window.muyeMeasureReportV424.buildMarkup(d),saved[0]),await page.locator('#mr-preview').innerHTML());
  const popupPromise=page.waitForEvent('popup');await page.locator('[data-r-action="print"]').click();const popup=await popupPromise;await popup.waitForLoadState();
  assert.equal(await popup.locator('.mr-sheet').evaluate(e=>e.outerHTML),await page.locator('#mr-preview .mr-sheet').evaluate(e=>e.outerHTML));
- await popup.emulateMedia({media:'print'});assert.equal(await popup.locator('.mr-grand,.mr-loss').count(),2);await popup.close();
+ await popup.emulateMedia({media:'print'});assert.equal(await popup.locator('.mr-grand,.mr-loss').count(),2);await popup.pdf({path:'/tmp/muye-v440-print.pdf',format:'A4',printBackground:true});await popup.close();
  }
  await setup([{expr:'325×555'}]);await check('18.04','18.94');
  for(const [w,h] of [[390,844],[844,390],[768,1024],[1024,768],[1440,900]]){
  await page.setViewportSize({width:w,height:h});
  const overflow=await page.locator('#mr-v424 .mr-dialog').evaluate(e=>e.scrollWidth>e.clientWidth+1);assert.equal(overflow,false,`${w} dialog overflow`);
+ await page.screenshot({path:`/tmp/muye-v440-${w}x${h}.png`});
  const overlap=await page.locator('#mr-preview .mr-loss').evaluate(e=>e.children[0].getBoundingClientRect().right>e.children[1].getBoundingClientRect().left);assert.equal(overlap,false,`${w} summary overlap`);
  }
  await setup([{expr:'325×555'}],10);await check('18.04','19.84',10);
@@ -37,6 +37,7 @@ const path=require('node:path');
  await setup([{expr:'100×100',floor:'1楼'},{expr:'325×555',floor:'2楼'},{expr:'200×',floor:'2楼'}]);await check('19.04','19.99');assert.equal(await page.locator('.mr-floor').count(),2);assert.equal(await page.locator('.mr-pending').count(),1);
  await setup([{expr:'325×555'},{kind:'stair'}]);await check('22.54','23.66');
  await setup([{kind:'stair'}]);await check('4.50','4.73');
+ await setup([{expr:'100×100.49'}]);await check('1.00','1.06');
  const legacy=await page.evaluate(()=>{const d={source:{rows:[{kind:'area',area:18.0375,expr:'325×555'}]}};const a=JSON.stringify(d);window.muyeMeasureReportV424.buildMarkup(d);return [a===JSON.stringify(d),window.muyeMeasureReportV424.lossSummary(d,window.muyeMeasureReportV424.reportTotals(d))]});assert.deepEqual(legacy,[true,null]);
- console.log('PASS: 6 business cases; preview/share/save/print parity; 5 viewport layouts; historical snapshot preservation. All network access outside localhost blocked.');await browser.close();
+ console.log('PASS: 7 business cases; preview/share/save/print parity; 5 viewport layouts; historical snapshot preservation. All network access outside localhost blocked.');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
