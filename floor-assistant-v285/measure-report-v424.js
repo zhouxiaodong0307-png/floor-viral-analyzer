@@ -75,8 +75,8 @@ function lossSummary(d,t){
  const percent=nonNegative(d.lossPercent);
  if(percent===null||percent>20||!(t.combined>0))return null;
  // Existing quote's loss slider applies to the entire measured area, including stairs.
- const area=Math.min(t.combined,t.combined*percent/100);
- return {percent,area,total:t.combined+area};
+ const area=t.combined*percent/100;
+ return {percent,area,total:t.combined*(1+percent/100)};
 }
 function optionalRows(d,t){
  const list=[];
@@ -119,7 +119,7 @@ function buildMarkup(d){
  if(d.customer?.trim())meta.push('<span>客户姓名：'+esc(d.customer.trim())+'</span>');
  if(d.date?.trim())meta.push('<span>测量日期：'+esc(d.date.trim())+'</span>');
  if(d.address?.trim())meta.push('<span class="mr-full">项目地址：'+esc(d.address.trim())+'</span>');
- const areaName=t.stairs.length?'木地板实测面积（不含楼梯）':'木地板实测总面积';
+ const areaName='木地板实测总面积';
  const rows=optional.map(x=>'<div class="mr-item"><span>'+esc(x[0])+'</span><strong>'+esc(x[1])+'</strong></div>').join('');
  const caution=optional.some(x=>x[0].includes('踢脚线（预估）'))?
   '<p>踢脚线按房间尺寸估算，未扣除门洞、柜体及连通区域共边，须现场复核。</p>':'';
@@ -128,8 +128,7 @@ function buildMarkup(d){
  '<header class="mr-heading"><h1>现场量房汇总单</h1><small>客户版</small></header>'+
  (meta.length?'<div class="mr-meta">'+meta.join('')+'</div>':'')+
  '<h2>'+(multipleFloors?'01 · 各楼层面积':'01 · 房间面积明细')+'</h2><table class="mr-table"><thead><tr><th>区域</th><th>尺寸（cm）</th><th class="mr-right">实测面积</th></tr></thead><tbody>'+body.join('')+'</tbody></table>'+
- '<div class="mr-grand"><span>'+(pending.length?'已完成实测面积':areaName)+'</span><b>'+(t.area>0?fmt(t.area)+' ㎡':(pending.length?'—':fmt(t.area)+' ㎡'))+'</b></div>'+
- (t.stairs.length?'<div class="mr-grand mr-grand-secondary"><span>楼梯实测面积</span><b>'+fmt(t.stairArea)+' ㎡</b></div><div class="mr-grand mr-grand-all"><span>全部实测面积合计</span><b>'+fmt(t.combined)+' ㎡</b></div>':'')+
+ '<div class="mr-grand"><span>'+(pending.length?'已完成实测面积':areaName)+'</span><b>'+fmt(t.combined)+' ㎡'+'</b></div>'+
  (loss?'<div class="mr-loss"><span>'+(pending.length?'已完成区域含':'含')+esc(loss.percent)+'%损耗预估面积</span><b>'+fmt(loss.total)+' ㎡</b></div>':'')+
  (optional.length?'<h2>02 · 其他项目汇总</h2><div class="mr-extras">'+rows+'</div>':'')+
  (d.notes?.trim()?'<h2>03 · 现场施工说明</h2><p class="mr-notes">'+esc(d.notes.trim())+'</p>':'')+
@@ -165,7 +164,7 @@ function printReport(){
  if(!exportReady())return;
  const tab=window.open('','_blank');
  if(!tab){alert('无法打开打印页面，请允许浏览器弹出新页面。');return}
- const href=new URL('./measure-report-v424.css?v=439',location.href).href;
+ const href=new URL('./measure-report-v424.css?v=440',location.href).href;
  const raw='<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>现场量房汇总单</title><link rel="stylesheet" href="'+esc(href)+'"></head><body class="mr-print-window"><div class="mr-print-toolbar"><button onclick="window.print()">打印 / 保存PDF</button></div>'+buildMarkup(current)+'</body></html>';
  tab.document.open();tab.document.write(raw);tab.document.close();
 }
@@ -185,9 +184,8 @@ function shareText(){
   if(withFloors)rows.push('【'+floor+'】本层 '+fmt(list.filter(x=>!x.pending).reduce((a,x)=>a+x.area,0))+'㎡');
   for(const x of list)rows.push(reportRowName(x,floor)+' '+(x.pending?'尺寸待补充（'+x.expr+'）':x.expr+' · '+fmt(x.area)+'㎡'));
  }
- rows.push((pending.length?'已完成实测面积：':'木地板实测面积：')+(t.area>0?fmt(t.area)+'㎡':(pending.length?'—':'0.00㎡')));
+ rows.push((pending.length?'已完成实测面积：':'木地板实测总面积：')+fmt(t.combined)+'㎡');
  if(pending.length)rows.push('注：待补充区域未计入实测面积，本单仅供现场初步核对。');
- if(t.stairs.length)rows.push('楼梯：'+fmt(t.stairArea)+'㎡','全部实测面积合计：'+fmt(t.combined)+'㎡');
  if(loss)rows.push((pending.length?'已完成区域含':'含')+loss.percent+'%损耗预估面积：'+fmt(loss.total)+'㎡');
  for(const x of optionalRows(current,t))rows.push(x[0]+'：'+x[1]);
  rows.push('实测面积不含备料损耗，最终施工及计价以双方确认方案为准。');
@@ -235,7 +233,7 @@ function init(){
  });
  window.muyeMeasureReportV424={
   open,close,capture,estimatePerimeter:exactPerimeter,reportTotals,lossSummary,buildMarkup,
-  status:()=>({enabled:true,visible:!!modal&&!modal.hidden,sourceCount:current?.source.rows.length||0,version:'439'})
+  status:()=>({enabled:true,visible:!!modal&&!modal.hidden,sourceCount:current?.source.rows.length||0,version:'440'})
  };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
