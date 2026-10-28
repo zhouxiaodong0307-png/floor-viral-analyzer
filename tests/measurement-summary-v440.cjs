@@ -18,21 +18,26 @@ assert.match(printCss,/@media print[\s\S]*?\.mr-print-window \.mr-sheet\{[^}]*wi
  const scrub=await page.evaluate(()=>{
    const range=document.getElementById('measureLoss'),out=document.querySelector('#quote [data-ratio-for="measureLoss"]'),input=out.querySelector('input');
    const start=Number(range.value);
-   const fire=(type,y)=>out.dispatchEvent(new PointerEvent(type,{bubbles:true,pointerId:91,pointerType:'touch',button:0,clientY:y}));
-   fire('pointerdown',150);fire('pointermove',126);fire('pointerup',126);
+   const fire=(type,y)=>{const t=new Touch({identifier:91,target:input,clientX:0,clientY:y});const list=type==='touchend'?[]:[t];const event=new TouchEvent(type,{bubbles:true,cancelable:true,touches:list,targetTouches:list,changedTouches:[t]});input.dispatchEvent(event);return event.defaultPrevented};
+   fire('touchstart',150);fire('touchmove',126);fire('touchend',126);
    const increased=Number(range.value);
-   fire('pointerdown',150);fire('pointermove',174);fire('pointerup',174);
+   fire('touchstart',150);fire('touchmove',174);fire('touchend',174);
    const restored=Number(range.value);
-   fire('pointerdown',150);fire('pointerup',150);
-   const tapped=document.activeElement===input;
+   const prevented=fire('touchstart',150);fire('touchend',150);
+   const singleTapped=document.activeElement===input;
+   fire('touchstart',150);fire('touchend',150);
+   const doubleTapped=document.activeElement===input;
    input.value='7.5';input.dispatchEvent(new Event('input',{bubbles:true}));
-   return {start,increased,restored,tapped,manual:Number(range.value)};
+   const row=document.querySelector('#quote #stagePaymentRows .quote-stage-main');
+   return {start,increased,restored,prevented,singleTapped,doubleTapped,manual:Number(range.value),columns:getComputedStyle(row).gridTemplateColumns};
  });
  assert.equal(scrub.increased,scrub.start+2,'Upward touch drag increases percent by 1% per 12px');
  assert.equal(scrub.restored,scrub.start,'Downward touch drag decreases percent');
- assert.equal(scrub.tapped,true,'Short tap retains direct manual editing');
+ assert.equal(scrub.prevented,true,'Native touch action is prevented to avoid iOS keyboard');
+ assert.equal(scrub.singleTapped,false,'Single tap must never open keyboard');
+ assert.equal(scrub.doubleTapped,true,'Intentional double tap can still edit exact percentage');
  assert.equal(scrub.manual,7.5,'Manual percentage entry preserves decimal precision');
-
+ assert.ok(scrub.columns.split(' ').length>=2,'Stage payment row has compact grid layout');
  // Quote section title alignment: same outer-card left edge and heading inset.
  await page.waitForSelector('#quote .quote-entry-shell .quote-entry-shell-title');
  await page.waitForSelector('#quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note) > summary .quote-section-title-label');
