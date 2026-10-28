@@ -28,6 +28,27 @@ assert.match(printCss,/@media print[\s\S]*?\.mr-print-window \.mr-sheet\{[^}]*wi
    console.log(`Badge geometry ${width}px: ${positions}`);
    if(width<=768) assert.ok(Math.max(...positions)-Math.min(...positions)<=3,`${width}px: ①②③ badge left edges should align: ${positions}`);
  }
+ await page.setViewportSize({width:1024,height:768});
+ // Deliberately simulate Safari's uneven inner padding, then assert real-device correction.
+ const simulated=await page.evaluate(async()=>{
+   const area=document.querySelector('#quote .measure-card-v273 .measure-head .quote-section-number');
+   const a=document.querySelector('#quote .quote-entry-shell .quote-entry-toolbar');
+   const b=document.querySelector('#quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note)>summary');
+   a.style.setProperty('padding-left','26px','important');
+   b.style.setProperty('padding-left','26px','important');
+   window.dispatchEvent(new Event('resize'));
+   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+   const badgeNodes=[
+     area,
+     document.querySelector('#quote .quote-entry-shell .quote-section-number'),
+     document.querySelector('#quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note)>summary .quote-section-number')
+   ];
+   const xs=badgeNodes.map(el=>el.getBoundingClientRect().left);
+   a.style.removeProperty('padding-left');b.style.removeProperty('padding-left');
+   window.dispatchEvent(new Event('resize'));
+   return xs;
+ });
+ assert.ok(Math.max(...simulated)-Math.min(...simulated)<=1,'V448 iPad dynamic correction under altered padding: '+simulated);
  await page.setViewportSize({width:1280,height:720});
 
  await page.evaluate(()=>{window.alert=()=>{}; window.__shared='';Object.defineProperty(navigator,'share',{value:async d=>window.__shared=d.text,configurable:true});});
