@@ -23,15 +23,25 @@ const assert=require('node:assert/strict');
  assert.equal(await page.evaluate(d=>window.muyeMeasureReportV424.buildMarkup(d),saved[0]),await page.locator('#mr-preview').innerHTML());
  const popupPromise=page.waitForEvent('popup');await page.locator('[data-r-action="print"]').click();const popup=await popupPromise;await popup.waitForLoadState();
  assert.equal(await popup.locator('.mr-sheet').evaluate(e=>e.outerHTML),await page.locator('#mr-preview .mr-sheet').evaluate(e=>e.outerHTML));
- await popup.emulateMedia({media:'print'});assert.equal(await popup.locator('.mr-grand,.mr-loss').count(),2);await popup.pdf({path:'/tmp/muye-v444-print.pdf',format:'A4',printBackground:true});await popup.close();
+ await popup.emulateMedia({media:'print'});assert.equal(await popup.locator('.mr-grand,.mr-loss').count(),2);
+ const a4Width=await popup.locator('.mr-sheet').evaluate(e=>e.getBoundingClientRect().width);
+ assert.ok(Math.abs(a4Width-793.7)<2,`PDF must remain 210mm A4 width, got ${a4Width}`);await popup.pdf({path:'/tmp/muye-v445-print.pdf',format:'A4',printBackground:true});await popup.close();
  }
  await setup([{expr:'500×300'}]);await check('15.00','16');
  await setup([{expr:'325×555'}]);await check('18.04','19');
- for(const [w,h] of [[390,844],[844,390],[768,1024],[1024,768],[1440,900]]){
+ for(const [w,h] of [[390,844],[844,390],[768,1024],[834,1194],[1024,768],[1194,834],[1366,1024],[1440,900]]){
  await page.setViewportSize({width:w,height:h});
  const overflow=await page.locator('#mr-v424 .mr-dialog').evaluate(e=>e.scrollWidth>e.clientWidth+1);assert.equal(overflow,false,`${w} dialog overflow`);
  const bounds=await page.locator('#mr-v424 .mr-dialog').boundingBox();assert.ok(Math.abs(bounds.x)<1&&Math.abs(bounds.y)<1&&Math.abs(bounds.width-w)<1&&Math.abs(bounds.height-h)<1,`${w} fullscreen bounds`);
- await page.screenshot({path:`/tmp/muye-v444-${w}x${h}.png`});
+ const geometry=await page.locator('#mr-v424 .mr-dialog-scroll').evaluate(el=>{
+  const preview=el.querySelector('.mr-preview'),paper=preview.querySelector('.mr-sheet');
+  return {scrollWidth:el.scrollWidth,clientWidth:el.clientWidth,previewWidth:preview.getBoundingClientRect().width,paperWidth:paper.getBoundingClientRect().width};
+ });
+ assert.ok(geometry.scrollWidth<=geometry.clientWidth+1,`${w} horizontal scroll overflow`);
+ assert.ok(Math.abs(geometry.paperWidth-geometry.previewWidth)<1,`${w} paper fills preview`);
+ if(w>=1024&&w<=1366&&w>h)assert.ok(geometry.previewWidth>=geometry.clientWidth-30,`${w} iPad landscape preview should fill viewport: ${JSON.stringify(geometry)}`);
+ if(w===1440)assert.ok(geometry.previewWidth<=765,`Mac preview width should remain compact: ${JSON.stringify(geometry)}`);
+ await page.screenshot({path:`/tmp/muye-v445-${w}x${h}.png`});
  const overlap=await page.locator('#mr-preview .mr-loss').evaluate(e=>e.children[0].getBoundingClientRect().right>e.children[1].getBoundingClientRect().left);assert.equal(overlap,false,`${w} summary overlap`);
  }
  await setup([{expr:'325×555'}],10);await check('18.04','20',10);
@@ -49,5 +59,5 @@ const assert=require('node:assert/strict');
  await page.locator('#mr-v424 .mr-dialog-head [data-r-action=close]').click();assert.equal(await page.locator('#mr-v424').isVisible(),false);
  assert.equal(await page.evaluate(()=>document.body.classList.contains('mr-open')),false);
  const legacy=await page.evaluate(()=>{const d={source:{rows:[{kind:'area',area:18.0375,expr:'325×555'}]}};const a=JSON.stringify(d);window.muyeMeasureReportV424.buildMarkup(d);return [a===JSON.stringify(d),window.muyeMeasureReportV424.lossSummary(d,window.muyeMeasureReportV424.reportTotals(d))]});assert.deepEqual(legacy,[true,null]);
- console.log('PASS: 10 whole-m² business cases; preview/share/save/print parity; 5 viewport layouts; historical snapshot preservation. All network access outside localhost blocked.');await browser.close();
+ console.log('PASS: 10 whole-m² business cases; preview/share/save/print A4 parity; 8 viewport layouts including iPad landscape fill; historical snapshot preservation. All network access outside localhost blocked.');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
