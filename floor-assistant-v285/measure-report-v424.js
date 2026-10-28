@@ -6,6 +6,8 @@ const q=(s,root=document)=>root.querySelector(s);
 const qa=(s,root=document)=>[...root.querySelectorAll(s)];
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n||0).toFixed(2);
+// Round preparation up to whole square metres; ignore only floating-point noise at integer boundaries.
+const preparationArea=n=>String(Math.ceil(n-Number.EPSILON*Math.max(1,Math.abs(n))*4));
 const nonNegative=x=>{if(x===''||x==null)return null;const n=Number(x);return Number.isFinite(n)&&n>=0?n:null;};
 let current=null,modal=null;
 function today(){
@@ -129,7 +131,7 @@ function buildMarkup(d){
  (meta.length?'<div class="mr-meta">'+meta.join('')+'</div>':'')+
  '<h2>'+(multipleFloors?'01 · 各楼层面积':'01 · 房间面积明细')+'</h2><table class="mr-table"><thead><tr><th>区域</th><th>尺寸（cm）</th><th class="mr-right">实测面积</th></tr></thead><tbody>'+body.join('')+'</tbody></table>'+
  '<div class="mr-grand"><span>'+(pending.length?'已完成实测面积':areaName)+'</span><b>'+fmt(t.combined)+' ㎡'+'</b></div>'+
- (loss?'<div class="mr-loss"><span>'+(pending.length?'已完成区域含':'含')+esc(loss.percent)+'%损耗预估面积</span><b>'+fmt(loss.total)+' ㎡</b></div>':'')+
+ (loss?'<div class="mr-loss"><span>'+(pending.length?'已完成区域含':'含')+esc(loss.percent)+'%损耗预估面积</span><b>'+preparationArea(loss.total)+' ㎡</b></div>':'')+
  (optional.length?'<h2>02 · 其他项目汇总</h2><div class="mr-extras">'+rows+'</div>':'')+
  (d.notes?.trim()?'<h2>03 · 现场施工说明</h2><p class="mr-notes">'+esc(d.notes.trim())+'</p>':'')+
  '<footer class="mr-foot">'+unmeasured+caution+'<p>本单为现场测量初稿，实测面积不含备料损耗，最终施工及计价数量以双方确认方案为准。</p></footer></article>';
@@ -164,7 +166,7 @@ function printReport(){
  if(!exportReady())return;
  const tab=window.open('','_blank');
  if(!tab){alert('无法打开打印页面，请允许浏览器弹出新页面。');return}
- const href=new URL('./measure-report-v424.css?v=440',location.href).href;
+ const href=new URL('./measure-report-v424.css?v=441',location.href).href;
  const raw='<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>现场量房汇总单</title><link rel="stylesheet" href="'+esc(href)+'"></head><body class="mr-print-window"><div class="mr-print-toolbar"><button onclick="window.print()">打印 / 保存PDF</button></div>'+buildMarkup(current)+'</body></html>';
  tab.document.open();tab.document.write(raw);tab.document.close();
 }
@@ -186,7 +188,7 @@ function shareText(){
  }
  rows.push((pending.length?'已完成实测面积：':'木地板实测总面积：')+fmt(t.combined)+'㎡');
  if(pending.length)rows.push('注：待补充区域未计入实测面积，本单仅供现场初步核对。');
- if(loss)rows.push((pending.length?'已完成区域含':'含')+loss.percent+'%损耗预估面积：'+fmt(loss.total)+'㎡');
+ if(loss)rows.push((pending.length?'已完成区域含':'含')+loss.percent+'%损耗预估面积：'+preparationArea(loss.total)+'㎡');
  for(const x of optionalRows(current,t))rows.push(x[0]+'：'+x[1]);
  rows.push('实测面积不含备料损耗，最终施工及计价以双方确认方案为准。');
  const content=rows.join('\n');
@@ -233,7 +235,7 @@ function init(){
  });
  window.muyeMeasureReportV424={
   open,close,capture,estimatePerimeter:exactPerimeter,reportTotals,lossSummary,buildMarkup,
-  status:()=>({enabled:true,visible:!!modal&&!modal.hidden,sourceCount:current?.source.rows.length||0,version:'440'})
+  status:()=>({enabled:true,visible:!!modal&&!modal.hidden,sourceCount:current?.source.rows.length||0,version:'441'})
  };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
