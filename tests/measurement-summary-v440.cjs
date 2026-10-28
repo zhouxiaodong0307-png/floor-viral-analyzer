@@ -10,10 +10,10 @@ assert.match(printCss,/@media print[\s\S]*?\.mr-print-window \.mr-sheet\{[^}]*wi
  await page.goto('http://127.0.0.1:8765/floor-assistant-v285/');
  await page.waitForFunction(()=>window.muyeMeasureReportV424);
  // V449: every quote percent control stays in its original compact field.
- await page.waitForFunction(()=>['measureLoss','depositRate','stage1Rate','stage2Rate','stage3Rate'].every(id=>document.querySelector('#quote [data-ratio-for="'+id+'"] .ratio-manual-input')?.closest('[data-vertical-scrub449]')));
+ await page.waitForFunction(()=>['measureLoss','depositRate','stage1Rate','stage2Rate','stage3Rate'].every(id=>document.querySelector('#quote [data-ratio-for="'+id+'"] .ratio-manual-input')?.closest('[data-vertical-scrub450]')));
  const inlineRatios=await page.evaluate(()=>{
   const ids=['measureLoss','depositRate','stage1Rate','stage2Rate','stage3Rate'];
-  return ids.map(id=>{const range=document.getElementById(id),out=document.querySelector('#quote [data-ratio-for="'+id+'"]'),input=out.querySelector('input');return {id,rangeHidden:getComputedStyle(range).display==='none',enabled:out.dataset.verticalScrub449==='1',fieldHeight:input.getBoundingClientRect().height}});});
+  return ids.map(id=>{const range=document.getElementById(id),out=document.querySelector('#quote [data-ratio-for="'+id+'"]'),input=out.querySelector('input');return {id,rangeHidden:getComputedStyle(range).display==='none',enabled:out.dataset.verticalScrub450==='1',fieldHeight:input.getBoundingClientRect().height}});});
  assert.ok(inlineRatios.every(x=>x.rangeHidden&&x.enabled&&x.fieldHeight<=33),'V449 must hide tracks while keeping compact editable fields: '+JSON.stringify(inlineRatios));
  const scrub=await page.evaluate(()=>{
    const range=document.getElementById('measureLoss'),out=document.querySelector('#quote [data-ratio-for="measureLoss"]'),input=out.querySelector('input');
