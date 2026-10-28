@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const printCss=fs.readFileSync('floor-assistant-v285/measure-report-v424.css','utf8');
-assert.match(printCss,/@media print[\\s\\S]*?\\.mr-print-window \\.mr-sheet\\{[^}]*width:210mm/, 'Physical PDF A4 width unchanged');
+assert.match(printCss,/@media print[\s\S]*?\.mr-print-window \.mr-sheet\{[^}]*width:210mm/, 'Physical PDF A4 width unchanged');
 (async()=>{
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||undefined,args:['--no-sandbox']});
  const page=await browser.newPage();
