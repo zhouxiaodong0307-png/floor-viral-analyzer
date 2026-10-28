@@ -23,13 +23,14 @@ const assert=require('node:assert/strict');
  assert.equal(await page.evaluate(d=>window.muyeMeasureReportV424.buildMarkup(d),saved[0]),await page.locator('#mr-preview').innerHTML());
  const popupPromise=page.waitForEvent('popup');await page.locator('[data-r-action="print"]').click();const popup=await popupPromise;await popup.waitForLoadState();
  assert.equal(await popup.locator('.mr-sheet').evaluate(e=>e.outerHTML),await page.locator('#mr-preview .mr-sheet').evaluate(e=>e.outerHTML));
- await popup.emulateMedia({media:'print'});assert.equal(await popup.locator('.mr-grand,.mr-loss').count(),2);await popup.pdf({path:'/tmp/muye-v441-print.pdf',format:'A4',printBackground:true});await popup.close();
+ await popup.emulateMedia({media:'print'});assert.equal(await popup.locator('.mr-grand,.mr-loss').count(),2);await popup.pdf({path:'/tmp/muye-v442-print.pdf',format:'A4',printBackground:true});await popup.close();
  }
  await setup([{expr:'325×555'}]);await check('18.04','19');
  for(const [w,h] of [[390,844],[844,390],[768,1024],[1024,768],[1440,900]]){
  await page.setViewportSize({width:w,height:h});
  const overflow=await page.locator('#mr-v424 .mr-dialog').evaluate(e=>e.scrollWidth>e.clientWidth+1);assert.equal(overflow,false,`${w} dialog overflow`);
- await page.screenshot({path:`/tmp/muye-v441-${w}x${h}.png`});
+ const bounds=await page.locator('#mr-v424 .mr-dialog').boundingBox();assert.ok(Math.abs(bounds.x)<1&&Math.abs(bounds.y)<1&&Math.abs(bounds.width-w)<1&&Math.abs(bounds.height-h)<1,`${w} fullscreen bounds`);
+ await page.screenshot({path:`/tmp/muye-v442-${w}x${h}.png`});
  const overlap=await page.locator('#mr-preview .mr-loss').evaluate(e=>e.children[0].getBoundingClientRect().right>e.children[1].getBoundingClientRect().left);assert.equal(overlap,false,`${w} summary overlap`);
  }
  await setup([{expr:'325×555'}],10);await check('18.04','20',10);
@@ -40,6 +41,12 @@ const assert=require('node:assert/strict');
  await setup([{expr:'100×100.49'}]);await check('1.00','2');
  await setup([{expr:'1000×1000'}],10);await check('100.00','110',10);
  await setup([{expr:'100×100'}],0);await check('1.00','1',0);
+ await setup(Array.from({length:40},()=>({expr:'325×555'})));
+ const scroll=page.locator('#mr-v424 .mr-dialog-scroll');assert.ok(await scroll.evaluate(e=>e.scrollHeight>e.clientHeight));
+ await scroll.evaluate(e=>e.scrollTop=e.scrollHeight);
+ assert.ok(await page.locator('[data-r-action=share]').isVisible());
+ await page.locator('#mr-v424 .mr-dialog-head [data-r-action=close]').click();assert.equal(await page.locator('#mr-v424').isVisible(),false);
+ assert.equal(await page.evaluate(()=>document.body.classList.contains('mr-open')),false);
  const legacy=await page.evaluate(()=>{const d={source:{rows:[{kind:'area',area:18.0375,expr:'325×555'}]}};const a=JSON.stringify(d);window.muyeMeasureReportV424.buildMarkup(d);return [a===JSON.stringify(d),window.muyeMeasureReportV424.lossSummary(d,window.muyeMeasureReportV424.reportTotals(d))]});assert.deepEqual(legacy,[true,null]);
  console.log('PASS: 9 business cases; preview/share/save/print parity; 5 viewport layouts; historical snapshot preservation. All network access outside localhost blocked.');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});

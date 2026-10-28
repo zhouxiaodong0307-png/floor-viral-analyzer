@@ -463,3 +463,35 @@ html body #mr-v424 .mr-dialog-head > button[data-r-action="close"]:focus-visible
  .mr-print-window .mr-table .mr-floor-name{font-size:10pt}
  .mr-print-window .mr-table .mr-floor-total{font-size:9pt}
 }
+
+/* V442: full available viewport, with fixed actions and an independently scrolling report. */
+#mr-v424.mr-overlay{
+ padding:0!important;
+ align-items:stretch!important;
+ background:#fff;
+}
+#mr-v424 .mr-dialog{
+ width:100%!important;
+ max-width:none!important;
+ height:100vh!important;
+ height:100dvh!important;
+ max-height:100vh!important;
+ max-height:100dvh!important;
+ margin:0!important;
+ border-radius:0!important;
+ box-shadow:none;
+}
+#mr-v424 .mr-dialog-head{
+ padding-top:max(10px,env(safe-area-inset-top,0px));
+ padding-left:max(18px,env(safe-area-inset-left,0px));
+ padding-right:max(18px,env(safe-area-inset-right,0px));
+}
+#mr-v424 .mr-dialog-scroll{
+ flex:1 1 auto!important;
+ padding-left:max(12px,env(safe-area-inset-left,0px))!important;
+ padding-right:max(12px,env(safe-area-inset-right,0px))!important;
+}
+#mr-v424 .mr-dialog-actions{
+ padding-left:max(10px,env(safe-area-inset-left,0px));
+ padding-right:max(10px,env(safe-area-inset-right,0px));
+}
