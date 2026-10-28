@@ -164,7 +164,7 @@ function printReport(){
  if(!exportReady())return;
  const tab=window.open('','_blank');
  if(!tab){alert('无法打开打印页面，请允许浏览器弹出新页面。');return}
- const href=new URL('./measure-report-v424.css?v=436',location.href).href;
+ const href=new URL('./measure-report-v424.css?v=437',location.href).href;
  const raw='<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>现场量房汇总单</title><link rel="stylesheet" href="'+esc(href)+'"></head><body class="mr-print-window"><div class="mr-print-toolbar"><button onclick="window.print()">打印 / 保存PDF</button></div>'+buildMarkup(current)+'</body></html>';
  tab.document.open();tab.document.write(raw);tab.document.close();
 }
@@ -207,9 +207,12 @@ function close(){if(!modal)return;modal.hidden=true;document.body.classList.remo
 function init(){
  if(q('#mr-open-btn'))return;
  const card=q('#quote .measure-card-v273');if(!card)return;
- const trigger=document.createElement('div');trigger.className='mr-open-row';
+ const header=q('.measure-head',card);if(!header)return;
+ // V437: move the existing single trigger beside the ①面积 heading.
+ // Do not add a sixth control to the four-button toolbar or a new bottom row.
+ const trigger=document.createElement('div');trigger.className='mr-head-trigger';
  trigger.innerHTML='<button type="button" id="mr-open-btn" aria-label="查看现场量房汇总单">量房汇总</button>';
- card.appendChild(trigger);q('#mr-open-btn',trigger).addEventListener('click',open);
+ header.appendChild(trigger);q('#mr-open-btn',trigger).addEventListener('click',open);
  modal=document.createElement('div');modal.id='mr-v424';modal.className='modal-mask mr-overlay';modal.hidden=true;
  modal.innerHTML='<section class="mr-dialog" role="dialog" aria-modal="true" aria-label="现场量房汇总单">'+
  '<header class="mr-dialog-head"><strong>量房结果</strong><button type="button" data-r-action="close" aria-label="关闭">×</button></header>'+
@@ -231,7 +234,7 @@ function init(){
  });
  window.muyeMeasureReportV424={
   open,close,capture,estimatePerimeter:exactPerimeter,reportTotals,lossSummary,buildMarkup,
-  status:()=>({enabled:true,visible:!!modal&&!modal.hidden,sourceCount:current?.source.rows.length||0,version:'436'})
+  status:()=>({enabled:true,visible:!!modal&&!modal.hidden,sourceCount:current?.source.rows.length||0,version:'437'})
  };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
