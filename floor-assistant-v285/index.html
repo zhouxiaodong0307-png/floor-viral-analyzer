@@ -7541,56 +7541,7 @@ input,select,button{min-height:44px} .internal-access-btn{min-height:auto}
 #quote .measure-card-v273 .measure-row.stair-row .stair-fields input[type="number"]{-moz-appearance:textfield!important;appearance:textfield!important}
 #quote .measure-card-v273 .measure-row.stair-row .stair-fields input[type="number"]::-webkit-inner-spin-button,#quote .measure-card-v273 .measure-row.stair-row .stair-fields input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none!important;appearance:none!important;display:none!important;margin:0!important}
 #quote .measure-card-v273 .measure-row.stair-row .stair-fields input:focus,#quote .measure-card-v273 .measure-row.stair-row .stair-fields input:focus-visible{outline:1px solid #a5aab2!important;outline-offset:0!important;box-shadow:none!important;border-color:#a5aab2!important}
-</style><style id="v337-title-tap-access">.business-title-access{touch-action:manipulation!important;cursor:pointer!important}</style><script id="v448-ipad-quote-badge-alignment">
-/* Align only the visible number badges on real tablet layouts.
-   A zero measured offset leaves all existing visuals untouched. */
-(function(){
-  const labels=[
-    '#quote .measure-card-v273 .measure-head .quote-section-title-label',
-    '#quote .quote-entry-shell .quote-entry-shell-title.quote-section-title-label',
-    '#quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note)>summary>.quote-section-title-label'
-  ];
-  let pending=false;
-  function measure(){
-    pending=false;
-    const nodes=labels.map(s=>document.querySelector(s));
-    if(nodes.some(x=>!x))return;
-    nodes.slice(1).forEach(el=>el.style.removeProperty('transform'));
-    if(window.innerWidth<=700||window.innerWidth>1366)return;
-    const target=nodes[0].querySelector('.quote-section-number')?.getBoundingClientRect().left;
-    if(!Number.isFinite(target))return;
-    nodes.slice(1).forEach(el=>{
-      const left=el.querySelector('.quote-section-number')?.getBoundingClientRect().left;
-      if(!Number.isFinite(left))return;
-      const delta=target-left;
-      if(Math.abs(delta)>0.5)el.style.setProperty('transform','translateX('+delta.toFixed(2)+'px)','important');
-    });
-  }
-  window.muyeAlignQuoteBadgesV448=measure;
-  function schedule(){
-    if(pending)return;
-    pending=true;
-    requestAnimationFrame(measure);
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});
-  else schedule();
-  window.addEventListener('resize',schedule,{passive:true});
-  window.addEventListener('orientationchange',schedule,{passive:true});
-  document.addEventListener('click',e=>{
-    if(e.target.closest('#quote .quote-entry-shell, #quote .measure-card-v273, #quote .quote-entry-optional'))schedule();
-  });
-  const observer=new MutationObserver(mutations=>{
-    if(mutations.some(m=>m.addedNodes.length&&m.target.closest?.('#quote')))schedule();
-  });
-  const init=()=>{
-    const quote=document.getElementById('quote');
-    if(quote)observer.observe(quote,{childList:true,subtree:true});
-    schedule();
-  };
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
-  else init();
-})();
-</script>
+</style><style id="v337-title-tap-access">.business-title-access{touch-action:manipulation!important;cursor:pointer!important}</style>
 </body></html>`}
 async function loadExternalScript(src,globalName){
   if(globalName&&window[globalName])return true;
@@ -11422,4 +11373,54 @@ window.muyeContractV408Status=()=>({version:'408',pdfReady:!!cache?.file,documen
 })();
 </script>
 <script src="./order-detail-v404.js?v=411"></script><script src="./ipad-numeric-v412.js?v=417"></script>
+<script id="v448-ipad-quote-badge-alignment">
+/* Align only the visible number badges on real tablet layouts.
+   A zero measured offset leaves all existing visuals untouched. */
+(function(){
+  const labels=[
+    '#quote .measure-card-v273 .measure-head .quote-section-title-label',
+    '#quote .quote-entry-shell .quote-entry-shell-title.quote-section-title-label',
+    '#quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note)>summary>.quote-section-title-label'
+  ];
+  let pending=false;
+  function measure(){
+    pending=false;
+    const nodes=labels.map(s=>document.querySelector(s));
+    if(nodes.some(x=>!x))return;
+    nodes.slice(1).forEach(el=>el.style.removeProperty('transform'));
+    if(window.innerWidth<=700||window.innerWidth>1366)return;
+    const target=nodes[0].querySelector('.quote-section-number')?.getBoundingClientRect().left;
+    if(!Number.isFinite(target))return;
+    nodes.slice(1).forEach(el=>{
+      const left=el.querySelector('.quote-section-number')?.getBoundingClientRect().left;
+      if(!Number.isFinite(left))return;
+      const delta=target-left;
+      if(Math.abs(delta)>0.5)el.style.setProperty('transform','translateX('+delta.toFixed(2)+'px)','important');
+    });
+  }
+  window.muyeAlignQuoteBadgesV448=measure;
+  function schedule(){
+    if(pending)return;
+    pending=true;
+    requestAnimationFrame(measure);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});
+  else schedule();
+  window.addEventListener('resize',schedule,{passive:true});
+  window.addEventListener('orientationchange',schedule,{passive:true});
+  document.addEventListener('click',e=>{
+    if(e.target.closest('#quote .quote-entry-shell, #quote .measure-card-v273, #quote .quote-entry-optional'))schedule();
+  });
+  const observer=new MutationObserver(mutations=>{
+    if(mutations.some(m=>m.addedNodes.length&&m.target.closest?.('#quote')))schedule();
+  });
+  const init=()=>{
+    const quote=document.getElementById('quote');
+    if(quote)observer.observe(quote,{childList:true,subtree:true});
+    schedule();
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
+  else init();
+})();
+</script>
 </body></html>
