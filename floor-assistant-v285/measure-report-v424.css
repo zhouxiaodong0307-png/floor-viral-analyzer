@@ -1,7 +1,81 @@
 /* V425 · Instant customer measurement sheet. Print A4; preview is paper-like, not a form. */
-#quote .measure-card-v273 .mr-open-row{display:flex;justify-content:flex-end;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid #ececef;min-width:0}
-#quote .measure-card-v273 .mr-open-row button{width:calc((100% - 21px)/4);min-width:0;height:40px;min-height:40px;margin:0;padding:0 4px;border:1px solid #151515;border-radius:11px;background:#151515;color:#fff;white-space:nowrap;font-size:12px;font-weight:600;letter-spacing:-.2px;cursor:pointer}
-#quote .measure-card-v273 .mr-open-row button:active{opacity:.8}
+/* V437: compact summary action at upper-right of ①面积, no bottom separator or extra row. */
+#quote .measure-card-v273 .measure-head .mr-head-trigger{
+  flex:0 0 auto;
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  min-width:0;
+  margin-left:auto;
+}
+#quote .measure-card-v273 .measure-head .mr-head-trigger #mr-open-btn{
+  display:inline-flex;
+  box-sizing:border-box;
+  align-items:center;
+  justify-content:center;
+  min-width:86px;
+  height:35px;
+  min-height:35px;
+  margin:0;
+  padding:0 12px;
+  border:1px solid #e2e3e7;
+  border-radius:11px;
+  background:#f7f7f8;
+  color:#202124;
+  font-size:12px;
+  font-weight:650;
+  line-height:1;
+  white-space:nowrap;
+  box-shadow:none;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+#quote .measure-card-v273 .measure-head .mr-head-trigger #mr-open-btn:active{
+  background:#ececef;
+}
+#quote .measure-card-v273 .measure-head .mr-head-trigger #mr-open-btn:focus-visible{
+  outline:2px solid #111;
+  outline-offset:2px;
+}
+@media(max-width:700px){
+  /* Keep title + summary on the first line, existing four toolbar buttons on line 2. */
+  html body #quote .measure-card-v273 .measure-head{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    align-items:center!important;
+    column-gap:8px!important;
+    row-gap:9px!important;
+  }
+  html body #quote .measure-card-v273 .measure-head>h2{
+    grid-column:1!important;
+    grid-row:1!important;
+  }
+  html body #quote .measure-card-v273 .measure-head .mr-head-trigger{
+    grid-column:2!important;
+    grid-row:1!important;
+    margin:0!important;
+  }
+  html body #quote .measure-card-v273 .measure-head .measure-head-actions{
+    grid-column:1/-1!important;
+    grid-row:2!important;
+    width:100%!important;
+    margin:0!important;
+  }
+  #quote .measure-card-v273 .measure-head .mr-head-trigger #mr-open-btn{
+    min-width:80px;
+    height:34px;
+    min-height:34px;
+    padding:0 10px;
+    font-size:11.5px;
+  }
+}
+@media(max-width:360px){
+  #quote .measure-card-v273 .measure-head .mr-head-trigger #mr-open-btn{
+    min-width:76px;
+    padding:0 7px;
+    font-size:11px;
+  }
+}
 .mr-overlay{z-index:9000!important;position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(0,0,0,.55);box-sizing:border-box}
 .mr-overlay[hidden]{display:none!important}
 .mr-open{overflow:hidden}
