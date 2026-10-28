@@ -495,3 +495,18 @@ html body #mr-v424 .mr-dialog-head > button[data-r-action="close"]:focus-visible
  padding-left:max(10px,env(safe-area-inset-left,0px));
  padding-right:max(10px,env(safe-area-inset-right,0px));
 }
+
+/* V445: iPad landscape preview should use the available fullscreen content width.
+   This affects only the on-screen report; .mr-print-window remains physical A4. */
+@media (min-width:701px) and (max-width:1366px) and (orientation:landscape){
+  #mr-v424 .mr-preview,
+  #mr-v424 .mr-warning{
+    width:100%!important;
+    max-width:none!important;
+    min-width:0;
+  }
+  #mr-v424 .mr-sheet{
+    width:100%!important;
+    max-width:none!important;
+  }
+}
