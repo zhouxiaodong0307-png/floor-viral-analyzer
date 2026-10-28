@@ -24,7 +24,7 @@ function exactPerimeter(expr){
  return total;
 }
 function capture(){
- const rows=[],invalid=[];
+ const rows=[],invalid=[],pendingRows=[];
  qa('#measureRows > .measure-row').forEach((el,i)=>{
   const kind=el.dataset.kind==='stair'?'stair':'area',floor=String(el.dataset.floor||'1楼').trim()||'1楼';
   const name=q('.mname',el)?.value.trim()||(kind==='stair'?'楼梯':'区域'+(i+1));
@@ -33,21 +33,21 @@ function capture(){
    const fields={width:get('.stair-width'),depth:get('.stair-depth'),count:get('.stair-count'),riser:get('.stair-riser'),platform:get('.stair-platform')};
    if(!Object.values(fields).some(x=>x!==''))return;
    const invalidDimension=['width','depth','count','riser'].some(k=>fields[k]!==''&&nonNegative(fields[k])===null);
-   if(invalidDimension||(fields.count!==''&&!Number.isInteger(Number(fields.count)))||(fields.platform&&exactPerimeter(fields.platform)===null)){invalid.push(floor+' '+name);return}
+   if(invalidDimension||(fields.count!==''&&!Number.isInteger(Number(fields.count)))||(fields.platform&&exactPerimeter(fields.platform)===null)){invalid.push(floor+' '+name);pendingRows.push({kind,floor,name,expr:'踏步/平台待补充',order:i});return}
    const area=typeof stairMeasureArea==='function'?stairMeasureArea(el):0;
-   if(!Number.isFinite(area)||area<=0){invalid.push(floor+' '+name);return}
-   rows.push({kind,floor,name,expr:'踏步'+fields.count+'级'+(fields.platform?'；平台'+fields.platform:''),area,fields});
+   if(!Number.isFinite(area)||area<=0){invalid.push(floor+' '+name);pendingRows.push({kind,floor,name,expr:'踏步/平台待补充',order:i});return}
+   rows.push({kind,floor,name,expr:'踏步'+fields.count+'级'+(fields.platform?'；平台'+fields.platform:''),area,fields,order:i});
   }else{
    const expr=q('.mexpr',el)?.value.trim()||'';
    if(!expr)return;
    const perimeter=exactPerimeter(expr);
-   if(perimeter===null){invalid.push(floor+' '+name);return}
+   if(perimeter===null){invalid.push(floor+' '+name);pendingRows.push({kind,floor,name,expr,order:i});return}
    const area=typeof parseMeasureExpr==='function'?parseMeasureExpr(expr):0;
-   if(!Number.isFinite(area)||area<=0){invalid.push(floor+' '+name);return}
-   rows.push({kind,floor,name,expr,area,perimeter});
+   if(!Number.isFinite(area)||area<=0){invalid.push(floor+' '+name);pendingRows.push({kind,floor,name,expr,order:i});return}
+   rows.push({kind,floor,name,expr,area,perimeter,order:i});
   }
  });
- return {rows,invalid,capturedAt:new Date().toISOString()};
+ return {rows,invalid,pendingRows,capturedAt:new Date().toISOString()};
 }
 function dataFromCurrentInputs(){
  const source=capture(),customer=q('#cust')?.value.trim()||'',address=q('#project')?.value.trim()||'';
@@ -90,13 +90,21 @@ function optionalRows(d,t){
  return list;
 }
 function buildMarkup(d){
- const t=reportTotals(d),floors=[...new Set(d.source.rows.map(r=>r.floor))],body=[];
+ const t=reportTotals(d),pending=Array.isArray(d.source.pendingRows)?d.source.pendingRows:[],body=[];
+ const entries=[...d.source.rows.map((r,i)=>({...r,pending:false,order:Number.isInteger(r.order)?r.order:i})),
+  ...pending.map((r,i)=>({...r,pending:true,order:Number.isInteger(r.order)?r.order:d.source.rows.length+i}))];
+ const floors=[...new Set(entries.map(r=>r.floor||'1楼'))],multipleFloors=floors.length>1;
  for(const floor of floors){
-  const list=d.source.rows.filter(r=>r.floor===floor);
+  const list=entries.filter(r=>(r.floor||'1楼')===floor).sort((a,b)=>a.order-b.order);
   if(!list.length)continue;
-  body.push('<tr class="mr-floor"><td colspan="4">'+esc(floor)+'</td></tr>');
-  for(const r of list)body.push('<tr><td>'+esc(r.name)+'</td><td>'+esc(r.kind==='stair'?'踏步/平台':r.expr)+'</td><td>'+esc(r.kind==='stair'?'楼梯':'木地板')+'</td><td class="mr-right">'+fmt(r.area)+'㎡</td></tr>');
-  body.push('<tr class="mr-sub"><td colspan="3">'+esc(floor)+'小计</td><td class="mr-right">'+fmt(list.reduce((a,r)=>a+r.area,0))+'㎡</td></tr>');
+  // Ordinary homes need no explicit floor labels or duplicated subtotal lines.
+  if(multipleFloors)body.push('<tr class="mr-floor"><td colspan="4">'+esc(floor)+'</td></tr>');
+  for(const r of list){
+   const expr=r.kind==='stair'?(r.pending?'踏步/平台待补充':'踏步/平台'):r.expr;
+   const value=r.pending?'<span class="mr-pending-value">待补充</span>':fmt(r.area)+'㎡';
+   body.push('<tr'+(r.pending?' class="mr-pending"':'')+'><td>'+esc(r.name)+'</td><td>'+esc(expr)+'</td><td>'+esc(r.kind==='stair'?'楼梯':'木地板')+'</td><td class="mr-right">'+value+'</td></tr>');
+  }
+  if(multipleFloors)body.push('<tr class="mr-sub"><td colspan="3">'+esc(floor)+'小计</td><td class="mr-right">'+fmt(list.filter(r=>!r.pending).reduce((a,r)=>a+r.area,0))+'㎡</td></tr>');
  }
  const optional=optionalRows(d,t),loss=lossSummary(d,t);
  const meta=[];
@@ -107,12 +115,12 @@ function buildMarkup(d){
  const rows=optional.map(x=>'<div class="mr-item"><span>'+esc(x[0])+'</span><strong>'+esc(x[1])+'</strong></div>').join('');
  const caution=optional.some(x=>x[0].includes('踢脚线（预估）'))?
   '<p>踢脚线按房间尺寸估算，未扣除门洞、柜体及连通区域共边，须现场复核。</p>':'';
- const unmeasured=d.source.invalid?.length?'<p class="mr-attention">待核实的测量区域：'+esc(d.source.invalid.join('、'))+'</p>':'';
+ const unmeasured=pending.length?'<p class="mr-attention">尺寸待补充：'+esc(pending.map(r=>r.name).join('、'))+'。以上实测合计仅包含填写完整的区域。</p>':'';
  return '<article class="mr-sheet">'+
  '<header class="mr-heading"><h1>现场量房汇总单</h1><small>客户版</small></header>'+
  (meta.length?'<div class="mr-meta">'+meta.join('')+'</div>':'')+
  '<h2>01 · 房间面积明细</h2><table class="mr-table"><thead><tr><th>区域</th><th>尺寸（cm）</th><th>项目</th><th class="mr-right">实测面积</th></tr></thead><tbody>'+body.join('')+'</tbody></table>'+
- '<div class="mr-grand"><span>'+areaName+'</span><b>'+fmt(t.area)+' ㎡</b></div>'+
+ '<div class="mr-grand"><span>'+(pending.length?'已完成实测面积':areaName)+'</span><b>'+(t.area>0?fmt(t.area)+' ㎡':(pending.length?'—':fmt(t.area)+' ㎡'))+'</b></div>'+
  (t.stairs.length?'<div class="mr-grand mr-grand-secondary"><span>楼梯实测面积</span><b>'+fmt(t.stairArea)+' ㎡</b></div><div class="mr-grand mr-grand-all"><span>全部实测面积合计</span><b>'+fmt(t.combined)+' ㎡</b></div>':'')+
  (loss?'<div class="mr-loss"><span>预估损耗面积（'+esc(loss.percent)+'%）</span><b>'+fmt(loss.area)+' ㎡</b></div>':'')+
  (optional.length?'<h2>02 · 其他项目汇总</h2><div class="mr-extras">'+rows+'</div>':'')+
@@ -127,15 +135,14 @@ function writeSaved(rows){
  if(localStorage.getItem(STORE)!==raw)throw Error('本机保存回读失败');
 }
 function exportReady(){
- if(!current||!current.source.rows.length){alert('当前没有有效量房记录，暂不能生成汇总单。');return false}
- if(current.source.invalid?.length){alert('存在待核实尺寸，请先在量房页更正：'+current.source.invalid.join('、'));return false}
+ if(!current||(current.source.rows.length===0&&!(current.source.pendingRows?.length))){alert('请先填写量房尺寸。');return false}
  return true;
 }
 function render(){
  if(!current||!modal)return;
  q('#mr-preview',modal).innerHTML=buildMarkup(current);
  const tip=q('#mr-warning',modal);
- tip.textContent=current.source.invalid?.length?'有未计算成功的区域：'+current.source.invalid.join('、')+'。请返回量房页面修正。':'';
+ tip.textContent=current.source.pendingRows?.length?'有 '+current.source.pendingRows.length+' 处尺寸尚未填完整，已在清单标记为「待补充」，不计入实测面积。':'';
  tip.hidden=!tip.textContent;
 }
 function save(){
@@ -150,7 +157,7 @@ function printReport(){
  if(!exportReady())return;
  const tab=window.open('','_blank');
  if(!tab){alert('无法打开打印页面，请允许浏览器弹出新页面。');return}
- const href=new URL('./measure-report-v424.css?v=429',location.href).href;
+ const href=new URL('./measure-report-v424.css?v=433',location.href).href;
  const raw='<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>现场量房汇总单</title><link rel="stylesheet" href="'+esc(href)+'"></head><body class="mr-print-window"><div class="mr-print-toolbar"><button onclick="window.print()">打印 / 保存PDF</button></div>'+buildMarkup(current)+'</body></html>';
  tab.document.open();tab.document.write(raw);tab.document.close();
 }
@@ -161,8 +168,12 @@ function shareText(){
  if(current.customer?.trim())rows.push('客户：'+current.customer.trim());
  if(current.date?.trim())rows.push('日期：'+current.date.trim());
  if(current.address?.trim())rows.push('项目：'+current.address.trim());
- for(const x of current.source.rows)rows.push(x.floor+' '+x.name+' '+fmt(x.area)+'㎡');
- rows.push('木地板实测面积：'+fmt(t.area)+'㎡');
+ const pending=current.source.pendingRows||[];
+ const entries=[...current.source.rows.map((r,i)=>({...r,pending:false,order:Number.isInteger(r.order)?r.order:i})),...pending.map((r,i)=>({...r,pending:true,order:Number.isInteger(r.order)?r.order:current.source.rows.length+i}))].sort((a,b)=>a.order-b.order);
+ const withFloors=new Set(entries.map(x=>x.floor||'1楼')).size>1;
+ for(const x of entries)rows.push((withFloors?x.floor+' ':'')+x.name+' '+(x.pending?'尺寸待补充（'+x.expr+'）':fmt(x.area)+'㎡'));
+ rows.push((pending.length?'已完成实测面积：':'木地板实测面积：')+(t.area>0?fmt(t.area)+'㎡':(pending.length?'—':'0.00㎡')));
+ if(pending.length)rows.push('注：待补充区域未计入实测面积，本单仅供现场初步核对。');
  if(t.stairs.length)rows.push('楼梯：'+fmt(t.stairArea)+'㎡','全部实测面积合计：'+fmt(t.combined)+'㎡');
  if(loss)rows.push('预估损耗面积（'+loss.percent+'%）：'+fmt(loss.area)+'㎡');
  for(const x of optionalRows(current,t))rows.push(x[0]+'：'+x[1]);
@@ -177,7 +188,7 @@ function copyText(content){
 }
 function open(){
  const data=dataFromCurrentInputs();
- if(!data.source.rows.length){alert(data.source.invalid.length?'请先更正量房尺寸：'+data.source.invalid.join('、'):'请先在①面积中录入至少一个有效量房区域。');return}
+ if(!data.source.rows.length&&!data.source.pendingRows.length){alert('请先在①面积填写房间尺寸。');return}
  current=data;modal.hidden=false;document.body.classList.add('mr-open');render();
 }
 function close(){if(!modal)return;modal.hidden=true;document.body.classList.remove('mr-open');current=null;}
@@ -208,7 +219,7 @@ function init(){
  });
  window.muyeMeasureReportV424={
   open,close,capture,estimatePerimeter:exactPerimeter,reportTotals,lossSummary,buildMarkup,
-  status:()=>({enabled:true,visible:!!modal&&!modal.hidden,sourceCount:current?.source.rows.length||0,version:'429'})
+  status:()=>({enabled:true,visible:!!modal&&!modal.hidden,sourceCount:current?.source.rows.length||0,version:'433'})
  };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
