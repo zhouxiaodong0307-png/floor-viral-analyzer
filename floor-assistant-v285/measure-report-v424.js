@@ -89,6 +89,11 @@ function optionalRows(d,t){
  for(const v of extras){if(v?.name?.trim()&&nonNegative(v.qty)>0&&String(v.unit||'').trim())list.push([v.name.trim(),fmt(v.qty)+' '+String(v.unit).trim()]);}
  return list;
 }
+// Presentation-only: don't repeat a floor's name as a room name inside that floor.
+function reportRowName(r,floor){
+ const name=String(r.name||'').trim();
+ return r.kind==='area'&&name===String(floor||'1楼').trim()?'测量区域':name||'测量区域';
+}
 function buildMarkup(d){
  const t=reportTotals(d),pending=Array.isArray(d.source.pendingRows)?d.source.pendingRows:[],body=[];
  const entries=[...d.source.rows.map((r,i)=>({...r,pending:false,order:Number.isInteger(r.order)?r.order:i})),
@@ -97,14 +102,16 @@ function buildMarkup(d){
  for(const floor of floors){
   const list=entries.filter(r=>(r.floor||'1楼')===floor).sort((a,b)=>a.order-b.order);
   if(!list.length)continue;
-  // Ordinary homes need no explicit floor labels or duplicated subtotal lines.
-  if(multipleFloors)body.push('<tr class="mr-floor"><td colspan="4">'+esc(floor)+'</td></tr>');
+  // A single floor needs no redundant floor label. Multiple floors get one subtotal
+  // in the heading (not a second subtotal row after the rooms).
+  const floorArea=list.filter(r=>!r.pending).reduce((a,r)=>a+r.area,0);
+  if(multipleFloors)body.push('<tr class="mr-floor"><td colspan="2"><span class="mr-floor-name">'+esc(floor)+'</span></td><td class="mr-right"><span class="mr-floor-total">本层 '+fmt(floorArea)+'㎡</span></td></tr>');
   for(const r of list){
    const expr=r.kind==='stair'?(r.pending?'踏步/平台待补充':'踏步/平台'):r.expr;
    const value=r.pending?'<span class="mr-pending-value">待补充</span>':fmt(r.area)+'㎡';
-   body.push('<tr'+(r.pending?' class="mr-pending"':'')+'><td>'+esc(r.name)+'</td><td>'+esc(expr)+'</td><td>'+esc(r.kind==='stair'?'楼梯':'木地板')+'</td><td class="mr-right">'+value+'</td></tr>');
+   const name=reportRowName(r,floor);
+   body.push('<tr'+(r.pending?' class="mr-pending"':'')+'><td>'+esc(name)+'</td><td>'+esc(expr)+'</td><td class="mr-right">'+value+'</td></tr>');
   }
-  if(multipleFloors)body.push('<tr class="mr-sub"><td colspan="3">'+esc(floor)+'小计</td><td class="mr-right">'+fmt(list.filter(r=>!r.pending).reduce((a,r)=>a+r.area,0))+'㎡</td></tr>');
  }
  const optional=optionalRows(d,t),loss=lossSummary(d,t);
  const meta=[];
@@ -119,7 +126,7 @@ function buildMarkup(d){
  return '<article class="mr-sheet">'+
  '<header class="mr-heading"><h1>现场量房汇总单</h1><small>客户版</small></header>'+
  (meta.length?'<div class="mr-meta">'+meta.join('')+'</div>':'')+
- '<h2>01 · 房间面积明细</h2><table class="mr-table"><thead><tr><th>区域</th><th>尺寸（cm）</th><th>项目</th><th class="mr-right">实测面积</th></tr></thead><tbody>'+body.join('')+'</tbody></table>'+
+ '<h2>'+(multipleFloors?'01 · 各楼层面积':'01 · 房间面积明细')+'</h2><table class="mr-table"><thead><tr><th>区域</th><th>尺寸（cm）</th><th class="mr-right">实测面积</th></tr></thead><tbody>'+body.join('')+'</tbody></table>'+
  '<div class="mr-grand"><span>'+(pending.length?'已完成实测面积':areaName)+'</span><b>'+(t.area>0?fmt(t.area)+' ㎡':(pending.length?'—':fmt(t.area)+' ㎡'))+'</b></div>'+
  (t.stairs.length?'<div class="mr-grand mr-grand-secondary"><span>楼梯实测面积</span><b>'+fmt(t.stairArea)+' ㎡</b></div><div class="mr-grand mr-grand-all"><span>全部实测面积合计</span><b>'+fmt(t.combined)+' ㎡</b></div>':'')+
  (loss?'<div class="mr-loss"><span>预估损耗面积（'+esc(loss.percent)+'%）</span><b>'+fmt(loss.area)+' ㎡</b></div>':'')+
@@ -157,7 +164,7 @@ function printReport(){
  if(!exportReady())return;
  const tab=window.open('','_blank');
  if(!tab){alert('无法打开打印页面，请允许浏览器弹出新页面。');return}
- const href=new URL('./measure-report-v424.css?v=433',location.href).href;
+ const href=new URL('./measure-report-v424.css?v=434',location.href).href;
  const raw='<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>现场量房汇总单</title><link rel="stylesheet" href="'+esc(href)+'"></head><body class="mr-print-window"><div class="mr-print-toolbar"><button onclick="window.print()">打印 / 保存PDF</button></div>'+buildMarkup(current)+'</body></html>';
  tab.document.open();tab.document.write(raw);tab.document.close();
 }
@@ -171,7 +178,12 @@ function shareText(){
  const pending=current.source.pendingRows||[];
  const entries=[...current.source.rows.map((r,i)=>({...r,pending:false,order:Number.isInteger(r.order)?r.order:i})),...pending.map((r,i)=>({...r,pending:true,order:Number.isInteger(r.order)?r.order:current.source.rows.length+i}))].sort((a,b)=>a.order-b.order);
  const withFloors=new Set(entries.map(x=>x.floor||'1楼')).size>1;
- for(const x of entries)rows.push((withFloors?x.floor+' ':'')+x.name+' '+(x.pending?'尺寸待补充（'+x.expr+'）':fmt(x.area)+'㎡'));
+ const floors=[...new Set(entries.map(x=>x.floor||'1楼'))];
+ for(const floor of floors){
+  const list=entries.filter(x=>(x.floor||'1楼')===floor);
+  if(withFloors)rows.push('【'+floor+'】本层 '+fmt(list.filter(x=>!x.pending).reduce((a,x)=>a+x.area,0))+'㎡');
+  for(const x of list)rows.push(reportRowName(x,floor)+' '+(x.pending?'尺寸待补充（'+x.expr+'）':x.expr+' · '+fmt(x.area)+'㎡'));
+ }
  rows.push((pending.length?'已完成实测面积：':'木地板实测面积：')+(t.area>0?fmt(t.area)+'㎡':(pending.length?'—':'0.00㎡')));
  if(pending.length)rows.push('注：待补充区域未计入实测面积，本单仅供现场初步核对。');
  if(t.stairs.length)rows.push('楼梯：'+fmt(t.stairArea)+'㎡','全部实测面积合计：'+fmt(t.combined)+'㎡');
@@ -219,7 +231,7 @@ function init(){
  });
  window.muyeMeasureReportV424={
   open,close,capture,estimatePerimeter:exactPerimeter,reportTotals,lossSummary,buildMarkup,
-  status:()=>({enabled:true,visible:!!modal&&!modal.hidden,sourceCount:current?.source.rows.length||0,version:'433'})
+  status:()=>({enabled:true,visible:!!modal&&!modal.hidden,sourceCount:current?.source.rows.length||0,version:'434'})
  };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
