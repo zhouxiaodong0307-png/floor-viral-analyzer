@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
    const page=await browser.newPage({viewport:{width:w,height:h}});
    await page.context().route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:8765/')?r.continue():r.abort());
    await page.goto('http://127.0.0.1:8765/floor-assistant-v285/',{waitUntil:'domcontentloaded'});
-   await page.waitForSelector('#measureLossArea');
+   await page.waitForSelector('#measureBill');
    const versionInfo=JSON.parse(require('node:fs').readFileSync('floor-assistant-v285/version.json','utf8'));
    const advertised=await page.locator('meta[name="app-version"]').getAttribute('content');
    assert.equal(advertised,'V'+versionInfo.version,'HTML version must match version.json (cache updates)');
@@ -40,20 +40,19 @@ const assert = require('node:assert/strict');
        rows.innerHTML='<div class="measure-row" data-floor="1楼"><input class="mexpr"><span class="measure-area"></span></div>';
        rows.querySelector('.mexpr').value=expr;rate.value=String(percent);
        calcMeasures();
-       result.push({loss:document.getElementById('measureLossArea')?.textContent,
-          bill:document.getElementById('measureBill')?.textContent,
-          hidden:getComputedStyle(document.getElementById('measureBill')).display==='none',
+       result.push({bill:document.getElementById('measureBill')?.textContent,
+          visible:getComputedStyle(document.getElementById('measureBill')).display!=='none',
           label:document.querySelector('.measure-bill-line > span')?.textContent,
           actual:document.getElementById('measureTotal')?.textContent});
      }
      return result;
     });
     assert.deepEqual(cases,[
-      {loss:'1㎡',bill:'16㎡',hidden:true,label:'损耗面积',actual:'15.00㎡'},
-      {loss:'2㎡',bill:'17㎡',hidden:true,label:'损耗面积',actual:'15.00㎡'},
-      {loss:'1㎡',bill:'19㎡',hidden:true,label:'损耗面积',actual:'18.04㎡'},
-      {loss:'0㎡',bill:'15㎡',hidden:true,label:'损耗面积',actual:'15.00㎡'}
-    ],'Loss area must be rounded up from raw actual*percent; bill area kept hidden for business logic');
+      {bill:'16㎡',visible:true,label:'损耗面积',actual:'15.00㎡'},
+      {bill:'17㎡',visible:true,label:'损耗面积',actual:'15.00㎡'},
+      {bill:'19㎡',visible:true,label:'损耗面积',actual:'18.04㎡'},
+      {bill:'15㎡',visible:true,label:'损耗面积',actual:'15.00㎡'}
+    ],'V461 label-only change must preserve original billed area values, visible under 损耗面积 label');
    }
 
    await page.close();
