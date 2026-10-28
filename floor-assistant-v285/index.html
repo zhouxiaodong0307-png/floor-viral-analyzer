@@ -7542,6 +7542,19 @@ input,select,button{min-height:44px} .internal-access-btn{min-height:auto}
 #quote .measure-card-v273 .measure-row.stair-row .stair-fields input[type="number"]::-webkit-inner-spin-button,#quote .measure-card-v273 .measure-row.stair-row .stair-fields input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none!important;appearance:none!important;display:none!important;margin:0!important}
 #quote .measure-card-v273 .measure-row.stair-row .stair-fields input:focus,#quote .measure-card-v273 .measure-row.stair-row .stair-fields input:focus-visible{outline:1px solid #a5aab2!important;outline-offset:0!important;box-shadow:none!important;border-color:#a5aab2!important}
 </style><style id="v337-title-tap-access">.business-title-access{touch-action:manipulation!important;cursor:pointer!important}</style>
+
+<style id="v456-compact-measure-summary">
+/* V456: one compact row; preserve original IDs and loss editor. */
+#quote .measure-card-v273 .measure-summary{display:grid!important;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)!important;align-items:center!important;gap:0!important;padding:9px 10px!important}
+#quote .measure-card-v273 .measure-summary>.measure-summary-line,#quote .measure-card-v273 .measure-summary>.measure-loss-line{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:5px!important;margin:0!important;padding:0 6px!important;min-width:0!important;min-height:66px!important;border:0!important;text-align:center!important}
+#quote .measure-card-v273 .measure-summary>.measure-loss-line{border-left:1px solid rgba(255,255,255,.15)!important;border-right:1px solid rgba(255,255,255,.15)!important}
+#quote .measure-card-v273 .measure-summary .measure-loss-line .deposit-style-range{display:none!important}
+#quote .measure-card-v273 .measure-summary .measure-summary-line>span,#quote .measure-card-v273 .measure-summary .measure-loss-line>span{font-size:12px!important;line-height:1.25!important;white-space:nowrap!important}
+#quote .measure-card-v273 .measure-summary .measure-summary-line b{font-size:clamp(16px,4.5vw,22px)!important;white-space:nowrap!important}
+#quote .measure-card-v273 .measure-summary #measureBill{font-size:clamp(17px,4.6vw,23px)!important}
+#quote .measure-card-v273 .measure-summary .measure-loss-line .ratio-value{margin:0!important}
+@media(max-width:390px){#quote .measure-card-v273 .measure-summary{padding:8px 5px!important}#quote .measure-card-v273 .measure-summary>.measure-summary-line,#quote .measure-card-v273 .measure-summary>.measure-loss-line{padding:0 3px!important}}
+</style>
 </body></html>`}
 async function loadExternalScript(src,globalName){
   if(globalName&&window[globalName])return true;
