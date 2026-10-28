@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
    const page=await browser.newPage({viewport:{width:w,height:h}});
    await page.context().route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:8765/')?r.continue():r.abort());
    await page.goto('http://127.0.0.1:8765/floor-assistant-v285/',{waitUntil:'domcontentloaded'});
-   await page.waitForSelector('#measureBill');
+   await page.waitForSelector('#measureLossArea');
    const versionInfo=JSON.parse(require('node:fs').readFileSync('floor-assistant-v285/version.json','utf8'));
    const advertised=await page.locator('meta[name="app-version"]').getAttribute('content');
    assert.equal(advertised,'V'+versionInfo.version,'HTML version must match version.json (cache updates)');
