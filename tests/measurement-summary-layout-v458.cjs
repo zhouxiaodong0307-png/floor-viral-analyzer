@@ -8,6 +8,10 @@ const assert = require('node:assert/strict');
    await page.context().route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:8765/')?r.continue():r.abort());
    await page.goto('http://127.0.0.1:8765/floor-assistant-v285/',{waitUntil:'domcontentloaded'});
    await page.waitForSelector('#measureBill');
+   const versionInfo=JSON.parse(require('node:fs').readFileSync('floor-assistant-v285/version.json','utf8'));
+   const advertised=await page.locator('meta[name="app-version"]').getAttribute('content');
+   assert.equal(advertised,'V'+versionInfo.version,'HTML version must match version.json (cache updates)');
+
    const metrics=await page.evaluate(()=>{
     const box=document.querySelector('#quote .measure-card-v273 .measure-summary');
     const items=[...box.children].map(e=>{
