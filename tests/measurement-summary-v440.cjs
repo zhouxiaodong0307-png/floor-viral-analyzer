@@ -23,6 +23,7 @@ const assert=require('node:assert/strict');
  assert.equal(await page.evaluate(d=>window.muyeMeasureReportV424.buildMarkup(d),saved[0]),await page.locator('#mr-preview').innerHTML());
  const popupPromise=page.waitForEvent('popup');await page.locator('[data-r-action="print"]').click();const popup=await popupPromise;await popup.waitForLoadState();
  assert.equal(await popup.locator('.mr-sheet').evaluate(e=>e.outerHTML),await page.locator('#mr-preview .mr-sheet').evaluate(e=>e.outerHTML));
+ await popup.waitForFunction(()=>[...document.styleSheets].some(s=>s.href?.includes('measure-report-v424.css')),null,{timeout:10000});
  await popup.emulateMedia({media:'print'});assert.equal(await popup.locator('.mr-grand,.mr-loss').count(),2);
  const a4Width=await popup.locator('.mr-sheet').evaluate(e=>e.getBoundingClientRect().width);
  assert.ok(Math.abs(a4Width-793.7)<2,`PDF must remain 210mm A4 width, got ${a4Width}`);await popup.pdf({path:'/tmp/muye-v445-print.pdf',format:'A4',printBackground:true});await popup.close();
