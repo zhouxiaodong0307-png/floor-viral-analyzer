@@ -30,6 +30,15 @@ const assert = require('node:assert/strict');
    assert.ok(Math.max(...metrics.items.map(x=>x.y))-Math.min(...metrics.items.map(x=>x.y))<=2,'three summary entries must be on the SAME row');
    assert.ok(metrics.box.h>=50&&metrics.box.h<=65,'V459 must reduce blank vertical space while retaining visible content: '+JSON.stringify(metrics.box));
    assert.ok(metrics.manual&&metrics.manualHeight>=28,'loss percent input remains usable at original height');
+   const headings=await page.evaluate(()=>[...document.querySelectorAll('#quote .measure-card-v273 .measure-summary > .measure-summary-line, #quote .measure-card-v273 .measure-summary > .measure-loss-line')].map(cell=>{
+     const el=cell.querySelector(':scope > span');
+     const cs=getComputedStyle(el),r=el.getBoundingClientRect();
+     return {text:el.textContent.trim(),top:r.top,bottom:r.bottom,fontSize:cs.fontSize,fontWeight:cs.fontWeight,lineHeight:cs.lineHeight,fontFamily:cs.fontFamily,letterSpacing:cs.letterSpacing};
+   }));
+   assert.deepEqual(headings.map(h=>h.text),['实际面积','损耗','损耗面积'],'three heading labels unchanged');
+   assert.ok(Math.max(...headings.map(h=>h.top))-Math.min(...headings.map(h=>h.top))<=1,'all heading text top edges aligned: '+JSON.stringify(headings));
+   for(const key of ['fontSize','fontWeight','lineHeight','fontFamily','letterSpacing'])assert.equal(new Set(headings.map(h=>h[key])).size,1,'all headings must share '+key+': '+JSON.stringify(headings));
+
    assert.ok(metrics.items.every(x=>x.x>=metrics.box.x-2&&x.x+x.w<=metrics.box.x+metrics.box.w+2),'no horizontal overflow');
    assert.ok(metrics.scrollWidth<=metrics.viewport+2,'no viewport horizontal overflow');
    if (w===390) {
