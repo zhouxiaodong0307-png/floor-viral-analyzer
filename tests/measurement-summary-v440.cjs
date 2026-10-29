@@ -83,7 +83,11 @@ assert.match(printCss,/@media print[\s\S]*?\.mr-print-window \.mr-sheet\{[^}]*wi
  assert.ok(Math.max(...simulated)-Math.min(...simulated)<=1,'V448 iPad dynamic correction under altered padding: '+simulated);
  await page.setViewportSize({width:1280,height:720});
 
- await page.evaluate(()=>{window.alert=()=>{}; window.__shared='';Object.defineProperty(navigator,'share',{value:async d=>window.__shared=d.text,configurable:true});});
+ await page.evaluate(()=>{
+  window.alert=()=>{};window.__shared=[];
+  Object.defineProperty(navigator,'canShare',{value:d=>!!d.files?.length&&d.files[0].type==='image/png',configurable:true});
+  Object.defineProperty(navigator,'share',{value:async d=>{window.__shared.push(d)},configurable:true});
+ });
  async function setup(rooms,percent=5){await page.evaluate(({rooms,percent})=>{
  document.querySelector('#measureRows').innerHTML=rooms.map((r,i)=>`<div class="measure-row" data-kind="${r.kind||'area'}" data-floor="${r.floor||'1楼'}"><input class="mname" value="房间${i+1}"><input class="mexpr" value="${r.expr||''}">${r.kind==='stair'?'<input class="stair-width" value="100"><input class="stair-depth" value="30"><input class="stair-count" value="10"><input class="stair-riser" value="15"><input class="stair-platform" value="">':''}</div>`).join('');
  document.querySelector('#measureLoss').value=percent;
@@ -92,12 +96,30 @@ assert.match(printCss,/@media print[\s\S]*?\.mr-print-window \.mr-sheet\{[^}]*wi
  async function check(actual,total,percent=5){
  const lines=await page.locator('#mr-preview .mr-grand, #mr-preview .mr-loss').allTextContents();
  assert.equal(lines.length,2);assert.ok(lines[0].includes(actual+' ㎡'));assert.ok(lines[1].includes(`含${percent}%损耗预估面积`));assert.ok(lines[1].includes(total+' ㎡'));assert.ok(!lines[1].includes('预估损耗面积'));assert.ok(!lines.some(x=>x.includes('0.90 ㎡')));assert.ok(/^\d+$/.test(lines[1].trim().match(/(\d+) ㎡$/)?.[1]||''));
- await page.locator('[data-r-action="share"]').click();const text=await page.evaluate(()=>window.__shared);assert.ok(text.includes(total+'㎡'));assert.ok(!text.includes('全部实测面积合计'));assert.ok(!text.includes('预估损耗面积'));assert.ok(!text.includes('15.75㎡'));
- const before=await page.evaluate(()=>localStorage.getItem('muye-measure-a4-reports-v424'));
+ const storageBefore=await page.evaluate(()=>localStorage.getItem('muye-measure-a4-reports-v424'));
+ await page.locator('[data-r-action="share"]').click();
  await page.locator('[data-r-action="save"]').click();
- const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('muye-measure-a4-reports-v424')));
- assert.ok(saved.length);if(before)assert.deepEqual(saved.slice(1),JSON.parse(before));
- assert.equal(await page.evaluate(d=>window.muyeMeasureReportV424.buildMarkup(d),saved[0]),await page.locator('#mr-preview').innerHTML());
+ const exports=await page.evaluate(async()=>{
+   const input=window.__shared.slice(-2);
+   return await Promise.all(input.map(async item=>{
+     const file=item.files?.[0];
+     const buffer=file?await file.arrayBuffer():new ArrayBuffer(0);
+     const bytes=Array.from(new Uint8Array(buffer.slice(0,8)));
+     const bitmap=file?await createImageBitmap(file):null;
+     const result={type:file?.type,name:file?.name,size:file?.size,bytes,width:bitmap?.width,height:bitmap?.height,hasText:!!item.text,hasTitle:!!item.title};
+     bitmap?.close();return result;
+   }));
+ });
+ assert.equal(exports.length,2,'share and save both open the image file share sheet');
+ for(const item of exports){
+   assert.equal(item.type,'image/png','WeChat must receive an actual image/png, not text-only Web Share');
+   assert.ok(item.name.endsWith('.png')&&item.size>3000,'PNG file is complete');
+   assert.deepEqual(item.bytes,[137,80,78,71,13,10,26,10],'PNG binary header');
+   assert.ok(item.width>=700&&item.height>=1500,'image dimensions are readable and A4-like');
+   assert.equal(item.hasText,false,'No text-only share unsupported by WeChat');
+   assert.equal(item.hasTitle,false,'Avoid iOS share target choosing unsupported text type');
+ }
+ assert.equal(await page.evaluate(()=>localStorage.getItem('muye-measure-a4-reports-v424')),storageBefore,'V465 image export must not mutate legacy local saves');
  const popupPromise=page.waitForEvent('popup');await page.locator('[data-r-action="print"]').click();const popup=await popupPromise;await popup.waitForLoadState();
  assert.equal(await popup.locator('.mr-sheet').evaluate(e=>e.outerHTML),await page.locator('#mr-preview .mr-sheet').evaluate(e=>e.outerHTML));
  await popup.emulateMedia({media:'print'});assert.equal(await popup.locator('.mr-grand,.mr-loss').count(),2);await popup.pdf({path:'/tmp/muye-v445-print.pdf',format:'A4',printBackground:true});await popup.close();
@@ -127,6 +149,19 @@ assert.match(printCss,/@media print[\s\S]*?\.mr-print-window \.mr-sheet\{[^}]*wi
  await setup([{expr:'100×100.49'}]);await check('1.00','2');
  await setup([{expr:'1000×1000'}],10);await check('100.00','110',10);
  await setup([{expr:'100×100'}],0);await check('1.00','1',0);
+ // A browser that rejects native file shares must still offer the PNG for long-press saving.
+ await page.evaluate(()=>{
+   Object.defineProperty(navigator,'canShare',{value:()=>false,configurable:true});
+ });
+ await page.locator('[data-r-action="save"]').click();
+ assert.ok(await page.locator('#mr-preview img[alt="现场量房汇总单图片"]').isVisible(),'fallback PNG preview');
+ assert.match(await page.locator('#mr-preview').innerText(),/存储到照片/,'clear iOS Photos fallback instructions');
+ await page.getByRole('button',{name:'返回汇总单'}).click();
+ assert.ok(await page.locator('#mr-preview .mr-sheet').count(),'report preview can be restored');
+ await page.evaluate(()=>{
+   Object.defineProperty(navigator,'canShare',{value:d=>!!d.files?.length&&d.files[0].type==='image/png',configurable:true});
+ });
+
  await setup(Array.from({length:40},()=>({expr:'325×555'})));
  const scroll=page.locator('#mr-v424 .mr-dialog-scroll');assert.ok(await scroll.evaluate(e=>e.scrollHeight>e.clientHeight));
  await scroll.evaluate(e=>e.scrollTop=e.scrollHeight);
@@ -134,5 +169,5 @@ assert.match(printCss,/@media print[\s\S]*?\.mr-print-window \.mr-sheet\{[^}]*wi
  await page.locator('#mr-v424 .mr-dialog-head [data-r-action=close]').click();assert.equal(await page.locator('#mr-v424').isVisible(),false);
  assert.equal(await page.evaluate(()=>document.body.classList.contains('mr-open')),false);
  const legacy=await page.evaluate(()=>{const d={source:{rows:[{kind:'area',area:18.0375,expr:'325×555'}]}};const a=JSON.stringify(d);window.muyeMeasureReportV424.buildMarkup(d);return [a===JSON.stringify(d),window.muyeMeasureReportV424.lossSummary(d,window.muyeMeasureReportV424.reportTotals(d))]});assert.deepEqual(legacy,[true,null]);
- console.log('PASS: 10 whole-m² business cases; preview/share/save/print A4 parity; 8 viewport layouts including iPad landscape fill; historical snapshot preservation. All network access outside localhost blocked.');await browser.close();
+ console.log('PASS: 10 whole-m² business cases; PNG binary+dimensions, image-only native share and iOS Photos fallback, A4 print, 8 viewport layouts, legacy snapshot safety. External network blocked.');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
