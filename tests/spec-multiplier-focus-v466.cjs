@@ -58,10 +58,11 @@ const assert=require('node:assert/strict');
    await exercise('#spec','main quote');
    // Use the actual manual order row rather than a synthetic field.
    await page.evaluate(()=>{
-    document.querySelector('#quote').classList.add('hide');
-    const el=document.querySelector('#orders');
-    el.classList.remove('hide');el.style.setProperty('display','block','important');
-    document.body.classList.add('internal-visible');
+    // Open the real business-mode entry panel (collapsed by default).
+    window.enterBusinessMode();
+    if(document.getElementById('orderManagerContent').classList.contains('collapsed'))window.toggleOrderManager();
+    const manual=document.getElementById('manualOrderEntryPanel');
+    if(manual)manual.classList.remove('hide');
     if(!document.querySelector('#orderProductRows [data-field="spec"]'))window.addOrderProductRow();
    });
    await page.waitForFunction(()=>!!document.querySelector('#orderProductRows input[data-field="spec"]')?.parentElement.querySelector('button.muye-spec-x'));
