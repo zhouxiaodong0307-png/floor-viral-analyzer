@@ -154,14 +154,150 @@ function render(){
  tip.textContent=current.source.pendingRows?.length?'有 '+current.source.pendingRows.length+' 处尺寸尚未填完整，已在清单标记为「待补充」，不计入实测面积。':'';
  tip.hidden=!tip.textContent;
 }
-function save(){
- if(!exportReady())return;
- // Each save creates a new immutable snapshot; never edit an existing historical record.
- const all=collectSaved();
- const item=JSON.parse(JSON.stringify({...current,id:'MR-'+Date.now()+'-'+Math.floor(Math.random()*100000),createdAt:new Date().toISOString()}));
- try{writeSaved([item,...all].slice(0,60));alert('量房汇总单已保存到本机。')}
- catch(e){alert('保存失败，本机数据未确认写入。请使用打印/保存PDF。')}
+
+/* V465: render the current report as an offline PNG. iOS websites cannot silently
+   write Photos, so give the native share sheet a genuine image file. */
+function renderReportImage(d=current){
+ if(!d)throw Error('量房内容为空');
+ const W=1120, L=76, R=W-76, CW=R-L, ops=[];
+ const probe=document.createElement('canvas').getContext('2d');
+ if(!probe)throw Error('当前浏览器不支持生成图片');
+ const font=(size,bold=false)=>`${bold?'700':'400'} ${size}px "PingFang SC",-apple-system,"Microsoft YaHei",sans-serif`;
+ const wrap=(value,maxWidth,size=26,bold=false)=>{
+  probe.font=font(size,bold);
+  const lines=[];let part='';
+  for(const ch of String(value??'')){
+   if(ch==='\n'){lines.push(part);part='';continue}
+   if(part&&probe.measureText(part+ch).width>maxWidth){lines.push(part);part=ch}else part+=ch;
+  }
+  lines.push(part);
+  return lines;
+ };
+ const rect=(x,y,w,h,fill,r=0)=>ops.push(g=>{
+  g.fillStyle=fill;
+  if(r&&typeof g.roundRect==='function'){g.beginPath();g.roundRect(x,y,w,h,r);g.fill()}
+  else g.fillRect(x,y,w,h);
+ });
+ const stroke=(x1,y1,x2,y2,color='#dedede')=>ops.push(g=>{g.strokeStyle=color;g.lineWidth=1;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke()});
+ const text=(value,x,y,size=26,bold=false,color='#1c1c1e',align='left')=>ops.push(g=>{
+  g.fillStyle=color;g.font=font(size,bold);g.textAlign=align;g.textBaseline='top';g.fillText(String(value),x,y);
+ });
+ let y=70;
+ rect(L,y,CW,155,'#1c1c1e',14);
+ text('现场量房汇总单',W/2,y+34,44,true,'#fff','center');
+ text('客户版',W/2,y+101,23,false,'#ddd','center');
+ y+=192;
+ const meta=[];
+ if(d.customer?.trim())meta.push('客户姓名：'+d.customer.trim());
+ if(d.date?.trim())meta.push('测量日期：'+d.date.trim());
+ if(d.address?.trim())meta.push('项目地址：'+d.address.trim());
+ for(const m of meta){const ls=wrap(m,CW,24);for(const s of ls){text(s,L,y,24);y+=34}y+=5}
+ y+=23;
+ const entries=[
+  ...d.source.rows.map((r,i)=>({...r,pending:false,order:Number.isInteger(r.order)?r.order:i})),
+  ...(d.source.pendingRows||[]).map((r,i)=>({...r,pending:true,order:Number.isInteger(r.order)?r.order:d.source.rows.length+i}))
+ ];
+ const floors=[...new Set(entries.map(r=>r.floor||'1楼'))];
+ text(floors.length>1?'01 · 各楼层面积':'01 · 房间面积明细',L,y,32,true);
+ y+=55;stroke(L,y,R,y,'#444');y+=14;
+ text('区域',L+8,y,23,false,'#71717a');
+ text('尺寸（cm）',L+280,y,23,false,'#71717a');
+ text('实测面积',R-8,y,23,false,'#71717a','right');
+ y+=48;stroke(L,y,R,y);
+ for(const floor of floors){
+  const rows=entries.filter(r=>(r.floor||'1楼')===floor).sort((a,b)=>a.order-b.order);
+  if(floors.length>1){
+   rect(L,y,CW,50,'#f3f3f3');
+   text(floor,L+10,y+10,24,true);
+   text('本层 '+fmt(rows.filter(r=>!r.pending).reduce((a,r)=>a+r.area,0))+'㎡',R-10,y+10,22,true,'#3f3f46','right');
+   y+=50;
+  }
+  for(const r of rows){
+   const left=wrap(reportRowName(r,floor),236,24);
+   const middle=wrap(r.kind==='stair'?(r.pending?'踏步/平台待补充':'踏步/平台'):r.expr,422,24);
+   const h=Math.max(57,Math.max(left.length,middle.length)*36+18);
+   for(let i=0;i<left.length;i++)text(left[i],L+8,y+9+i*36,24);
+   for(let i=0;i<middle.length;i++)text(middle[i],L+280,y+9+i*36,24);
+   text(r.pending?'待补充':fmt(r.area)+'㎡',R-8,y+9,24,false,r.pending?'#9a3412':'#1c1c1e','right');
+   y+=h;stroke(L,y,R,y,'#e5e5e5');
+  }
+ }
+ const t=reportTotals(d),loss=lossSummary(d,t);
+ y+=25;
+ rect(L,y,CW,84,'#f5f5f5',12);
+ text('木地板实测总面积',L+20,y+24,26,true);
+ text(fmt(t.combined)+' ㎡',R-20,y+18,34,true,'#111','right');
+ y+=100;
+ if(loss){
+  rect(L,y,CW,73,'#fafafa',10);
+  text('含'+loss.percent+'%损耗预估面积',L+20,y+21,24);
+  text(fmtWholePreparation(loss.total)+' ㎡',R-20,y+13,33,true,'#111','right');
+  y+=88;
+ }
+ const extras=optionalRows(d,t);
+ if(extras.length){
+  y+=22;text('02 · 其他项目汇总',L,y,30,true);y+=48;stroke(L,y,R,y);y+=10;
+  for(const [label,value] of extras){text(label,L+8,y+10,24);text(value,R-8,y+10,25,true,'#111','right');y+=52;stroke(L,y,R,y)}
+ }
+ if(d.notes?.trim()){
+  y+=30;text('03 · 现场施工说明',L,y,30,true);y+=51;
+  for(const s of wrap(d.notes.trim(),CW-16,24)){text(s,L+8,y,24);y+=36}
+ }
+ y+=45;stroke(L,y,R,y,'#d5d5d5');y+=24;
+ const notices=[];
+ const pending=d.source.pendingRows||[];
+ if(pending.length)notices.push('尺寸待补充：'+pending.map(r=>r.name).join('、')+'。仅统计填写完整的区域。');
+ if(extras.some(x=>x[0].includes('踢脚线（预估）')))notices.push('踢脚线为估算数量，须现场复核。');
+ notices.push('本单为现场测量初稿，实测面积不含备料损耗，最终施工及计价数量以双方确认方案为准。');
+ for(const note of notices){for(const s of wrap(note,CW,21)){text(s,L,y,21,false,'#71717a');y+=31}y+=6}
+ const H=Math.max(1584,Math.ceil(y+75)),scale=Math.min(1,7000/H);
+ const canvas=document.createElement('canvas');
+ canvas.width=Math.round(W*scale);canvas.height=Math.round(H*scale);
+ const g=canvas.getContext('2d');
+ if(!g)throw Error('当前浏览器不支持生成图片');
+ g.scale(scale,scale);g.fillStyle='#fff';g.fillRect(0,0,W,H);
+ for(const op of ops)op(g);
+ return canvas;
 }
+function previewReportImage(dataURL,mode){
+ const box=q('#mr-preview',modal);
+ if(!box)return;
+ box.replaceChildren();
+ const tip=document.createElement('p');
+ tip.textContent=mode==='save'?'长按下方图片，选择「存储到照片」，即可保存到相册。':'长按图片可保存，也可以从相册发送给微信好友。';
+ tip.style.cssText='font-size:13px;color:#333;margin:8px 4px 12px;text-align:center';
+ const img=document.createElement('img');
+ img.src=dataURL;img.alt='现场量房汇总单图片';img.style.cssText='display:block;width:100%;height:auto;background:white;border-radius:9px';
+ const back=document.createElement('button');
+ back.type='button';back.textContent='返回汇总单';
+ back.style.cssText='display:block;margin:12px auto;border:1px solid #ddd;border-radius:9px;background:white;padding:10px 18px;color:#111;font-size:14px';
+ back.addEventListener('click',render);
+ box.append(tip,img,back);
+ q('.mr-dialog-scroll',modal)?.scrollTo?.(0,0);
+}
+function exportReportImage(mode){
+ if(!exportReady())return;
+ let dataURL;
+ try{
+  const canvas=renderReportImage();
+  dataURL=canvas.toDataURL('image/png');
+  if(!dataURL.startsWith('data:image/png;base64,'))throw Error('PNG生成失败');
+  const binary=atob(dataURL.slice(dataURL.indexOf(',')+1)),bytes=new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+  const file=new File([bytes],'现场量房汇总单-'+(current.date||today())+'.png',{type:'image/png'});
+  // Image files are accepted by iOS/WeChat more consistently than text-only Web Share.
+  if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){
+   try{
+    const promise=navigator.share({files:[file]});
+    Promise.resolve(promise).catch(e=>{if(e?.name!=='AbortError')previewReportImage(dataURL,mode)});
+    return;
+   }catch(_){/* Fall back to an image that can be long-pressed. */}
+  }
+ }catch(e){alert('生成汇总图片失败，请使用打印PDF。');return}
+ previewReportImage(dataURL,mode);
+}
+
+function save(){return exportReportImage('save')}
 function printReport(){
  if(!exportReady())return;
  const tab=window.open('','_blank');
@@ -220,8 +356,8 @@ function init(){
  '<div class="mr-dialog-scroll"><p id="mr-warning" class="mr-warning" hidden></p><div id="mr-preview" class="mr-preview"></div></div>'+
  '<footer class="mr-dialog-actions">'+
  '<button type="button" data-r-action="close" aria-label="返回量房"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h11"/></svg><span>返回</span></button>'+
- '<button type="button" data-r-action="save" aria-label="保存汇总单"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2ZM7 3v6h9V3M7 21v-8h10v8"/></svg><span>保存</span></button>'+
- '<button type="button" data-r-action="share" aria-label="分享文字"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m0 0-5 5m5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg><span>分享</span></button>'+
+ '<button type="button" data-r-action="save" aria-label="保存汇总单图片到相册"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2ZM7 3v6h9V3M7 21v-8h10v8"/></svg><span>保存</span></button>'+
+ '<button type="button" data-r-action="share" aria-label="分享汇总单图片"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m0 0-5 5m5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg><span>分享</span></button>'+
  '<button type="button" data-r-action="print" aria-label="打印或保存PDF"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 15h12v6H6z"/></svg><span>打印PDF</span></button>'+
  '</footer></section>';
  document.body.appendChild(modal);
@@ -230,12 +366,12 @@ function init(){
   const action=e.target.closest('[data-r-action]')?.dataset.rAction;
   if(action==='close')return close();
   if(action==='save')return save();
-  if(action==='share')return shareText();
+  if(action==='share')return exportReportImage('share');
   if(action==='print')return printReport();
  });
  window.muyeMeasureReportV424={
   open,close,capture,estimatePerimeter:exactPerimeter,reportTotals,lossSummary,buildMarkup,
-  status:()=>({enabled:true,visible:!!modal&&!modal.hidden,sourceCount:current?.source.rows.length||0,version:'445'})
+  status:()=>({enabled:true,visible:!!modal&&!modal.hidden,sourceCount:current?.source.rows.length||0,version:'465'})
  };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
