@@ -15,7 +15,8 @@ const assert=require('node:assert/strict');
 
    async function exercise(selector,label){
     const input=page.locator(selector);
-    await input.scrollIntoViewIfNeeded();
+    await input.waitFor({state:'visible',timeout:6000});
+    await input.scrollIntoViewIfNeeded({timeout:6000});
     await input.fill('800');
     await page.evaluate(sel=>{
      const el=document.querySelector(sel); window.__multiplierFocusLoss=0;
@@ -44,6 +45,16 @@ const assert=require('node:assert/strict');
     assert.ok(row.x>=field.x&&row.x+row.width<=field.x+field.width+4,label+' × stays within original input width');
    }
 
+   // ②地板 is intentionally collapsed by default; expand it as a real user would.
+   await page.evaluate(()=>{
+     const quote=document.getElementById('quote');
+     quote.classList.remove('hide');
+     const toggle=quote.querySelector('.quote-entry-shell-toggle');
+     const shell=quote.querySelector('.quote-entry-shell');
+     if(shell?.classList.contains('is-collapsed')&&toggle)toggle.click();
+     else shell?.classList.remove('is-collapsed');
+   });
+   await page.waitForSelector('#spec',{state:'visible',timeout:6000});
    await exercise('#spec','main quote');
    // Use the actual manual order row rather than a synthetic field.
    await page.evaluate(()=>{
