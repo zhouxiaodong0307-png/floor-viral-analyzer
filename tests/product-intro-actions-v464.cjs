@@ -24,7 +24,7 @@ const {chromium} = require('playwright');
       fontVersion:document.querySelector('meta[name="app-version"]')?.content};
    });
    console.log('V464 intro actions',w,JSON.stringify(result));
-   assert.equal(result.fontVersion,'V464');
+   assert.equal(result.fontVersion,'V'+JSON.parse(require('node:fs').readFileSync('floor-assistant-v285/version.json','utf8')).version,'product action test follows the currently deployed app version');
    assert.deepEqual(result.buttons.map(x=>x.text),['复制微信版','生成介绍图','进入报价']);
    assert.deepEqual(result.buttons.map(x=>x.handler),['copyProductIntroduction()','shareProductIntroductionImage()','quoteIntroducedProduct()']);
    assert.equal(result.buttons.length,3);
