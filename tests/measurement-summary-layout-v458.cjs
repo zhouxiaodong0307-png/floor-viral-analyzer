@@ -64,6 +64,34 @@ const assert = require('node:assert/strict');
     ],'V461 label-only change must preserve original billed area values, visible under 损耗面积 label');
    }
 
+   if(w===390){
+    // V463: real Clear button must refresh BOTH compact measurement outputs.
+    await page.evaluate(()=>{
+     const rows=document.getElementById('measureRows');
+     rows.innerHTML='<div class="measure-row" data-kind="area" data-floor="1楼"><input class="mexpr" value="500×300"><span class="measure-area"></span></div>';
+     document.getElementById('measureLoss').value='5';
+     window.calcMeasures();
+    });
+    const before=await page.evaluate(()=>({actual:document.getElementById('measureTotal').textContent,bill:document.getElementById('measureBill').textContent}));
+    assert.deepEqual(before,{actual:'15.00㎡',bill:'16㎡'},'pre-clear measurement should be 15 + 5% = 16');
+    await page.locator('#quote .clear-quote-btn').click();
+    const cleared=await page.evaluate(()=>({
+      rows:document.querySelectorAll('#measureRows .measure-row').length,
+      actual:document.getElementById('measureTotal').textContent,
+      bill:document.getElementById('measureBill').textContent,
+      rate:document.getElementById('measureLoss').value,
+      quoteArea:document.getElementById('area').value,
+      floorSummary:document.getElementById('measureFloorSummary').textContent.trim()
+    }));
+    assert.deepEqual(cleared,{rows:0,actual:'0.00㎡',bill:'0㎡',rate:'5',quoteArea:'',floorSummary:''},'Clear button must reset measured areas without changing default loss rate');
+    const after=await page.evaluate(()=>{
+      document.getElementById('measureRows').innerHTML='<div class="measure-row" data-kind="area" data-floor="1楼"><input class="mexpr" value="500×300"><span class="measure-area"></span></div>';
+      calcMeasures();
+      return {actual:document.getElementById('measureTotal').textContent,bill:document.getElementById('measureBill').textContent};
+    });
+    assert.deepEqual(after,{actual:'15.00㎡',bill:'16㎡'},'re-entry after clearing must restore correct calculation');
+    console.log('PASS: V463 clear resets area display, floor totals, and preserves 5% default/re-entry 15→16');
+   }
    await page.close();
   }
   console.log('PASS: V459 compact height and one-row measurement card geometry verified on six viewports');
