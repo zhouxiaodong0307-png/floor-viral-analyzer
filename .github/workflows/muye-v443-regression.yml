@@ -33,5 +33,7 @@ jobs:
         run: node tests/measurement-summary-layout-v458.cjs
       - name: Validate V464 product introduction action row across phone tablet desktop
         run: node tests/product-intro-actions-v464.cjs
+      - name: Verify V466 specification × key keeps keyboard focus on all platforms
+        run: node tests/spec-multiplier-focus-v466.cjs
       - name: Diagnose production HTML delivery and cache headers (read only)
         run: node tests/production-delivery-diagnostic-v458.cjs
