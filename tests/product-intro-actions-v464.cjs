@@ -9,6 +9,7 @@ const {chromium} = require('playwright');
    await page.context().route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:8765/')?r.continue():r.abort());
    await page.goto('http://127.0.0.1:8765/floor-assistant-v285/',{waitUntil:'domcontentloaded'});
    const result=await page.evaluate(()=>{
+     document.getElementById('compare').classList.remove('hide');
      const root=document.getElementById('productIntroResult');
      root.classList.remove('hide');
      const bar=root.querySelector('.actions.product-intro-actions-v464'),barRect=bar.getBoundingClientRect();
