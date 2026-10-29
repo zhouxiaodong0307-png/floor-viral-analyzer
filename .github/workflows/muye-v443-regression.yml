@@ -31,5 +31,7 @@ jobs:
         run: node tests/measurement-summary-v440.cjs
       - name: Assert actual area summary is one row across phone tablet desktop
         run: node tests/measurement-summary-layout-v458.cjs
+      - name: Validate V464 product introduction action row across phone tablet desktop
+        run: node tests/product-intro-actions-v464.cjs
       - name: Diagnose production HTML delivery and cache headers (read only)
         run: node tests/production-delivery-diagnostic-v458.cjs
