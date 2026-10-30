@@ -51,7 +51,8 @@ async function main(){
     if(prior===null)localStorage.removeItem(KEY);else localStorage.setItem(KEY,prior);
     return {version:document.querySelector('meta[name="app-version"]')?.content,
       all,done,view,summary,completeness,people,warning,exports,unchanged,afterReopen,afterRestore,
-      titles:[...document.querySelectorAll('#finance .finance-all-dashboard .finance-kpi>span')].map(el=>el.innerText)};
+      titles:[...document.querySelectorAll('#finance .finance-all-dashboard .finance-kpi>span')].map(el=>el.innerText),
+      personLabels:[...document.querySelectorAll('#personFinanceList .person-metric>span')].map(el=>el.innerText)};
    });
    assert.equal(out.version,'V'+JSON.parse(require('node:fs').readFileSync('floor-assistant-v285/version.json','utf8')).version);
    assert.equal(out.all.count,5);
@@ -121,7 +122,7 @@ async function main(){
    assert.equal(layout.labels.length,6);
    assert.ok(layout.labels.every(x=>!x.overflow),'finance labels fit within compact 2-column cards');
    assert.ok(layout.months.some(x=>/^(本月|当日)已记录支出$/.test(x))&&layout.months.some(x=>/^(本月|当日)账面收益$/.test(x)),'period labels follow the same meaning: '+layout.months.join(' / '));
-   assert.ok(layout.persons.includes('已记录支出'),'per-person labels consistent');
+   assert.ok(out.personLabels.includes('已记录支出'),'per-person labels consistent with simulated order cards');
    console.log('V469',width+'x'+height,JSON.stringify({completed:out.done.count,ongoing:out.all.count-out.done.count,income:out.done.bookIncome,layout}));
    await context.close();
   }
