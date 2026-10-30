@@ -11,7 +11,7 @@ const assert=require('node:assert/strict');
    await page.goto('http://127.0.0.1:8765/floor-assistant-v285/',{waitUntil:'domcontentloaded'});
    await page.waitForFunction(()=>window.muyeNumericKeyboardStatusV403);
    const ver=await page.locator('meta[name="app-version"]').getAttribute('content');
-   assert.equal(ver,'V466');
+   assert.equal(ver,'V'+require('node:fs').readFileSync('floor-assistant-v285/version.json','utf8').match(/"version"\s*:\s*"(\d+)"/)[1],'spec test follows installed app version');
 
    async function exercise(selector,label){
     const input=page.locator(selector);
