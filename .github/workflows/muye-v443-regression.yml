@@ -35,7 +35,7 @@ jobs:
         run: node tests/product-intro-actions-v464.cjs
       - name: Verify V466 specification × key keeps keyboard focus on all platforms
         run: node tests/spec-multiplier-focus-v466.cjs
-      - name: Verify V467 all-order accounting and financial reports
-        run: node tests/finance-book-income-v467.cjs
+      - name: Verify V468 completed-only finance recognition, ongoing tracking, exports
+        run: node tests/finance-completed-recognition-v468.cjs
       - name: Diagnose production HTML delivery and cache headers (read only)
         run: node tests/production-delivery-diagnostic-v458.cjs
