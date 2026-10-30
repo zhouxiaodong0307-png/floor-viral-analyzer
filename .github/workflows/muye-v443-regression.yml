@@ -39,5 +39,7 @@ jobs:
         run: node tests/finance-completed-recognition-v468.cjs
       - name: Verify V471 staged 50-40-10 selection, default persistence and quote safety
         run: node tests/payment-stage-default-v471.cjs
+      - name: Verify V472 compact two-column normal payment UI and unmodified payment math
+        run: node tests/payment-normal-layout-v472.cjs
       - name: Diagnose production HTML delivery and cache headers (read only)
         run: node tests/production-delivery-diagnostic-v458.cjs
