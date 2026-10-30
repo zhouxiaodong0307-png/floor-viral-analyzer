@@ -15,7 +15,11 @@ async function run(){
     const blank={floor:0,install:0,batten:0,skirt:0,material:0,freight:0,remove:0,other:0};
     const mk=(id,sales,paid,cost,date,status,costStatus,known,opener)=>{
      const b={...blank,floor:cost};
-     return {id,opener,cust:'模拟数据',date,status,costStatus,profitKnown:known,sales,paid,costBreakdown:b};
+     return {id,opener,cust:'模拟数据',date,status,costStatus,profitKnown:known,
+      sales,finalAmount:sales,total:sales,projectOriginalAmount:sales,paid,balance:Math.max(0,sales-paid),
+      orderMode:'manual',orderModeVersion:213,
+      products:[{species:'测试木地板',spec:'800×200×18',area:1,billArea:1,price:sales,subtotal:sales}],
+      salesItems:[],costBreakdown:b};
     };
     const a=mk(997001,200,200,150,thisMonth,'已完成','complete',true,'甲');
     a.costSnapshot={costBreakdown:{...blank,floor:150},cost:150,costStatus:'complete',profitKnown:true,sales:200,profit:50};
@@ -26,6 +30,10 @@ async function run(){
     const testOrders=[a,b,c,d],priorRaw=localStorage.getItem(KEY);
     // Simulated input exists only in an isolated localhost browser, never production/cloud.
     localStorage.setItem(KEY,JSON.stringify(testOrders));
+    // V213's legacy sanitizer normalizes the stored billing fields when orders() is read.
+    // Measure immutability after that existing normalization, not against incomplete fake records.
+    orders();
+    const canonicalBefore=localStorage.getItem(KEY);
     updateDash();
     const ledger=financeLedgerTotalsV467(orders());
     const selected=['fSales','fPaid','fCost','fProfit','fMargin','fBalance','fmSales','fmCost','fmProfit','fmMargin','profit']
@@ -47,7 +55,7 @@ async function run(){
      warningHidden:document.getElementById('financeMismatchNoteV467')?.hidden,
      explanatoryNote:document.getElementById('financeBookNoteV467')?.innerText,
      financeTitles:[...document.querySelectorAll('#finance .finance-all-dashboard .finance-kpi>span')].map(x=>x.textContent),
-     unchangedJSON:JSON.stringify(orders())===JSON.stringify(testOrders)};
+     unchangedJSON:localStorage.getItem(KEY)===canonicalBefore};
     // Reset the synthetic session so it cannot affect subsequent contexts.
     if(priorRaw===null)localStorage.removeItem(KEY);else localStorage.setItem(KEY,priorRaw);
     return statuses;
