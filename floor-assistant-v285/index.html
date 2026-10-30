@@ -6709,6 +6709,7 @@ function migrateLegacyAutoQuotePaymentV471(d){
  const f=d.fields,rates=[f.stage1Rate,f.stage2Rate,f.stage3Rate].map(Number);
  const old=[40,50,10].every((n,i)=>rates[i]===n);
  const current=[50,40,10].every((n,i)=>rates[i]===n);
+ if(current&&f.paymentMode==='staged')return d;
  if(!old&&!current)return d;
  const updated={...d,fields:{...f,paymentMode:'staged',stage1Rate:'50',stage2Rate:'40',stage3Rate:'10'},paymentDefaultVersion:471};
  return updated;
