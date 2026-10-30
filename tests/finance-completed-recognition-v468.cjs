@@ -52,7 +52,7 @@ async function main(){
     return {version:document.querySelector('meta[name="app-version"]')?.content,
       all,done,view,summary,completeness,people,warning,exports,unchanged,afterReopen,afterRestore,
       titles:[...document.querySelectorAll('#finance .finance-all-dashboard .finance-kpi>span')].map(el=>el.innerText),
-      personLabels:[...document.querySelectorAll('#personFinanceList .person-metric>span')].map(el=>el.innerText)};
+      personLabels:[...document.querySelectorAll('#personFinanceList .person-metric>span')].map(el=>el.textContent)};
    });
    assert.equal(out.version,'V'+JSON.parse(require('node:fs').readFileSync('floor-assistant-v285/version.json','utf8')).version);
    assert.equal(out.all.count,5);
@@ -113,8 +113,8 @@ async function main(){
      labels:[...document.querySelectorAll('#finance .finance-all-dashboard .finance-kpi>span')].map(el=>({
        text:el.innerText, overflow:el.scrollWidth>el.clientWidth+1, wrapped:el.getClientRects().length>1
      })),
-     months:[...document.querySelectorAll('#finance .finance-month-dashboard .finance-kpi>span')].map(el=>el.innerText),
-     persons:[...document.querySelectorAll('#personFinanceList .person-metric>span')].map(el=>el.innerText)
+     months:[...document.querySelectorAll('#finance .finance-month-dashboard .finance-kpi>span')].map(el=>el.textContent),
+     persons:[...document.querySelectorAll('#personFinanceList .person-metric>span')].map(el=>el.textContent)
    }));
    assert.ok(layout.scroll<=layout.window+2,'no horizontal scrolling '+width+' '+JSON.stringify(layout));
    assert.equal(layout.cards,6);
