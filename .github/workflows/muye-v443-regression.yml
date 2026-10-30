@@ -37,5 +37,7 @@ jobs:
         run: node tests/spec-multiplier-focus-v466.cjs
       - name: Verify V468 completed-only finance recognition, ongoing tracking, exports
         run: node tests/finance-completed-recognition-v468.cjs
+      - name: Verify V470 payment stage 50/40/10 defaults and saved quote safety
+        run: node tests/payment-stage-default-v470.cjs
       - name: Diagnose production HTML delivery and cache headers (read only)
         run: node tests/production-delivery-diagnostic-v458.cjs
