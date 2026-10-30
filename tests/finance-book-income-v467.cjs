@@ -82,7 +82,7 @@ async function run(){
    assert.match(output.anomalies,/¥4,798/);
    assert.ok(output.financeTitles.includes('账面收益')&&output.financeTitles.includes('账面收益率'));
    assert.match(output.financeCSV.text,/账面收益率/);
-   assert.match(output.financeCSV.text,/合计,4,1500,2890,-1390,-92.67%,1200,2/);
+   assert.match(output.financeCSV.text,/"合计","4","1500","2890","-1390","-92.67%","1200","2"/);
    assert.match(output.orderCSV.text,/账面收益率/);
    assert.ok(output.unchangedJSON,'no data edits from finance rendering or export');
    // Existing app layout is unchanged, while the two notices remain unobtrusive.
