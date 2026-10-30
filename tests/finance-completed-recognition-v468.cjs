@@ -53,7 +53,7 @@ async function main(){
       all,done,view,summary,completeness,people,warning,exports,unchanged,afterReopen,afterRestore,
       titles:[...document.querySelectorAll('#finance .finance-all-dashboard .finance-kpi>span')].map(el=>el.innerText)};
    });
-   assert.equal(out.version,'V468');
+   assert.equal(out.version,'V'+JSON.parse(require('node:fs').readFileSync('floor-assistant-v285/version.json','utf8')).version);
    assert.equal(out.all.count,5);
    assert.equal(out.all.sales,2000);
    assert.equal(out.all.cost,2970);
@@ -83,16 +83,18 @@ async function main(){
    assert.match(out.summary,/已完成 3 单/);
    assert.match(out.summary,/进行中 2 单不计收益/);
    assert.match(out.summary,/未知库存成本/);
+   assert.match(out.summary,/前四项仅统计/);
+   assert.match(out.summary,/并非净利润/);
    assert.match(out.completeness,/已完成 3 单/);
    assert.match(out.completeness,/1 单成本待补/);
    assert.match(out.warning,/¥4,798/);
    assert.equal(out.people.length,2);
    assert.equal(out.people.reduce((n,p)=>n+p.bookIncome,0),out.done.bookIncome);
    assert.equal(out.people.reduce((n,p)=>n+p.receivable,0),out.all.receivable);
-   assert.match(out.exports[0].content,/已完成账面收益/);
+   assert.match(out.exports[0].content,/账面收益（已完成订单）/);
    assert.match(out.exports[0].content,/"合计","3","700","2930","-2230","-318.57%","1200","1","2"/);
    assert.equal((out.exports[1].content.match(/未完成，不计收益/g)||[]).length,2);
-   assert.match(out.exports[1].content,/已完成账面收益/);
+   assert.match(out.exports[1].content,/账面收益（已完成订单）/);
    assert.ok(out.unchanged,'finance computations and exports are strictly read-only');
    assert.equal(out.afterReopen.count,2);
    assert.equal(out.afterReopen.sales,500);
@@ -100,21 +102,30 @@ async function main(){
    assert.equal(out.afterReopen.bookIncome,-2280);
    assert.deepEqual({sales:out.afterRestore.sales,cost:out.afterRestore.cost,bookIncome:out.afterRestore.bookIncome},
      {sales:700,cost:2930,bookIncome:-2230},'manually re-completed order is counted once again');
-   assert.ok(out.titles.includes('已完成销售')&&out.titles.includes('全部已收款'));
+   assert.deepEqual(out.titles,['已完成销售额','已记录支出','账面收益','账面收益率','累计已收款','全部待收款']);
    await page.evaluate(()=>{enterBusinessMode();showInternal('finance')});
    await page.waitForSelector('#finance:not(.hide)');
    const layout=await page.evaluate(()=>({
      scroll:document.documentElement.scrollWidth,window:innerWidth,
      cards:document.querySelectorAll('#finance .finance-all-dashboard .finance-kpi').length,
-     note:document.getElementById('financeBookNoteV467').getBoundingClientRect().height
+     note:document.getElementById('financeBookNoteV467').getBoundingClientRect().height,
+     labels:[...document.querySelectorAll('#finance .finance-all-dashboard .finance-kpi>span')].map(el=>({
+       text:el.innerText, overflow:el.scrollWidth>el.clientWidth+1, wrapped:el.getClientRects().length>1
+     })),
+     months:[...document.querySelectorAll('#finance .finance-month-dashboard .finance-kpi>span')].map(el=>el.innerText),
+     persons:[...document.querySelectorAll('#personFinanceList .person-metric>span')].map(el=>el.innerText)
    }));
    assert.ok(layout.scroll<=layout.window+2,'no horizontal scrolling '+width+' '+JSON.stringify(layout));
    assert.equal(layout.cards,6);
    assert.ok(layout.note<=84,'brief accounting scope note, no oversized card');
-   console.log('V468',width+'x'+height,JSON.stringify({completed:out.done.count,ongoing:out.all.count-out.done.count,income:out.done.bookIncome,layout}));
+   assert.equal(layout.labels.length,6);
+   assert.ok(layout.labels.every(x=>!x.overflow),'finance labels fit within compact 2-column cards');
+   assert.ok(layout.months.includes('本月已记录支出')&&layout.months.includes('本月账面收益'),'monthly labels follow the same meaning');
+   assert.ok(layout.persons.includes('已记录支出'),'per-person labels consistent');
+   console.log('V469',width+'x'+height,JSON.stringify({completed:out.done.count,ongoing:out.all.count-out.done.count,income:out.done.bookIncome,layout}));
    await context.close();
   }
-  console.log('PASS V468: only completed orders recognized, ongoing sales/cost/profit excluded, deposits/receivables preserved, incomplete completed costs allowed, status switch, historic anomaly, month, person, CSV, 7 viewports.');
+  console.log('PASS V469: clearer finance labels, still completed-only recognized income, all-order cash tracking, financial exports and 7 responsive viewports.');
  }finally{await browser.close()}
 }
 main().catch(e=>{console.error(e);process.exit(1)});
