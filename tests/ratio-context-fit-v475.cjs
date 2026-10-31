@@ -3,7 +3,7 @@ const fs=require('node:fs');
 const assert=require('node:assert/strict');
 (async()=>{
  const version=JSON.parse(fs.readFileSync('floor-assistant-v285/version.json','utf8')).version;
- assert.equal(version,'475');
+ assert.ok(Number(version)>=475,'ratio fixture supports V475 and later');
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  try{
   for(const [width,height] of [[320,690],[375,812],[390,844],[430,932],[768,1024],[1024,768],[1366,900]]){
@@ -61,7 +61,7 @@ const assert=require('node:assert/strict');
     return {version:document.querySelector('meta[name="app-version"]')?.content,thirteen,twenty,
       staged,normal,normal100,stage100,documentWidth:document.documentElement.scrollWidth,viewport:innerWidth};
    });
-   assert.equal(result.version,'V475');
+   assert.equal(result.version,'V'+version);
    const {thirteen,twenty,staged,normal}=result;
    for(const x of [thirteen,twenty]){
     assert.equal(x.r.h,30,'compact loss card height');
