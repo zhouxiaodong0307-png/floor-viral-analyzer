@@ -36,7 +36,7 @@ const assert=require('node:assert/strict');
        focusFont:getComputedStyle(lossBadge.querySelector('.ratio-manual-input')).fontSize};
     };
     $('measureLoss').value='13';syncRatioValue($('measureLoss'));calcMeasures();const thirteen=topRead();
-    $('measureLoss').value='100';syncRatioValue($('measureLoss'));calcMeasures();const hundred=topRead();
+    $('measureLoss').value='20';syncRatioValue($('measureLoss'));calcMeasures();const twenty=topRead();
     $('measureLoss').value='13';syncRatioValue($('measureLoss'));calcMeasures();
     const panelRead=mode=>{
       $('paymentMode').value=mode;syncPaymentMode(false);
@@ -58,12 +58,12 @@ const assert=require('node:assert/strict');
     const inStage=$('stage1Rate');inStage.value='100';syncRatioValue(inStage);calc();
     const stage100=get(document.querySelector('[data-ratio-for="stage1Rate"].ratio-manual'));
     inStage.value='50';syncRatioValue(inStage);calc();
-    return {version:document.querySelector('meta[name="app-version"]')?.content,thirteen,hundred,
+    return {version:document.querySelector('meta[name="app-version"]')?.content,thirteen,twenty,
       staged,normal,normal100,stage100,documentWidth:document.documentElement.scrollWidth,viewport:innerWidth};
    });
    assert.equal(result.version,'V475');
-   const {thirteen,hundred,staged,normal}=result;
-   for(const x of [thirteen,hundred]){
+   const {thirteen,twenty,staged,normal}=result;
+   for(const x of [thirteen,twenty]){
     assert.equal(x.r.h,30,'compact loss card height');
     assert.ok(x.r.w>=54 && x.r.w<=84,'loss width fits text');
     assert.ok(x.r.x>=x.parent.x-1&&x.r.right<=x.parent.right+1,'loss card stays inside middle column');
@@ -72,7 +72,7 @@ const assert=require('node:assert/strict');
     assert.equal(x.focusFont,'16px','iOS edit input readable without zoom');
     assert.equal(x.r.bg,'rgb(18, 18, 18)');
    }
-   assert.equal(thirteen.r.text,'13%');assert.equal(hundred.r.text,'100%');
+   assert.equal(thirteen.r.text,'13%');assert.equal(twenty.r.text,'20%');
    assert.deepEqual(staged.badges.map(x=>x.text),['50%','40%','10%']);
    assert.deepEqual(normal.badges.map(x=>x.text),['50%','50%']);
    assert.equal(staged.columns,3);assert.equal(normal.columns,2);
