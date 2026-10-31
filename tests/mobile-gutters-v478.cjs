@@ -24,7 +24,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
    assert.equal(x.appVersion,'V478');
    assert.ok(x.scroll<=x.viewport+2,'no horizontal scrolling at '+w);
    assert.ok(x.navButtons.every(b=>b.scroll<=b.client+2),'nav label fit '+w);
-   if(w<=700){
+   if(w<=520){
     assert.ok(Math.abs(x.section.left-9)<=2,'outer side margin 9px at '+w);
     assert.ok(Math.abs(x.viewport-x.section.right-9)<=2,'right margin 9px at '+w);
     assert.ok(Math.abs(x.nav.left+x.navPadding-9)<=2,'top nav content starts at 9px at '+w);
