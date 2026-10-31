@@ -21,7 +21,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
        navButtons:[...document.querySelectorAll('.client-nav button')].map(b=>({width:b.getBoundingClientRect().width,scroll:b.scrollWidth,client:b.clientWidth})),
        floorHeight:document.querySelector('#quote .quote-entry-toolbar').getBoundingClientRect().height};
    });
-   assert.equal(x.appVersion,'V480');
+   assert.ok(Number(x.appVersion.slice(1))>=480,'post-V480 version');
    assert.ok(x.scroll<=x.viewport+2,'no horizontal scrolling at '+w);
    assert.ok(x.navButtons.every(b=>b.scroll<=b.client+2),'nav label fit '+w);
    if(w<=520){
