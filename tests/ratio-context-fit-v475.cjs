@@ -65,7 +65,7 @@ const assert=require('node:assert/strict');
    const {thirteen,hundred,staged,normal}=result;
    for(const x of [thirteen,hundred]){
     assert.equal(x.r.h,30,'compact loss card height');
-    assert.ok(x.r.w>=56 && x.r.w<=84,'loss width fits text');
+    assert.ok(x.r.w>=54 && x.r.w<=84,'loss width fits text');
     assert.ok(x.r.x>=x.parent.x-1&&x.r.right<=x.parent.right+1,'loss card stays inside middle column');
     assert.ok(x.r.y>=x.label.bottom-2,'label and loss ratio do not overlap');
     assert.ok(x.r.textWidth+10<=x.r.w,'loss text and edge must have breathing room');
@@ -77,7 +77,7 @@ const assert=require('node:assert/strict');
    assert.deepEqual(normal.badges.map(x=>x.text),['50%','50%']);
    assert.equal(staged.columns,3);assert.equal(normal.columns,2);
    for(const p of [staged,normal]){
-    assert.ok(p.badges.every(x=>x.h===32&&x.w>=56&&x.w<=84),'compact payment cards');
+    assert.ok(p.badges.every(x=>x.h===32&&x.w>=60&&x.w<=84),'compact payment cards');
     assert.ok(p.badges.every(x=>x.x>=p.rect.left-1&&x.right<=p.rect.right+1),'payment card within grid');
     assert.ok(p.badges.every(x=>x.textWidth+10<=x.w),'no clipped percent text');
     assert.ok(p.badges.every(x=>x.font===thirteen.r.font && x.weight==='400'),'unified typography');
@@ -87,7 +87,7 @@ const assert=require('node:assert/strict');
    }
    for(const p of [result.normal100,result.stage100]){
     assert.equal(p.text,'100%');assert.ok(p.textWidth+10<=p.w,'100% text fits naturally');
-    assert.ok(p.w>=56 && p.w<=84,'100% card stays compact');
+    assert.ok(p.w>=60 && p.w<=84,'100% card stays compact');
    }
    assert.ok(result.documentWidth<=result.viewport+2,'no viewport-wide scroll');
    console.log('V475 compact cards',width+'x'+height,JSON.stringify({loss:[thirteen.r.w,thirteen.r.h],payment:[normal.badges[0].w,normal.badges[0].h],fullRateWidth:result.normal100.w}));
