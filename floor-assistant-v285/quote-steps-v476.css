@@ -2,7 +2,7 @@
 body .app #quote .quote-entry-shell{margin:0!important}
 body .app #quote .quote-entry-shell.is-collapsed .quote-entry-toolbar{
   height:42px!important;min-height:42px!important;max-height:42px!important;
-  padding:0 14px!important;margin:0!important;
+  padding:0 16px!important;margin:0!important;
   border-bottom:0!important;background:#fff!important;
 }
 body .app #quote .quote-entry-shell.is-collapsed .quote-entry-shell-toggle{
@@ -23,7 +23,7 @@ body .app #quote .quote-entry-shell.is-collapsed .quote-entry-arrow{
 body .app #quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note){margin:6px 0 0!important}
 body .app #quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note):not([open])>summary{
   height:42px!important;min-height:42px!important;max-height:42px!important;
-  padding:0 14px!important;margin:0!important;
+  padding:0 16px!important;margin:0!important;
   display:flex!important;align-items:center!important;gap:8px!important;
 }
 body .app #quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note):not([open])>summary .quote-section-title-label{
@@ -51,7 +51,7 @@ body .app #quote .result.quote-result-card{margin-top:10px!important}
   body .app #quote .quote-entry-shell.is-collapsed .quote-entry-toolbar,
   body .app #quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note):not([open])>summary{
     height:40px!important;min-height:40px!important;max-height:40px!important;
-    padding:0 12px!important;
+    padding:0 16px!important;
   }
   body .app #quote .v476-step-status{font-size:11px;max-width:50%}
   body .app #quote .quote-entry-shell.is-collapsed .quote-entry-toolbar .quote-section-title-label,
