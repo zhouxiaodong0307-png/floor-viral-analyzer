@@ -1,0 +1,66 @@
+/* V476: compact collapsed-only floor and accessory rows. Expanded forms unchanged. */
+body .app #quote .quote-entry-shell{margin:0!important}
+body .app #quote .quote-entry-shell.is-collapsed .quote-entry-toolbar{
+  height:42px!important;min-height:42px!important;max-height:42px!important;
+  padding:0 14px!important;margin:0!important;
+  border-bottom:0!important;background:#fff!important;
+}
+body .app #quote .quote-entry-shell.is-collapsed .quote-entry-shell-toggle{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  flex:1 1 auto!important;min-width:0!important;width:auto!important;
+  height:100%!important;min-height:0!important;max-height:100%!important;
+  gap:8px!important;padding:0!important;margin:0!important;
+}
+body .app #quote .quote-entry-shell.is-collapsed .quote-entry-shell-title{
+  flex:0 0 auto!important;min-width:0!important;margin:0!important;
+}
+body .app #quote .quote-entry-shell.is-collapsed .quote-entry-arrow{
+  flex:0 0 25px!important;width:25px!important;
+  height:30px!important;min-height:30px!important;max-height:30px!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
+  padding:0!important;box-shadow:none!important;
+}
+body .app #quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note){margin:6px 0 0!important}
+body .app #quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note):not([open])>summary{
+  height:42px!important;min-height:42px!important;max-height:42px!important;
+  padding:0 14px!important;margin:0!important;
+  display:flex!important;align-items:center!important;gap:8px!important;
+}
+body .app #quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note):not([open])>summary .quote-section-title-label{
+  flex:0 0 auto!important;min-width:0!important;margin:0 auto 0 0!important;
+}
+body .app #quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note):not([open])>summary .quote-aux-arrow{
+  flex:0 0 25px!important;width:25px!important;
+  height:30px!important;min-height:30px!important;max-height:30px!important;
+  margin:0!important;padding:0!important;
+}
+/* Only text, never imagery or simulated product counts. */
+body .app #quote .v476-step-status{
+  display:block;flex:0 1 auto;min-width:0;max-width:53%;
+  margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;
+  color:#858892;font-size:12px;font-weight:400;line-height:1.2;
+  letter-spacing:0;text-align:right;
+}
+body .app #quote .v476-step-status[hidden]{display:none!important}
+body .app #quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note):not([open])>summary .v476-step-status{
+  margin-left:auto!important;
+}
+body .app #quote .result.quote-result-card{margin-top:10px!important}
+@media(max-width:700px){
+  body .app #quote .quote-entry-shell.is-collapsed .quote-entry-toolbar,
+  body .app #quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note):not([open])>summary{
+    height:40px!important;min-height:40px!important;max-height:40px!important;
+    padding:0 12px!important;
+  }
+  body .app #quote .v476-step-status{font-size:11px;max-width:50%}
+  body .app #quote .quote-entry-shell.is-collapsed .quote-entry-toolbar .quote-section-title-label,
+  body .app #quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note):not([open])>summary .quote-section-title-label{
+    font-size:16px!important;line-height:20px!important;
+  }
+  body .app #quote .quote-entry-shell.is-collapsed .quote-entry-arrow,
+  body .app #quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note):not([open])>summary .quote-aux-arrow{
+    flex-basis:24px!important;width:24px!important;
+  }
+}
+@media(max-width:350px){body .app #quote .v476-step-status{font-size:10px;max-width:47%}}
