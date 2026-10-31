@@ -41,5 +41,7 @@ jobs:
         run: node tests/payment-stage-default-v471.cjs
       - name: Verify V472 compact two-column normal payment UI and unmodified payment math
         run: node tests/payment-normal-layout-v472.cjs
-      - name: Verify V473 exact normal/staged payment typography and card parity\n        run: node tests/payment-visual-parity-v473.cjs\n      - name: Diagnose production HTML delivery and cache headers (read only)
+      - name: Verify V473 exact normal/staged payment typography and card parity
+        run: node tests/payment-visual-parity-v473.cjs
+      - name: Diagnose production HTML delivery and cache headers (read only)
         run: node tests/production-delivery-diagnostic-v458.cjs
