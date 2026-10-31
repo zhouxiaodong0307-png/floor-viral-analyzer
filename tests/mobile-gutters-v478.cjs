@@ -10,13 +10,14 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
    const x=await p.evaluate(()=>{
      show('quote');
      const rect=el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width}};
-     const nav=rect(document.querySelector('.client-nav'));
+     const navElement=document.querySelector('.client-nav');
+     const nav=rect(navElement), navPadding=parseFloat(getComputedStyle(navElement).paddingLeft);
      const section=rect(document.querySelector('#quote'));
      const outer=rect(document.querySelector('#quote>.box'));
      const measure=rect(document.querySelector('#quote .measure-card-v273'));
      const floor=rect(document.querySelector('#quote .quote-entry-shell'));
      const accessory=rect(document.querySelector('#quote details.quote-entry-optional:not(.quote-compact-note)'));
-     return {nav,section,outer,measure,floor,accessory,viewport:innerWidth,scroll:document.documentElement.scrollWidth,appVersion:document.querySelector('meta[name="app-version"]')?.content,
+     return {nav,navPadding,section,outer,measure,floor,accessory,viewport:innerWidth,scroll:document.documentElement.scrollWidth,appVersion:document.querySelector('meta[name="app-version"]')?.content,
        navButtons:[...document.querySelectorAll('.client-nav button')].map(b=>({width:b.getBoundingClientRect().width,scroll:b.scrollWidth,client:b.clientWidth})),
        floorHeight:document.querySelector('#quote .quote-entry-toolbar').getBoundingClientRect().height};
    });
@@ -26,7 +27,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
    if(w<=700){
     assert.ok(Math.abs(x.section.left-9)<=2,'outer side margin 9px at '+w);
     assert.ok(Math.abs(x.viewport-x.section.right-9)<=2,'right margin 9px at '+w);
-    assert.ok(Math.abs(x.nav.left-9)<=2,'top nav gutter 9px at '+w);
+    assert.ok(Math.abs(x.nav.left+x.navPadding-9)<=2,'top nav content starts at 9px at '+w);
     assert.ok(x.measure.left>=x.outer.left&&x.measure.right<=x.outer.right+1,'measurement in quote panel');
     assert.ok(Math.abs(x.floor.left-x.accessory.left)<2,'two compact accordions aligned');
     assert.ok(x.floorHeight>=39&&x.floorHeight<=43,'accordion remains compact');
