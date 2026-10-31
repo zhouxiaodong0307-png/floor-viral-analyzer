@@ -64,3 +64,15 @@ body .app #quote .result.quote-result-card{margin-top:10px!important}
   }
 }
 @media(max-width:350px){body .app #quote .v476-step-status{font-size:10px;max-width:47%}}
+
+/* V477: use the same card-corner family as ① area, not a pill radius. */
+body .app #quote .quote-entry-shell.is-collapsed,
+body .app #quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note):not([open]){
+ border-radius:22px!important;
+}
+@media(max-width:700px){
+ body .app #quote .quote-entry-shell.is-collapsed,
+ body .app #quote details.quote-compact-details.quote-entry-optional:not(.quote-compact-note):not([open]){
+  border-radius:19px!important;
+ }
+}
