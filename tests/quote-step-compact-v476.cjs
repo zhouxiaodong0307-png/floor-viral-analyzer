@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 (async()=>{
  const version=JSON.parse(fs.readFileSync('floor-assistant-v285/version.json','utf8')).version;
- assert.equal(version,'476');
+ assert.ok(Number(version)>=476);
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  try{
   for(const [width,height] of [[320,690],[375,812],[390,844],[430,932],[768,1024],[1024,768],[1366,900]]){

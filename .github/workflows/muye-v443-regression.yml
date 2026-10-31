@@ -49,5 +49,7 @@ jobs:
         run: node tests/ratio-context-fit-v475.cjs
       - name: Verify V476 compact late-step headers and actual selected counts
         run: node tests/quote-step-compact-v476.cjs
+      - name: Validate V478 wider mobile gutters and no horizontal overflow
+        run: node tests/mobile-gutters-v478.cjs
       - name: Diagnose production HTML delivery and cache headers (read only)
         run: node tests/production-delivery-diagnostic-v458.cjs
