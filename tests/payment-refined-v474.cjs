@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 
 (async()=>{
  const version=JSON.parse(fs.readFileSync('floor-assistant-v285/version.json','utf8')).version;
- assert.equal(version,'474');
+ assert.ok(Number(version)>=474,'V474 visual contract applies to later releases');
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  try{
   for(const [width,height] of [[320,690],[375,812],[390,844],[430,932],[768,1024],[1024,768],[1366,900]]){
@@ -45,7 +45,7 @@ const assert=require('node:assert/strict');
     inp.blur();
     return {version:document.querySelector('meta[name="app-version"]')?.content,staged,normal,edit,focus,scroll:document.documentElement.scrollWidth,viewport:innerWidth};
    });
-   assert.equal(result.version,'V474');assert.equal(result.staged.counts,3);assert.equal(result.normal.counts,2);
+   assert.equal(result.version,'V'+version);assert.equal(result.staged.counts,3);assert.equal(result.normal.counts,2);
    assert.deepEqual(result.staged.values,['50%','40%','10%']);
    assert.deepEqual(result.normal.values,['50%','50%']);
    assert.deepEqual(result.staged.amounts,[5000,5000,5000,4000,1000]);
