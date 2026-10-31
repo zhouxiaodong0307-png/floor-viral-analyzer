@@ -11719,8 +11719,7 @@ body .app #quote :is(#normalPaymentRows.normal-payment-grid,#stagePaymentRows.st
 /* Keep 16px actual input font on iOS to prevent Safari focus zoom; the idle label is
    rendered by the matching :after text, not by a scaled-down input. */
 body .app #quote :is(#normalPaymentRows.normal-payment-grid,#stagePaymentRows.stage-payments) .quote-stage-row .ratio-manual-input{
- height:calc(var(--pay-ratio-height) - 2px)!important;
- min-height:0!important;max-height:calc(var(--pay-ratio-height) - 2px)!important;
+ height:28px!important;min-height:28px!important;max-height:28px!important;
  width:calc(var(--ratio-ch,2) * .60em + .55em)!important;
  min-width:1.4em!important;max-width:3.8em!important;
  margin:0!important;padding:0 1px!important;border:0!important;
