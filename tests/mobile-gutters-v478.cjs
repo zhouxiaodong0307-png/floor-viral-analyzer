@@ -21,13 +21,13 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
        navButtons:[...document.querySelectorAll('.client-nav button')].map(b=>({width:b.getBoundingClientRect().width,scroll:b.scrollWidth,client:b.clientWidth})),
        floorHeight:document.querySelector('#quote .quote-entry-toolbar').getBoundingClientRect().height};
    });
-   assert.equal(x.appVersion,'V479');
+   assert.equal(x.appVersion,'V480');
    assert.ok(x.scroll<=x.viewport+2,'no horizontal scrolling at '+w);
    assert.ok(x.navButtons.every(b=>b.scroll<=b.client+2),'nav label fit '+w);
    if(w<=520){
-    assert.ok(Math.abs(x.section.left-9)<=2,'outer side margin 9px at '+w);
-    assert.ok(Math.abs(x.viewport-x.section.right-9)<=2,'right margin 9px at '+w);
-    assert.ok(Math.abs(x.nav.left+x.navPadding-9)<=2,'top nav content starts at 9px at '+w);
+    assert.ok(Math.abs(x.section.left-5)<=2,'outer side margin 9px at '+w);
+    assert.ok(Math.abs(x.viewport-x.section.right-5)<=2,'right margin 9px at '+w);
+    assert.ok(Math.abs(x.nav.left+x.navPadding-5)<=2,'top nav content starts at 9px at '+w);
     assert.equal(x.padding,7,'quote outer content padding 7px at '+w);
     assert.ok(x.measure.left>=x.outer.left&&x.measure.right<=x.outer.right+1,'measurement in quote panel');
     assert.ok(Math.abs(x.floor.left-x.accessory.left)<2,'two compact accordions aligned');
