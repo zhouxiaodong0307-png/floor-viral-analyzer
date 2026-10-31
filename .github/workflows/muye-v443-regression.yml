@@ -47,5 +47,7 @@ jobs:
         run: node tests/payment-refined-v474.cjs
       - name: Verify V475 compact text-fitted loss and payment badges on seven viewports
         run: node tests/ratio-context-fit-v475.cjs
+      - name: Verify V476 compact late-step headers and actual selected counts
+        run: node tests/quote-step-compact-v476.cjs
       - name: Diagnose production HTML delivery and cache headers (read only)
         run: node tests/production-delivery-diagnostic-v458.cjs
