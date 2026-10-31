@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 (async()=>{
  const version=JSON.parse(fs.readFileSync('floor-assistant-v285/version.json','utf8')).version;
- assert.equal(version,'473','V473 version metadata');
+ assert.ok(Number(version)>=473,'V473 parity test applies to V473 and later versions');
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  try{
   for(const [width,height] of [[320,690],[375,812],[390,844],[430,932],[768,1024],[1024,768],[1366,900]]){
@@ -56,7 +56,7 @@ const fs=require('node:fs');
     return {version:document.querySelector('meta[name="app-version"]')?.content,normal,stage,
       edited,editFont,editPseudo,stageEditFont,stageEditPseudo,bodyWidth:document.documentElement.scrollWidth,view:innerWidth};
    });
-   assert.equal(data.version,'V473');
+   assert.equal(data.version,'V'+version);
    assert.equal(data.normal.mode,'normal');assert.equal(data.stage.mode,'staged');
    assert.equal(data.normal.visible,'grid');assert.equal(data.stage.visible,'grid');
    assert.equal(data.normal.grid,2);assert.equal(data.stage.grid,3);

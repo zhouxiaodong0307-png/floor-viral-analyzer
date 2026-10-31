@@ -43,5 +43,7 @@ jobs:
         run: node tests/payment-normal-layout-v472.cjs
       - name: Verify V473 exact normal/staged payment typography and card parity
         run: node tests/payment-visual-parity-v473.cjs
+      - name: Verify V474 refined dark badges and light font against reference image 1
+        run: node tests/payment-refined-v474.cjs
       - name: Diagnose production HTML delivery and cache headers (read only)
         run: node tests/production-delivery-diagnostic-v458.cjs
