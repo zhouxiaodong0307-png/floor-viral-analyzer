@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 (async()=>{
  const version=JSON.parse(fs.readFileSync('floor-assistant-v285/version.json','utf8')).version;
- assert.equal(version,'476');
+ assert.ok(Number(version)>=476);
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  try{
   for(const [width,height] of [[320,690],[375,812],[390,844],[430,932],[768,1024],[1024,768],[1366,900]]){
@@ -20,6 +20,8 @@ const fs=require('node:fs');
     const a=head.getBoundingClientRect(),b=summary.getBoundingClientRect();
     const floorStatus=shell.querySelector('.v476-step-status'),auxStatus=summary.querySelector('.v476-step-status');
     return {floorHeight:a.height,auxHeight:b.height,floorTop:a.y,auxTop:b.y,
+      areaRadius:getComputedStyle(document.querySelector('#quote .measure-card-v273')).borderTopLeftRadius,
+      floorRadius:getComputedStyle(shell).borderTopLeftRadius,auxRadius:getComputedStyle(optional).borderTopLeftRadius,
       floorCollapsed:shell.classList.contains('is-collapsed'),auxCollapsed:!optional.open,
       floorStatus:floorStatus.textContent,floorHidden:floorStatus.hidden,
       auxStatus:auxStatus.textContent,auxHidden:auxStatus.hidden,
@@ -34,6 +36,8 @@ const fs=require('node:fs');
    });
    let result=await snapshot();
    assert.equal(result.floorHeight,width<=700?40:42,'floor compact height '+width);
+   assert.equal(result.floorRadius,result.areaRadius,'② corner matches ① at '+width);
+   assert.equal(result.auxRadius,result.areaRadius,'③ corner matches ① at '+width);
    assert.equal(result.auxHeight,width<=700?40:42,'aux compact height '+width);
    assert.ok(result.floorCollapsed&&result.auxCollapsed&&result.editorHidden);
    assert.ok(result.floorHidden&&result.auxHidden,'no fake selected items in default quote');
