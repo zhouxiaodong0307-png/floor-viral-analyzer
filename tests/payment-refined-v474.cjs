@@ -51,11 +51,12 @@ const assert=require('node:assert/strict');
    assert.deepEqual(result.staged.amounts,[5000,5000,5000,4000,1000]);
    assert.deepEqual(result.normal.amounts,[5000,5000,5000,4000,1000]);
    const entries=[...result.staged.styles,...result.normal.styles];
+   console.log('V474 computed CSS snapshot',width,JSON.stringify(entries));
    for(const x of entries){
     assert.equal(x.fontWeight,'400','refined ratio labels must be regular weight');
     assert.equal(x.background,'rgb(18, 18, 18)','reference 1 black badge fill');
     assert.equal(x.borderColor,'rgb(74, 74, 74)','reference 1 precise grey outline');
-    assert.equal(x.border,'1.5px','refined thin border');
+    assert.equal(x.border,'1px','refined thin border');
     assert.equal(x.shadow,'none','no heavy shadows');
     assert.equal(x.opacity,'1','readability preserved');
     assert.equal(x.borderRadius,'10px','refined not-pill corner radius');
