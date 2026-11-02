@@ -8584,7 +8584,13 @@ function toggleFulfilled(id){let a=orders(),o=a.find(x=>x.id===id);if(!o||isComp
 function settleOrder(id){let a=orders(),o=a.find(x=>x.id===id);if(!o)return;if(!confirm('确认这笔订单已经全部结清并完成吗？'))return;let sales=calcOrderFinalAmount(o),paid=orderPaidValue(o),tail=Math.max(0,sales-paid),now=new Date().toISOString();if(tail>0.005){o.paymentHistory=Array.isArray(o.paymentHistory)?o.paymentHistory:[];o.paymentHistory.push({type:'尾款',amount:tail,date:now});appendOrderEvent(o,'尾款','结清收款 '+money(tail))}o.sales=sales;o.total=sales;o.finalAmount=sales;o.paid=sales;o.balance=0;o.status='已完成';o.completedAt=new Date().toLocaleDateString('zh-CN');o.updatedAt=now;lockCompletedCostSnapshot(o);appendOrderEvent(o,'完成','订单结清并完成');localStorage.setItem(KEY,JSON.stringify(a));renderOrders();updateDash()}
 function reopenOrder(id){let a=orders(),o=a.find(x=>x.id===id);if(!o)return;o.status='进行中';delete o.completedAt;unlockCompletedCostSnapshot(o);o.balance=calcOrderReceivable(o);appendOrderEvent(o,'恢复','订单恢复进行中');o.updatedAt=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(a));renderOrders();updateDash()}
 function setOrderFilter(v){orderFilter=v;$('ongoingTab').classList.toggle('active-tab',v==='ongoing');$('completedTab').classList.toggle('active-tab',v==='completed');if($('allTab'))$('allTab').classList.toggle('active-tab',v==='all');renderOrders()}
-function clearOrderSearch(){let q=$('orderSearch');if(q)q.value='';renderOrders()}
+function clearOrderSearch(){
+  // Clear the visible search and the unsaved manual order entry only.
+  // Saved orders and cloud records must never be modified by this action.
+  const q=$('orderSearch');if(q)q.value='';
+  resetOrderEntryForm();
+  renderOrders();
+}
 function orderMatchesSearch(o,q){if(!q)return true;let x=q.toLowerCase(),ps=normalizeOrderProducts(o).flatMap(p=>[p.species,p.spec]);return[(o.opener||''),(o.cust||''),(o.species||''),(o.spec||''),(o.project||''),...ps].some(v=>String(v).toLowerCase().includes(x))}
 function addEditProductRow(p={}){
  let box=$('editProductRows');if(!box)return;
