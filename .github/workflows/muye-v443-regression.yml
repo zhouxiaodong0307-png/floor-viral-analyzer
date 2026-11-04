@@ -53,5 +53,7 @@ jobs:
         run: node tests/mobile-gutters-v478.cjs
       - name: Verify V481 contract payment terms reflect selected quote
         run: node tests/contract-payment-sync-v481.cjs
+      - name: Verify V482 quote-to-order action carries products and payments safely
+        run: node tests/quote-to-order-action-v482.cjs
       - name: Diagnose production HTML delivery and cache headers (read only)
         run: node tests/production-delivery-diagnostic-v458.cjs
