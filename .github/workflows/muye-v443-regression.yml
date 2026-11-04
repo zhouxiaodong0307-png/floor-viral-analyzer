@@ -55,5 +55,7 @@ jobs:
         run: node tests/contract-payment-sync-v481.cjs
       - name: Verify V482 quote-to-order action carries products and payments safely
         run: node tests/quote-to-order-action-v482.cjs
+      - name: Check V483 quote footer has no unused blank space
+        run: node tests/quote-footer-spacing-v483.cjs
       - name: Diagnose production HTML delivery and cache headers (read only)
         run: node tests/production-delivery-diagnostic-v458.cjs
