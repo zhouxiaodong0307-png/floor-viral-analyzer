@@ -17,9 +17,9 @@ const TAKEBACK='并对符合法定取回条件的产品依法主张收回权利'
     const base={cust:'历史订单',date:'2026/10/18',status:'进行中',orderMode:'manual',
      products:[{species:'缅甸柚木',spec:'740×115×17',area:20,billArea:20,price:300,subtotal:6000}],
      salesItems:[],total:6000,sales:6000,paid:0,depositRate:35};
-    const oldStage={...base,id:91001,paymentMode:'staged',
+    const oldStage={...base,id:91001,contractTermsVersion:484,paymentMode:'staged',
       paymentPlan:{stage1Rate:50,stage2Rate:40,stage3Rate:10}};
-    const oldNormal={...base,id:91002,paymentMode:'normal',date:'2027/10/01'};
+    const oldNormal={...base,id:91002,contractTermsVersion:484,paymentMode:'normal',date:'2027/10/01'};
     const oldEdited={...base,id:91003,paymentMode:'normal',
      contractEditedDocuments:{electronic:{
       html:'<div class="contract-title">客户已确认的历史合同</div><p class="contract-text">历史手工修改条款原样保留</p>',
