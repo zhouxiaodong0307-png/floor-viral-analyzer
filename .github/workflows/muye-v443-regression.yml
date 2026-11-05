@@ -61,5 +61,7 @@ jobs:
         run: node tests/contract-clause-placement-v484.cjs
       - name: Verify V485 historical order clauses and original saved contracts are untouched
         run: node tests/new-order-contract-terms-v485.cjs
+      - name: Verify V486 exact pre-V484 contract wording and immutable historical orders
+        run: node tests/historical-contract-provenance-v486.cjs
       - name: Diagnose production HTML delivery and cache headers (read only)
         run: node tests/production-delivery-diagnostic-v458.cjs
