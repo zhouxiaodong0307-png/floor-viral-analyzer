@@ -12,6 +12,8 @@ const assert=require('node:assert/strict');
    const docs=await page.evaluate(()=>{
     const $=id=>document.getElementById(id);
     show('quote');$('finalTotal').value='10000';
+    // V485: this test asserts the unchanged V484 template used by pre-existing orders.
+    window.__useV485ContractClause=false;
     const generate=mode=>{
      $('paymentMode').value=mode;syncPaymentMode(false);
      if(mode==='staged'){for(const [id,value] of [['stage1Rate','50'],['stage2Rate','40'],['stage3Rate','10']])$(id).value=value;}
@@ -21,7 +23,9 @@ const assert=require('node:assert/strict');
      if(!head)throw Error('Payment section missing');
      return {lines:head.nextElementSibling.innerHTML.split(/<br\s*\/?>/i).map(x=>x.replace(/<[^>]+>/g,'').trim()),total:currentQuote.total,mode:currentQuote.paymentMode};
     };
-    return [generate('staged'),generate('normal')];
+    const legacyDocs=[generate('staged'),generate('normal')];
+    window.__useV485ContractClause=undefined;
+    return legacyDocs;
    });
    const [staged,normal]=docs;
    assert.equal(staged.total,10000);assert.equal(normal.total,10000);

@@ -59,5 +59,7 @@ jobs:
         run: node tests/quote-footer-spacing-v483.cjs
       - name: Verify V484 contract recovery wording stays within existing payment point five
         run: node tests/contract-clause-placement-v484.cjs
+      - name: Verify V485 historical order clauses and original saved contracts are untouched
+        run: node tests/new-order-contract-terms-v485.cjs
       - name: Diagnose production HTML delivery and cache headers (read only)
         run: node tests/production-delivery-diagnostic-v458.cjs
