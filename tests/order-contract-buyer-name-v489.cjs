@@ -25,7 +25,7 @@ const fixtures=()=>[
    page.on('dialog',async d=>d.accept());
    await page.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:8765/')?r.continue():r.abort());
    await page.goto('http://127.0.0.1:8765/floor-assistant-v285/',{waitUntil:'domcontentloaded'});
-   await page.waitForFunction(()=>typeof renderOrders==='function'&&typeof sendOrderContract==='function'&&typeof savePreview==='function');
+   await page.waitForFunction(()=>typeof renderOrders==='function'&&typeof sendOrderContract==='function'&&typeof finishContractFullEdit==='function');
    await page.evaluate(()=>{
      localStorage.setItem(KEY,JSON.stringify(fixturesForBrowser()));
      function fixturesForBrowser(){
@@ -73,11 +73,12 @@ const fixtures=()=>[
 
    await page.evaluate(()=>{
      sendOrderContract(948906);
+     setContractFullEdit(true);
      const buyer=[...document.querySelectorAll('#contractPreview .contract-info div')]
        .find(el=>el.textContent.includes('乙方（需方）'));
      if(!buyer)throw Error('no contract buyer field');
      buyer.textContent='乙方（需方）：刘先生';
-     if(!savePreview())throw Error('saved contract failed');
+     if(finishContractFullEdit()===false)throw Error('saved contract failed');
    });
    changed=await page.evaluate(()=>orders());
    assert.equal(changed.find(o=>o.id===948906).cust,'刘先生','saved full-edit contract syncs buyer');
