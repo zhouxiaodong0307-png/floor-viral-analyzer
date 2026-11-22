@@ -7316,9 +7316,21 @@ function initContractSmartEditEvents(){
       if(contractLastEditTarget===target)contractRecalculateFrom(target);
     },550);
   });
+  // Tapping plain contract text does not always blur a nested contenteditable
+  // on Safari/Chromium. Commit before the next pointer changes the selection.
+  document.addEventListener('pointerdown',e=>{
+    if(!contractFullEditActive||!p.isConnected)return;
+    const field=contractPaymentEditTarget(contractLastEditTarget)||
+      contractPaymentEditTarget(document.activeElement);
+    if(field&&p.contains(field)&&!field.contains(e.target)&&
+       field.dataset.contractPayOriginal!==undefined){
+      clearTimeout(contractLiveCalcTimer);contractLiveCalcTimer=null;
+      contractCommitPaymentField(field);
+    }
+  },true);
   p.addEventListener('focusout',e=>{
     const field=contractPaymentEditTarget(e.target);
-    if(field&&field===e.target&&contractFullEditActive){
+    if(field&&field===e.target&&contractFullEditActive&&field.dataset.contractPayOriginal!==undefined){
       clearTimeout(contractLiveCalcTimer);contractLiveCalcTimer=null;
       contractCommitPaymentField(field);
     }
