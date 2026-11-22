@@ -63,5 +63,7 @@ jobs:
         run: node tests/new-order-contract-terms-v485.cjs
       - name: Verify V486 exact pre-V484 contract wording and immutable historical orders
         run: node tests/historical-contract-provenance-v486.cjs
+      - name: Verify V487 full-edit contract payment rate and amount typing safely
+        run: node tests/contract-payment-full-edit-v487.cjs
       - name: Diagnose production HTML delivery and cache headers (read only)
         run: node tests/production-delivery-diagnostic-v458.cjs
