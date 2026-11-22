@@ -65,5 +65,7 @@ jobs:
         run: node tests/historical-contract-provenance-v486.cjs
       - name: Verify V487 full-edit contract payment rate and amount typing safely
         run: node tests/contract-payment-full-edit-v487.cjs
+      - name: Verify V488 edit-order cost detail starts collapsed but still saves and calculates
+        run: node tests/order-edit-cost-fold-v488.cjs
       - name: Diagnose production HTML delivery and cache headers (read only)
         run: node tests/production-delivery-diagnostic-v458.cjs
