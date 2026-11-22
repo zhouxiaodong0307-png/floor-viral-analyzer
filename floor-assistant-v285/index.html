@@ -7301,9 +7301,16 @@ function initContractSmartEditEvents(){
     contractLastEditTarget=null;
     field.dataset.contractPayOriginal=field.textContent;
   });
-  p.addEventListener('beforeinput',()=>{
+  p.addEventListener('beforeinput',e=>{
     clearTimeout(contractLiveCalcTimer);contractLiveCalcTimer=null;
-    contractLastEditTarget=contractSelectionTarget();
+    const target=contractSelectionTarget()||
+      e.target?.closest?.('[data-contract-field],[data-contract-total],[data-contract-pay-rate],[data-contract-pay-amount]');
+    contractLastEditTarget=target||null;
+    // Nested editable spans may keep the parent as activeElement on iOS.
+    // Capture the original before the first keystroke, not only on focusin.
+    const field=contractPaymentEditTarget(target);
+    if(field&&field.dataset.contractPayOriginal===undefined)
+      field.dataset.contractPayOriginal=field.textContent;
   });
   p.addEventListener('input',e=>{
     if(contractLiveCalcBusy||!contractFullEditActive||e.isComposing)return;
@@ -7322,15 +7329,14 @@ function initContractSmartEditEvents(){
     if(!contractFullEditActive||!p.isConnected)return;
     const field=contractPaymentEditTarget(contractLastEditTarget)||
       contractPaymentEditTarget(document.activeElement);
-    if(field&&p.contains(field)&&!field.contains(e.target)&&
-       field.dataset.contractPayOriginal!==undefined){
+    if(field&&p.contains(field)&&!field.contains(e.target)){
       clearTimeout(contractLiveCalcTimer);contractLiveCalcTimer=null;
       contractCommitPaymentField(field);
     }
   },true);
   p.addEventListener('focusout',e=>{
     const field=contractPaymentEditTarget(e.target);
-    if(field&&field===e.target&&contractFullEditActive&&field.dataset.contractPayOriginal!==undefined){
+    if(field&&field===e.target&&contractFullEditActive){
       clearTimeout(contractLiveCalcTimer);contractLiveCalcTimer=null;
       contractCommitPaymentField(field);
     }
@@ -7356,6 +7362,7 @@ function setContractFullEdit(on){
     paymentFields.forEach(field=>{
       field.setAttribute('contenteditable','true');
       field.setAttribute('inputmode','decimal');
+      field.setAttribute('tabindex','0');
       field.setAttribute('spellcheck','false');
     });
     let badge=p.querySelector('.contract-preview-badge');if(badge)badge.setAttribute('contenteditable','false');
@@ -7365,6 +7372,7 @@ function setContractFullEdit(on){
     paymentFields.forEach(field=>{
       field.removeAttribute('contenteditable');
       field.removeAttribute('inputmode');
+      field.removeAttribute('tabindex');
       field.removeAttribute('spellcheck');
       delete field.dataset.contractPayOriginal;
     });
