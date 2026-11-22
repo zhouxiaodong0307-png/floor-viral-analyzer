@@ -91,6 +91,8 @@ const assert=require('node:assert/strict');
    await page.evaluate(()=>{
     window.currentContractOrderId=null;window.currentQuoteOrderId=null;
     const $=id=>document.getElementById(id);
+    // Use a distinct quote draft, avoiding restoration of the just-saved staged contract.
+    $('cust').value='V487 独立的定金尾款测试';
     $('paymentMode').value='normal';syncPaymentMode(false);
     $('depositRate').value='35';
     calc();generateContract('electronic');
