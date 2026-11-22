@@ -67,5 +67,7 @@ jobs:
         run: node tests/contract-payment-full-edit-v487.cjs
       - name: Verify V488 edit-order cost detail starts collapsed but still saves and calculates
         run: node tests/order-edit-cost-fold-v488.cjs
+      - name: Verify V489 contract buyer names appear in order table and sync only missing customer names
+        run: node tests/order-contract-buyer-name-v489.cjs
       - name: Diagnose production HTML delivery and cache headers (read only)
         run: node tests/production-delivery-diagnostic-v458.cjs
