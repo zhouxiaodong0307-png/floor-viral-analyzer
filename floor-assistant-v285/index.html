@@ -11328,6 +11328,7 @@ const originalFinish=window.finishContractFullEdit;
 window.finishContractFullEdit=function(){
 const active=document.getElementById('contractPreview')?.getAttribute('contenteditable')==='true';
 const result=originalFinish.apply(this,arguments);
+if(result===false)return false;
 if(active&&!savePreview())return false;return result;
 };
 const originalBuild=window.buildContractFromModal;
